@@ -26,7 +26,8 @@ jobs:
       uses: NuGet/setup-nuget@v2
 
     - name: 🔄 Gerekli Eklentileri İndir (Restore)
-      run: nuget restore TamgaApp\TamgaApp.csproj
+      # Hatayı çözen sihirli dokunuş burası! Paketlerin nereye ineceği açıkça belirtildi.
+      run: nuget restore TamgaApp\TamgaApp.csproj -PackagesDirectory packages
 
     - name: 🚀 Projeyi Derle (Release / x64)
       run: msbuild TamgaApp\TamgaApp.csproj /p:Configuration=Release /p:Platform=x64
