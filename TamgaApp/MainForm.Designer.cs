@@ -1098,7 +1098,7 @@ namespace TamgaApp
             this.btnCikisYap.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnCikisYap.BackColor = System.Drawing.Color.Red;
             this.btnCikisYap.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnCikisYap.Location = new System.Drawing.Point(215, 190);
+            this.btnCikisYap.Location = new System.Drawing.Point(443, 347);
             this.btnCikisYap.Name = "btnCikisYap";
             this.btnCikisYap.Size = new System.Drawing.Size(285, 122);
             this.btnCikisYap.TabIndex = 17;
