@@ -3,15 +3,34 @@
   "WorkspaceRootPath": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\properties\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\properties\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\update.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
+      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\update.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\loginform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
     },
     {
       "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|TamgaApp||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
-      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\||{B270807C-D8C6-49EB-8EBE-8E8D566637A1}|5e9a8ac2-4f34-4521-858f-4c248ba31532"
     }
   ],
   "DocumentGroupContainers": [
@@ -21,7 +40,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 5,
           "Children": [
             {
               "$type": "Bookmark",
@@ -29,13 +48,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 4,
               "Title": "MainForm.cs",
               "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\MainForm.cs",
               "RelativeDocumentMoniker": "TamgaApp\\MainForm.cs",
               "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\MainForm.cs",
               "RelativeToolTip": "TamgaApp\\MainForm.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHEAAAAbAAAAAAAAAA==",
+              "ViewState": "AgIAAFUAAAAAAAAAAAA4wHMAAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-23T12:53:27.374Z",
               "IsPinned": true,
@@ -43,7 +62,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 5,
               "Title": "MainForm.cs [Tasar\u0131m]",
               "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\MainForm.cs",
               "RelativeDocumentMoniker": "TamgaApp\\MainForm.cs",
@@ -51,22 +70,74 @@
               "RelativeToolTip": "TamgaApp\\MainForm.cs [Tasar\u0131m]",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-23T12:53:24.378Z",
-              "IsPinned": true
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{56df62a4-05a3-4e5b-aa1a-99371ccfb997}"
+              "IsPinned": true,
+              "EditorCaption": " [Tasar\u0131m]"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
+              "Title": "update.xml",
+              "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\update.xml",
+              "RelativeDocumentMoniker": "TamgaApp\\update.xml",
+              "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\update.xml",
+              "RelativeToolTip": "TamgaApp\\update.xml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003576|",
+              "WhenOpened": "2026-06-23T20:13:55.517Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "TamgaApp",
               "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\TamgaApp.csproj",
               "RelativeDocumentMoniker": "TamgaApp\\TamgaApp.csproj",
               "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\TamgaApp.csproj*",
               "RelativeToolTip": "TamgaApp\\TamgaApp.csproj*",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2026-06-23T19:51:04.683Z"
+              "WhenOpened": "2026-06-23T19:51:04.683Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "LoginForm.cs",
+              "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\LoginForm.cs",
+              "RelativeDocumentMoniker": "TamgaApp\\LoginForm.cs",
+              "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\LoginForm.cs*",
+              "RelativeToolTip": "TamgaApp\\LoginForm.cs*",
+              "ViewState": "AgIAAL8AAAAAAAAAAAAmwOIAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T20:28:04.533Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "AssemblyInfo.cs",
+              "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\Properties\\AssemblyInfo.cs",
+              "RelativeDocumentMoniker": "TamgaApp\\Properties\\AssemblyInfo.cs",
+              "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\Properties\\AssemblyInfo.cs",
+              "RelativeToolTip": "TamgaApp\\Properties\\AssemblyInfo.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T20:31:57.395Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "LoginForm.cs [Tasar\u0131m]",
+              "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\LoginForm.cs",
+              "RelativeDocumentMoniker": "TamgaApp\\LoginForm.cs",
+              "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\LoginForm.cs [Tasar\u0131m]*",
+              "RelativeToolTip": "TamgaApp\\LoginForm.cs [Tasar\u0131m]*",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-23T20:09:23.115Z",
+              "EditorCaption": " [Tasar\u0131m]"
             }
           ]
         }

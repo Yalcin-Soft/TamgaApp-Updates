@@ -72,13 +72,14 @@
             // 
             // btnGiris
             // 
+            this.btnGiris.BackColor = System.Drawing.Color.Lime;
             this.btnGiris.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnGiris.Location = new System.Drawing.Point(437, 206);
             this.btnGiris.Name = "btnGiris";
             this.btnGiris.Size = new System.Drawing.Size(90, 37);
             this.btnGiris.TabIndex = 17;
             this.btnGiris.Text = "Giriş";
-            this.btnGiris.UseVisualStyleBackColor = true;
+            this.btnGiris.UseVisualStyleBackColor = false;
             this.btnGiris.Click += new System.EventHandler(this.btnGiris_Click);
             // 
             // LoginForm
@@ -93,6 +94,7 @@
             this.Controls.Add(this.txtKullaniciAdi);
             this.Name = "LoginForm";
             this.Text = "LoginForm";
+            this.Load += new System.EventHandler(this.LoginForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 

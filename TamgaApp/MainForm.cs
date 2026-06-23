@@ -113,9 +113,7 @@ namespace TamgaApp
 
             LoadFirmalar();
 
-            // 🎯 ŞOK CİHAZI: Eğer internete bağlanamazsa veya XML'de hata varsa bize sebebini söyleyecek!
-            AutoUpdater.ReportErrors = true;
-            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/refs/heads/main/update.xml");
+            
 
             // Sağ paneldeki araçların varsayılan değerleri
             numPropFontSize.Minimum = 6;

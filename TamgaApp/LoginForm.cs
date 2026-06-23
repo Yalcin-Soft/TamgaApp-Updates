@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AutoUpdaterDotNET;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -203,5 +204,18 @@ namespace TamgaApp
         }
 
         #endregion
+
+        private void LoginForm_Load(object sender, EventArgs e)
+        {
+            // 1. VIP Kapı (Bu ömür boyu burada kalacak, GitHub'ın kilidini açar)
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+
+            // 2. Kullanıcının güncellemeyi "Atla" demesini yasaklıyoruz (Hafıza sorununu çözer)
+            AutoUpdater.ShowSkipButton = false;
+            AutoUpdater.ReportErrors = true;
+
+            // 3. Güncelleme Motorunu Çalıştır!
+            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/refs/heads/main/update.xml");
+        }
     }
 }
