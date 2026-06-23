@@ -26,10 +26,10 @@ jobs:
       uses: NuGet/setup-nuget@v2
 
     - name: 🔄 Gerekli Eklentileri İndir (Restore)
-      run: nuget restore TamgaApp.sln
+      run: nuget restore TamgaApp/TamgaApp.sln
 
     - name: 🚀 Projeyi Derle (Release / x64)
-      run: msbuild TamgaApp.sln /p:Configuration=Release /p:Platform=x64
+      run: msbuild TamgaApp/TamgaApp.sln /p:Configuration=Release /p:Platform=x64
 
     - name: 🗜️ Dosyaları ZIP Yap
       run: |
