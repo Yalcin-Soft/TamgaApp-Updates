@@ -26,14 +26,14 @@ jobs:
       uses: NuGet/setup-nuget@v2
 
     - name: 🔄 Gerekli Eklentileri İndir (Restore)
-      run: nuget restore TamgaApp/TamgaApp.sln
+      run: nuget restore TamgaApp.sln
 
     - name: 🚀 Projeyi Derle (Release / x64)
-      run: msbuild TamgaApp/TamgaApp.sln /p:Configuration=Release /p:Platform=x64
+      run: msbuild TamgaApp.sln /p:Configuration=Release /p:Platform=x64
 
     - name: 🗜️ Dosyaları ZIP Yap
       run: |
-        Compress-Archive -Path "TamgaApp/TamgaApp/bin/x64/Release/*" -DestinationPath "TamgaApp_Guncelleme_v${{ github.event.inputs.version }}.zip"
+        Compress-Archive -Path "TamgaApp/bin/x64/Release/*" -DestinationPath "TamgaApp_Guncelleme_v${{ github.event.inputs.version }}.zip"
 
     - name: 🏆 GitHub Release (Sürüm) Oluştur ve Yükle
       uses: softprops/action-gh-release@v2
