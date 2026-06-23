@@ -35,6 +35,7 @@ namespace TamgaApp
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
             this.tabPage5 = new System.Windows.Forms.TabPage();
             this.panel3 = new System.Windows.Forms.Panel();
+            this.btnTumFirmalariSil = new System.Windows.Forms.Button();
             this.label10 = new System.Windows.Forms.Label();
             this.btnSil = new System.Windows.Forms.Button();
             this.lstFirmalar = new System.Windows.Forms.ListBox();
@@ -71,6 +72,8 @@ namespace TamgaApp
             this.label1 = new System.Windows.Forms.Label();
             this.tabPage3 = new System.Windows.Forms.TabPage();
             this.pnlAmbar = new System.Windows.Forms.Panel();
+            this.btnAmbarAra = new System.Windows.Forms.Button();
+            this.txtAmbarFirmaAra = new System.Windows.Forms.TextBox();
             this.cmbAmbarYazici = new System.Windows.Forms.ComboBox();
             this.label45 = new System.Windows.Forms.Label();
             this.btnAmbarListeyeEkle = new System.Windows.Forms.Button();
@@ -229,9 +232,6 @@ namespace TamgaApp
             this.printPreviewDialog1 = new System.Windows.Forms.PrintPreviewDialog();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
-            this.txtAmbarFirmaAra = new System.Windows.Forms.TextBox();
-            this.btnAmbarAra = new System.Windows.Forms.Button();
-            this.btnTumFirmalariSil = new System.Windows.Forms.Button();
             this.tabPage5.SuspendLayout();
             this.panel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFirmalar)).BeginInit();
@@ -307,6 +307,19 @@ namespace TamgaApp
             this.panel3.Name = "panel3";
             this.panel3.Size = new System.Drawing.Size(502, 766);
             this.panel3.TabIndex = 47;
+            // 
+            // btnTumFirmalariSil
+            // 
+            this.btnTumFirmalariSil.BackColor = System.Drawing.Color.DarkRed;
+            this.btnTumFirmalariSil.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnTumFirmalariSil.Location = new System.Drawing.Point(393, 142);
+            this.btnTumFirmalariSil.Margin = new System.Windows.Forms.Padding(2);
+            this.btnTumFirmalariSil.Name = "btnTumFirmalariSil";
+            this.btnTumFirmalariSil.Size = new System.Drawing.Size(104, 100);
+            this.btnTumFirmalariSil.TabIndex = 47;
+            this.btnTumFirmalariSil.Text = "Tümünü Sil";
+            this.btnTumFirmalariSil.UseVisualStyleBackColor = false;
+            this.btnTumFirmalariSil.Click += new System.EventHandler(this.btnTumFirmalariSil_Click);
             // 
             // label10
             // 
@@ -700,6 +713,24 @@ namespace TamgaApp
             this.pnlAmbar.Size = new System.Drawing.Size(1498, 742);
             this.pnlAmbar.TabIndex = 60;
             // 
+            // btnAmbarAra
+            // 
+            this.btnAmbarAra.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarAra.Location = new System.Drawing.Point(814, 269);
+            this.btnAmbarAra.Name = "btnAmbarAra";
+            this.btnAmbarAra.Size = new System.Drawing.Size(150, 40);
+            this.btnAmbarAra.TabIndex = 27;
+            this.btnAmbarAra.Text = "Firma Ara";
+            this.btnAmbarAra.UseVisualStyleBackColor = true;
+            this.btnAmbarAra.Click += new System.EventHandler(this.btnAmbarAra_Click);
+            // 
+            // txtAmbarFirmaAra
+            // 
+            this.txtAmbarFirmaAra.Location = new System.Drawing.Point(814, 245);
+            this.txtAmbarFirmaAra.Name = "txtAmbarFirmaAra";
+            this.txtAmbarFirmaAra.Size = new System.Drawing.Size(265, 20);
+            this.txtAmbarFirmaAra.TabIndex = 26;
+            // 
             // cmbAmbarYazici
             // 
             this.cmbAmbarYazici.FormattingEnabled = true;
@@ -1067,7 +1098,7 @@ namespace TamgaApp
             this.btnCikisYap.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.btnCikisYap.BackColor = System.Drawing.Color.Red;
             this.btnCikisYap.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnCikisYap.Location = new System.Drawing.Point(944, 99);
+            this.btnCikisYap.Location = new System.Drawing.Point(215, 190);
             this.btnCikisYap.Name = "btnCikisYap";
             this.btnCikisYap.Size = new System.Drawing.Size(285, 122);
             this.btnCikisYap.TabIndex = 17;
@@ -2385,37 +2416,6 @@ namespace TamgaApp
             // printDialog1
             // 
             this.printDialog1.UseEXDialog = true;
-            // 
-            // txtAmbarFirmaAra
-            // 
-            this.txtAmbarFirmaAra.Location = new System.Drawing.Point(814, 245);
-            this.txtAmbarFirmaAra.Name = "txtAmbarFirmaAra";
-            this.txtAmbarFirmaAra.Size = new System.Drawing.Size(265, 20);
-            this.txtAmbarFirmaAra.TabIndex = 26;
-            // 
-            // btnAmbarAra
-            // 
-            this.btnAmbarAra.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarAra.Location = new System.Drawing.Point(814, 269);
-            this.btnAmbarAra.Name = "btnAmbarAra";
-            this.btnAmbarAra.Size = new System.Drawing.Size(150, 40);
-            this.btnAmbarAra.TabIndex = 27;
-            this.btnAmbarAra.Text = "Firma Ara";
-            this.btnAmbarAra.UseVisualStyleBackColor = true;
-            this.btnAmbarAra.Click += new System.EventHandler(this.btnAmbarAra_Click);
-            // 
-            // btnTumFirmalariSil
-            // 
-            this.btnTumFirmalariSil.BackColor = System.Drawing.Color.DarkRed;
-            this.btnTumFirmalariSil.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Italic, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnTumFirmalariSil.Location = new System.Drawing.Point(393, 142);
-            this.btnTumFirmalariSil.Margin = new System.Windows.Forms.Padding(2);
-            this.btnTumFirmalariSil.Name = "btnTumFirmalariSil";
-            this.btnTumFirmalariSil.Size = new System.Drawing.Size(104, 100);
-            this.btnTumFirmalariSil.TabIndex = 47;
-            this.btnTumFirmalariSil.Text = "Tümünü Sil";
-            this.btnTumFirmalariSil.UseVisualStyleBackColor = false;
-            this.btnTumFirmalariSil.Click += new System.EventHandler(this.btnTumFirmalariSil_Click);
             // 
             // MainForm
             // 
