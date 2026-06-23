@@ -33,6 +33,7 @@
             this.label1 = new System.Windows.Forms.Label();
             this.txtSifre = new System.Windows.Forms.TextBox();
             this.btnGiris = new System.Windows.Forms.Button();
+            this.lblVersiyon = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label36
@@ -72,7 +73,7 @@
             // 
             // btnGiris
             // 
-            this.btnGiris.BackColor = System.Drawing.Color.Lime;
+            this.btnGiris.BackColor = System.Drawing.Color.Crimson;
             this.btnGiris.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnGiris.Location = new System.Drawing.Point(437, 206);
             this.btnGiris.Name = "btnGiris";
@@ -82,11 +83,21 @@
             this.btnGiris.UseVisualStyleBackColor = false;
             this.btnGiris.Click += new System.EventHandler(this.btnGiris_Click);
             // 
+            // lblVersiyon
+            // 
+            this.lblVersiyon.AutoSize = true;
+            this.lblVersiyon.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.lblVersiyon.Location = new System.Drawing.Point(722, 411);
+            this.lblVersiyon.Name = "lblVersiyon";
+            this.lblVersiyon.Size = new System.Drawing.Size(0, 15);
+            this.lblVersiyon.TabIndex = 18;
+            // 
             // LoginForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.lblVersiyon);
             this.Controls.Add(this.btnGiris);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.txtSifre);
@@ -107,5 +118,6 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.TextBox txtSifre;
         private System.Windows.Forms.Button btnGiris;
+        private System.Windows.Forms.Label lblVersiyon;
     }
 }
