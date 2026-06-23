@@ -1,0 +1,45 @@
+name: Otomatik Vites (Derleme ve Yayinlama)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Yeni Sürüm Numarası (Örn: 1.0.2.0)'
+        required: true
+        default: '1.0.2.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+    - name: 📥 Kodu Çek
+      uses: actions/checkout@v4
+
+    - name: 🛠️ MSBuild Motorunu Kur
+      uses: microsoft/setup-msbuild@v2
+
+    - name: 📦 NuGet Paketlerini Yükle
+      uses: NuGet/setup-nuget@v2
+
+    - name: 🔄 Gerekli Eklentileri İndir (Restore)
+      run: nuget restore TamgaApp.sln
+
+    - name: 🚀 Projeyi Derle (Release / x64)
+      run: msbuild TamgaApp.sln /p:Configuration=Release /p:Platform=x64
+
+    - name: 🗜️ Dosyaları ZIP Yap
+      run: |
+        Compress-Archive -Path "TamgaApp\bin\x64\Release\*" -DestinationPath "TamgaApp_Guncelleme_v${{ github.event.inputs.version }}.zip"
+
+    - name: 🏆 GitHub Release (Sürüm) Oluştur ve Yükle
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ github.event.inputs.version }}
+        name: TamgaApp Güncellemesi v${{ github.event.inputs.version }}
+        files: TamgaApp_Guncelleme_v${{ github.event.inputs.version }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
