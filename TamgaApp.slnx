@@ -1,0 +1,12 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="TamgaApp/TamgaApp.csproj" Id="659551e4-0193-4bed-9e5d-9725d49ad932">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="TamgaApp_Setup/TamgaApp_Setup.vdproj" Type="Installer">
+    <Build />
+  </Project>
+</Solution>
