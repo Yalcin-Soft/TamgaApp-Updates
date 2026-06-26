@@ -242,6 +242,8 @@ namespace TamgaApp
             this.btnUretimIleri = new System.Windows.Forms.Button();
             this.dtpUretimTarihi = new System.Windows.Forms.DateTimePicker();
             this.tabPage13 = new System.Windows.Forms.TabPage();
+            this.label56 = new System.Windows.Forms.Label();
+            this.txtBarkod = new System.Windows.Forms.TextBox();
             this.btnKismiSevk = new System.Windows.Forms.Button();
             this.btnTamSevk = new System.Windows.Forms.Button();
             this.btnSevkAra = new System.Windows.Forms.Button();
@@ -256,8 +258,6 @@ namespace TamgaApp
             this.printPreviewDialog1 = new System.Windows.Forms.PrintPreviewDialog();
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
-            this.label56 = new System.Windows.Forms.Label();
-            this.txtBarkod = new System.Windows.Forms.TextBox();
             this.tabPage5.SuspendLayout();
             this.panel3.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvFirmalar)).BeginInit();
@@ -2582,6 +2582,24 @@ namespace TamgaApp
             this.tabPage13.Text = "Sevkiyat";
             this.tabPage13.UseVisualStyleBackColor = true;
             // 
+            // label56
+            // 
+            this.label56.AutoSize = true;
+            this.label56.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label56.Location = new System.Drawing.Point(88, 505);
+            this.label56.Name = "label56";
+            this.label56.Size = new System.Drawing.Size(90, 15);
+            this.label56.TabIndex = 35;
+            this.label56.Text = "Ürün Barkodu:";
+            // 
+            // txtBarkod
+            // 
+            this.txtBarkod.Location = new System.Drawing.Point(183, 503);
+            this.txtBarkod.Name = "txtBarkod";
+            this.txtBarkod.Size = new System.Drawing.Size(182, 20);
+            this.txtBarkod.TabIndex = 34;
+            this.txtBarkod.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtBarkod_KeyDown);
+            // 
             // btnKismiSevk
             // 
             this.btnKismiSevk.BackColor = System.Drawing.Color.DarkOrange;
@@ -2713,24 +2731,6 @@ namespace TamgaApp
             // printDialog1
             // 
             this.printDialog1.UseEXDialog = true;
-            // 
-            // label56
-            // 
-            this.label56.AutoSize = true;
-            this.label56.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label56.Location = new System.Drawing.Point(88, 505);
-            this.label56.Name = "label56";
-            this.label56.Size = new System.Drawing.Size(90, 15);
-            this.label56.TabIndex = 35;
-            this.label56.Text = "Ürün Barkodu:";
-            // 
-            // txtBarkod
-            // 
-            this.txtBarkod.Location = new System.Drawing.Point(183, 503);
-            this.txtBarkod.Name = "txtBarkod";
-            this.txtBarkod.Size = new System.Drawing.Size(182, 20);
-            this.txtBarkod.TabIndex = 34;
-            this.txtBarkod.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtBarkod_KeyDown);
             // 
             // MainForm
             // 
