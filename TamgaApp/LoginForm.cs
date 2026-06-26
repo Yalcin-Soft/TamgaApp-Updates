@@ -214,7 +214,7 @@ namespace TamgaApp
             System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 
             // 3. AutoUpdater'ı Çalıştır
-            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/refs/heads/main/TamgaApp/update.xml");
+            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/main/TamgaApp/update.xml");
         }
     }
 }
