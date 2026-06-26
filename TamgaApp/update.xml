@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-	<version>5.0.0.1</version>
-	<url>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases/download/v5.0.0.1/TamgaApp_Guncelleme_v5.0.0.1.zip</url>
+	<version>5.0.0.2</version>
+	<url>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases/download/v5.0.0.2/TamgaApp_Guncelleme_v5.0.0.2.zip</url>
 	<changelog>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases</changelog>
 	<mandatory>true</mandatory>
 </item>

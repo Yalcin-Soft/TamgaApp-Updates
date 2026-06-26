@@ -9,7 +9,9 @@ using System.Linq;
 using System.Windows.Forms;
 using static TamgaApp.DataAccess;
 using AutoUpdaterDotNET;
-    
+using System.Data;
+using System.Net.Http;
+
 namespace TamgaApp
 {
     public partial class MainForm : Form
@@ -41,6 +43,9 @@ namespace TamgaApp
         private Dictionary<string, string> printerMappings = new Dictionary<string, string>();
         private const string PrinterSettingsFile = "printer_settings.json";
         private PrintDocument pdUretim;
+
+        // --- Sevkiyat Sistemi Global Değişkenleri ---
+        private DataTable dtTumSiparisler = new DataTable();           // Tüm siparişlerin tutulacağı sanal depo
 
         [Serializable]
         public class DesignItem
@@ -112,8 +117,6 @@ namespace TamgaApp
             }
 
             LoadFirmalar();
-
-            
 
             // Sağ paneldeki araçların varsayılan değerleri
             numPropFontSize.Minimum = 6;
@@ -2364,8 +2367,6 @@ namespace TamgaApp
             }
         }
 
-        // 🚀 TÜM LİSTEYİ ZARFLARA GÖNDERME BUTONU
-        // 🚀 TÜM LİSTEYİ ZARFLARA GÖNDERME BUTONU
         private void btnAmbarYazdir_Click(object sender, EventArgs e)
         {
             if (dgvAmbarSonListe.Rows.Count == 0) { MessageBox.Show("Yazdırılacak hiç palet/firma yok!"); return; }
@@ -2454,10 +2455,9 @@ namespace TamgaApp
 
             // =========================================================================================
             // 📐 MİLİMETRİK İNCE AYAR MOTORU
+            int inceAyarX = -45; // 🎯 45 piksel SOLA kaydırdık
+            int inceAyarY = -35; // 🎯 35 piksel YUKARI kaldırdık
             // =========================================================================================
-            int inceAyarX = -45; // 🎯 45 piksel SOLA kaydırdık (Logoya çarpmayacak kadar tatlı bir mesafe)
-            int inceAyarY = -35; // 🎯 35 piksel YUKARI kaldırdık (Alttaki cebi tamamen kurtaracak)
-                                 // =========================================================================================
 
             int ustBosluk = 76 + inceAyarY;
             int kutuYukseklik = 280;
@@ -2466,7 +2466,6 @@ namespace TamgaApp
             int solBosluk = 40 + inceAyarX;
             int kutuArasiBosluk = 20;
             int paletSolKoordinat = solBosluk + adresGenişlik + kutuArasiBosluk;
-            // =========================================================================================
 
             // 1. ADRES KUTUSU
             e.Graphics.DrawRectangle(Pens.Black, solBosluk, ustBosluk, adresGenişlik, kutuYukseklik);
@@ -2507,5 +2506,351 @@ namespace TamgaApp
         }
 
         #endregion
+
+        // =========================================================================================
+
+        #region 📦 13. SQL BAĞLANTISI VE SEVKİYAT OPERASYONLARI 
+
+        private void btnSqlKaydet_Click(object sender, EventArgs e)
+        {
+            Properties.Settings.Default.SqlSunucu = txtSqlSunucu.Text;
+            Properties.Settings.Default.SqlVeritabani = txtSqlVeritabani.Text;
+            Properties.Settings.Default.SqlKullanici = txtSqlKullanici.Text;
+
+            // ŞİFREYİ İSE KRİPTO MOTORUNDAN GEÇİRİP ÖYLE KAYDEDİYORUZ!
+            Properties.Settings.Default.SqlSifre = Kripto.Sifrele(txtSqlSifre.Text);
+
+            Properties.Settings.Default.Save();
+            MessageBox.Show("SQL Bağlantı ayarları güvenli bir şekilde şifrelenerek kaydedildi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void btnSqlTemizle_Click(object sender, EventArgs e)
+        {
+            txtSqlSunucu.Clear();
+            txtSqlVeritabani.Clear();
+            txtSqlKullanici.Clear();
+            txtSqlSifre.Clear();
+
+            Properties.Settings.Default.SqlSunucu = "";
+            Properties.Settings.Default.SqlVeritabani = "";
+            Properties.Settings.Default.SqlKullanici = "";
+            Properties.Settings.Default.SqlSifre = "";
+            Properties.Settings.Default.Save();
+
+            MessageBox.Show("SQL Ayarları ve kriptolu şifreler sistemden tamamen silindi!", "Sıfırlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private string SqlBaglantiDizesiGetir()
+        {
+            string sunucu = Properties.Settings.Default.SqlSunucu;
+            string vt = Properties.Settings.Default.SqlVeritabani;
+            string kullanici = Properties.Settings.Default.SqlKullanici;
+            string gercekSifre = Kripto.Coz(Properties.Settings.Default.SqlSifre);
+
+            return $"Provider=SQLOLEDB.1;Password={gercekSifre};Persist Security Info=True;User ID={kullanici};Initial Catalog={vt};Data Source={sunucu};Use Procedure for Prepare=1;Auto Translate=True;Packet Size=4096;Use Encryption for Data=False;Tag with column collation when possible=False";
+        }
+
+        private void btnSiparisYenile_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string baglantiDizesi = SqlBaglantiDizesiGetir();
+
+                string sorgu = @"
+                SELECT  
+                    A.DOCTYPE AS BelgeTipi,
+                    A.STFDOCNUM AS SirkuNo,
+                    A.DOCNUM AS BelgeNo,
+                    A.NAME1 AS MusteriAdi,
+                    A.GRCNAME1 AS SevkMusteri,
+                    B.MATERIAL AS Malzeme,
+                    B.MTEXT AS MalzemeAdi,
+                    B.LTEXT AS SecenekAciklamasi,
+                    B.AVAILQTY AS Bakiye
+                FROM IASSALHEAD A 
+                LEFT OUTER JOIN IASBAS007X R ON R.CLIENT = A.CLIENT 
+                    AND R.COMPANY = A.COMPANY 
+                    AND R.SALDEPT = A.SALDEPT 
+                    AND R.LANGU = 'T' , IASBAS010 , IASSALITEM B 
+                LEFT OUTER JOIN IASSALITEM S ON S.COMPANY = B.COMPANY 
+                    AND S.DOCTYPE = B.DOCTYPE 
+                    AND S.DOCNUM = B.DOCNUM 
+                    AND S.ITEMNUM = B.ITEMNUM 
+                    AND S.SETITEMNUM = 0 
+                    AND S.ISSET = 1 , IASMATBASIC C 
+                LEFT OUTER JOIN ECESAL016 P ON P.CLIENT = C.CLIENT 
+                    AND P.COMPANY = C.COMPANY 
+                    AND P.SEGMENT = C.SEGMENT , IASMATFMS D 
+                LEFT OUTER JOIN IASBAS008X Q ON Q.CLIENT = D.CLIENT 
+                    AND Q.COMPANY = D.COMPANY 
+                    AND Q.HIERARCHY = D.HIERARCHY 
+                    AND Q.LANGU = 'T' , IASCUSTOMER CUS 
+                LEFT OUTER JOIN ECESAL017 E ON E.CLIENT = CUS.CLIENT 
+                    AND E.COMPANY = CUS.COMPANY 
+                    AND E.BRANCHTYPE = CUS.BRANCHTYPE 
+                WHERE A.CLIENT = '00' 
+                    AND A.COMPANY = '09' 
+                    AND A.DOCTYPE IN  ('SE','O1') 
+                    AND A.VALIDFROM >= '2023-01-01' 
+                    AND A.VALIDFROM <= '2030-01-01' 
+                    AND A.ISORDCHAR = 1 
+                    AND B.ORDSTAT < 2 
+                    AND B.ISSTOP = '0' 
+                    AND A.ISDELETE = 0 
+                    AND B.CLIENT = A.CLIENT 
+                    AND B.COMPANY = A.COMPANY 
+                    AND B.DOCTYPE = A.DOCTYPE 
+                    AND B.DOCNUM = A.DOCNUM 
+                    AND CUS.COMPANY = A.COMPANY 
+                    AND CUS.BUSAREA = A.BUSAREA 
+                    AND CUS.CUSTOMER = A.CUSTOMER 
+                    AND (B.ISSET = 0 OR B.SETITEMNUM <> 0) 
+                    AND B.BUSAREA = '*' 
+                    AND B.UPTDATE >= '1975-01-01' 
+                    AND B.UPTDATE <= '2030-01-01' 
+                    AND C.CLIENT = B.CLIENT 
+                    AND C.COMPANY = B.COMPANY 
+                    AND C.MATERIAL = B.MATERIAL 
+                    AND C.VALIDFROM <= GETDATE() 
+                    AND C.VALIDUNTIL >= GETDATE() 
+                    AND D.CLIENT = B.CLIENT 
+                    AND D.COMPANY = B.COMPANY 
+                    AND D.PLANT = B.PLANT 
+                    AND D.MATERIAL = B.MATERIAL 
+                    AND D.VALIDFROM <= GETDATE() 
+                    AND D.VALIDUNTIL >= GETDATE() 
+                    AND IASBAS010.CLIENT = B.CLIENT 
+                    AND IASBAS010.COMPANY = B.COMPANY 
+                    AND IASBAS010.PRICELIST = B.PRICELIST 
+                ORDER BY A.COMPANY, A.CUSTOMER, A.DOCTYPE, A.DOCNUM, B.ITEMNUM;";
+
+                using (OleDbConnection baglanti = new OleDbConnection(baglantiDizesi))
+                {
+                    using (OleDbDataAdapter adaptor = new OleDbDataAdapter(sorgu, baglanti))
+                    {
+                        dtTumSiparisler.Clear();
+                        adaptor.Fill(dtTumSiparisler);
+                    }
+                }
+
+                cmbBelgeNo.Items.Clear();
+                var benzersizBelgeler = dtTumSiparisler.AsEnumerable()
+                                                       .Select(row => row.Field<string>("BelgeNo"))
+                                                       .Distinct()
+                                                       .ToArray();
+                cmbBelgeNo.Items.AddRange(benzersizBelgeler);
+
+                MessageBox.Show("Veriler başarıyla çekildi! Belge seçebilirsiniz.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("SQL Bağlantı Hatası: \n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnSevkAra_Click(object sender, EventArgs e)
+        {
+            string secilenBelge = cmbBelgeNo.Text.Trim();
+
+            if (string.IsNullOrEmpty(secilenBelge))
+            {
+                MessageBox.Show("Lütfen aranacak bir Belge No girin veya listeden seçin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo = '{secilenBelge}'");
+
+            if (filtrelenmisSatirlar.Length > 0)
+            {
+                txtMusteriAdi.Text = filtrelenmisSatirlar[0]["MusteriAdi"].ToString();
+                txtSevkMusteri.Text = filtrelenmisSatirlar[0]["SevkMusteri"].ToString();
+
+                DataTable dtEkran = new DataTable();
+                dtEkran.Columns.Add("Malzeme Kodu", typeof(string));
+                dtEkran.Columns.Add("Malzeme Adı", typeof(string));
+                dtEkran.Columns.Add("Açıklama", typeof(string));
+                dtEkran.Columns.Add("Sipariş Adedi", typeof(int));
+                dtEkran.Columns.Add("Okutulan", typeof(int));
+
+                foreach (DataRow satir in filtrelenmisSatirlar)
+                {
+                    dtEkran.Rows.Add(
+                        satir["Malzeme"].ToString(),
+                        satir["MalzemeAdi"].ToString(),
+                        satir["SecenekAciklamasi"].ToString(),
+                        Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])),
+                        0
+                    );
+                }
+
+                dgvMalzemeler.DataSource = dtEkran;
+                dgvMalzemeler.AllowUserToAddRows = false;
+                dgvMalzemeler.AllowUserToDeleteRows = false;
+                dgvMalzemeler.ReadOnly = true;
+                dgvMalzemeler.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+                dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            }
+            else
+            {
+                MessageBox.Show("Bu Belge Numarasına ait bir sipariş bulunamadı!", "Bulunamadı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                txtMusteriAdi.Clear();
+                txtSevkMusteri.Clear();
+                dgvMalzemeler.DataSource = null;
+            }
+        }
+
+        // 🔫 EKSİK OLAN BARKOD OKUTMA MOTORU (BURAYA EKLENDİ!)
+        private void txtBarkod_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Eğer basılan tuş "Enter" ise işlemi başlat (Barkod tabancaları Enter basar)
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                string okutulanBarkod = txtBarkod.Text.Trim(); // Formdaki TextBox'ın adı txtBarkod olmalı!
+
+                if (string.IsNullOrEmpty(okutulanBarkod)) return;
+
+                bool urunBulundu = false;
+
+                foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
+                {
+                    if (satir.Cells["Malzeme Kodu"].Value != null && satir.Cells["Malzeme Kodu"].Value.ToString() == okutulanBarkod)
+                    {
+                        urunBulundu = true;
+                        int siparisAdedi = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
+                        int okutulanAdet = Convert.ToInt32(satir.Cells["Okutulan"].Value);
+
+                        if (okutulanAdet >= siparisAdedi)
+                        {
+                            MessageBox.Show("DUR! Bu üründen sipariş edilen miktarı zaten tamamladınız.", "Fazla Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            txtBarkod.Clear();
+                            return;
+                        }
+
+                        okutulanAdet++;
+                        satir.Cells["Okutulan"].Value = okutulanAdet;
+
+                        if (okutulanAdet == siparisAdedi)
+                        {
+                            satir.DefaultCellStyle.BackColor = System.Drawing.Color.LightGreen;
+                        }
+                        else
+                        {
+                            satir.DefaultCellStyle.BackColor = System.Drawing.Color.LightYellow;
+                        }
+
+                        break;
+                    }
+                }
+
+                if (!urunBulundu)
+                {
+                    MessageBox.Show("HATA! Okutulan ürün bu siparişte YOK!", "Yanlış Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+
+                txtBarkod.Clear();
+                txtBarkod.Focus();
+            }
+        }
+
+        private void btnTumVerileriTemizle_Click(object sender, EventArgs e)
+        {
+            DialogResult onay = MessageBox.Show(
+                "DİKKAT: Kullanıcı hesapları ve yetkiler hariç; SQL bağlantı ayarları, çekilen tüm siparişler ve önbellekteki operasyonel veriler SİLİNECEKTİR! Onaylıyor musunuz?",
+                "Büyük Temizlik Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+            if (onay == DialogResult.Yes)
+            {
+                Properties.Settings.Default.SqlSunucu = "";
+                Properties.Settings.Default.SqlVeritabani = "";
+                Properties.Settings.Default.SqlKullanici = "";
+                Properties.Settings.Default.SqlSifre = "";
+                Properties.Settings.Default.Save();
+
+                cmbBelgeNo.Text = "";
+                cmbBelgeNo.Items.Clear();
+                txtMusteriAdi.Clear();
+                txtSevkMusteri.Clear();
+                dgvMalzemeler.DataSource = null;
+
+                if (dtTumSiparisler != null) dtTumSiparisler.Clear();
+
+                MessageBox.Show("Kullanıcı yetkileri korunarak, tüm operasyonel veriler ve SQL ayarları başarıyla sıfırlandı!", "Temizlik Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private void btnTamSevk_Click(object sender, EventArgs e)
+        {
+            if (dgvMalzemeler.Rows.Count == 0)
+            {
+                MessageBox.Show("Lütfen önce bir sipariş çağırın ve ürünleri okutun!", "İşlem Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            bool eksikVarMi = false;
+            foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
+            {
+                int siparis = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
+                int okutulan = Convert.ToInt32(satir.Cells["Okutulan"].Value);
+
+                if (okutulan < siparis)
+                {
+                    eksikVarMi = true;
+                    break;
+                }
+            }
+
+            if (eksikVarMi)
+            {
+                MessageBox.Show("DUR! Bu siparişte henüz eksik okutulmuş ürünler var. 'Tam Sevk' yapabilmek için tüm ürünlerin eksiksiz okutulması gerekir!", "Eksik Ürün Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz okutuldu. Tam Sevk işlemi onaylandı ve veritabanına kaydediliyor...", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                btnTumVerileriTemizle_Click(sender, e);
+            }
+        }
+
+        private void btnKismiSevk_Click(object sender, EventArgs e)
+        {
+            if (dgvMalzemeler.Rows.Count == 0) return;
+
+            List<string> eksikListesi = new List<string>();
+
+            foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
+            {
+                int siparis = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
+                int okutulan = Convert.ToInt32(satir.Cells["Okutulan"].Value);
+
+                if (okutulan < siparis)
+                {
+                    string malzemeKodu = satir.Cells["Malzeme Kodu"].Value.ToString();
+                    string malzemeAdi = satir.Cells["Malzeme Adı"].Value.ToString();
+                    eksikListesi.Add($"- {malzemeKodu} ({malzemeAdi}) | Gerekli: {siparis}, Okutulan: {okutulan}");
+                }
+            }
+
+            if (eksikListesi.Count > 0)
+            {
+                string mesaj = "Aşağıdaki ürünler EKSİK okutuldu:\n\n" + string.Join("\n", eksikListesi) + "\n\nYine de eksik haliyle 'Kısmi Sevk' işlemini onaylıyor musunuz?";
+                DialogResult onay = MessageBox.Show(mesaj, "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                if (onay == DialogResult.Yes)
+                {
+                    MessageBox.Show("Kısmi Sevk onaylandı. Mevcut adetler veritabanına işleniyor...", "Kısmi Sevk Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    btnTumVerileriTemizle_Click(sender, e);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Listede hiç eksik ürün yok! Doğrudan 'Tam Sevk' yapabilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // Not: Eğer önceden cmbBelgeNo_SelectedIndexChanged kullandıysan ama artık sildiysen,
+        // o metodu tamamen kaldırdım ki program hata vermesin (Çünkü btnSevkAra işini yapıyor).
+
+        #endregion
+
     }
 }

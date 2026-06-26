@@ -22,5 +22,53 @@ namespace TamgaApp.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SqlSunucu {
+            get {
+                return ((string)(this["SqlSunucu"]));
+            }
+            set {
+                this["SqlSunucu"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SqlVeritabani {
+            get {
+                return ((string)(this["SqlVeritabani"]));
+            }
+            set {
+                this["SqlVeritabani"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SqlKullanici {
+            get {
+                return ((string)(this["SqlKullanici"]));
+            }
+            set {
+                this["SqlKullanici"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string SqlSifre {
+            get {
+                return ((string)(this["SqlSifre"]));
+            }
+            set {
+                this["SqlSifre"] = value;
+            }
+        }
     }
 }

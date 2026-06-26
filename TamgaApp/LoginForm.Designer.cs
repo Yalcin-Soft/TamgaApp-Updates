@@ -87,7 +87,7 @@
             // 
             this.lblVersiyon.AutoSize = true;
             this.lblVersiyon.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.lblVersiyon.Location = new System.Drawing.Point(722, 411);
+            this.lblVersiyon.Location = new System.Drawing.Point(679, 413);
             this.lblVersiyon.Name = "lblVersiyon";
             this.lblVersiyon.Size = new System.Drawing.Size(0, 15);
             this.lblVersiyon.TabIndex = 18;
