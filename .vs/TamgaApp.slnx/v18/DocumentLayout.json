@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\tamgaapp\\properties\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\properties\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\tamgaapp\\update.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}",
       "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\update.xml||{FA3CD31E-987B-443A-9B81-186104E8DAC1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\tamgaapp\\properties\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|solutionrelative:tamgaapp\\properties\\assemblyinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{659551E4-0193-4BED-9E5D-9725D49AD932}|TamgaApp\\TamgaApp.csproj|c:\\users\\ugury\\onedrive\\masa\u00FCst\u00FC\\tamgaapp\\tamgaapp-updates\\yalcin-soft\\tamgaapp-updates\\tamgaapp\\mainform.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
@@ -44,17 +44,17 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "AssemblyInfo.cs",
               "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\Properties\\AssemblyInfo.cs",
               "RelativeDocumentMoniker": "TamgaApp\\Properties\\AssemblyInfo.cs",
               "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\Properties\\AssemblyInfo.cs",
               "RelativeToolTip": "TamgaApp\\Properties\\AssemblyInfo.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAAlAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAAqAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-06-23T20:31:57.395Z",
               "IsPinned": true,
@@ -62,13 +62,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "update.xml",
               "DocumentMoniker": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\update.xml",
               "RelativeDocumentMoniker": "TamgaApp\\update.xml",
               "ToolTip": "C:\\Users\\ugury\\OneDrive\\Masa\u00FCst\u00FC\\TamgaApp\\TamgaApp-Updates\\Yalcin-Soft\\TamgaApp-Updates\\TamgaApp\\update.xml",
               "RelativeToolTip": "TamgaApp\\update.xml",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAABQAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAYAAAAHAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003576|",
               "WhenOpened": "2026-06-23T20:13:55.517Z",
               "IsPinned": true,
