@@ -113,6 +113,7 @@ C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaAp
 C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.LoginForm.resources
 C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.MainForm.resources
 C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.Properties.Resources.resources
+C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.SplashForm.resources
 C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.csproj.GenerateResource.cache
 C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.csproj.CoreCompileInputs.cache
 C:\Users\ugury\OneDrive\Masaüstü\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\obj\x64\Debug\TamgaApp.csproj.Up2Date

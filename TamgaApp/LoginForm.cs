@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Drawing2D; // Arka plan renk geçişi (Gradient) için gerekli
 using System.Linq;
+using System.Runtime.InteropServices; // Yuvarlak köşe ve sürükleme API'leri için gerekli
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -13,16 +15,105 @@ using static TamgaApp.DataAccess;
 namespace TamgaApp
 {
     /// <summary>
-    /// Sistemin ilk açılışında kimlik doğrulamasını, God Mode girişlerini ve süre/şifre kontrollerini yapan ana giriş formudur.
+    /// Sistemin ilk açılışında kimlik doğrulamasını, God Mode girişlerini, süre/şifre kontrollerini ve görsel şöleni sunan ana giriş formudur.
     /// </summary>
     public partial class LoginForm : Form
     {
+        #region 📐 1. GÖRSEL MOTOR (Yuvarlak Köşe ve Sürükleme Ayarları)
+
+        [DllImport("user32.dll")]
+        public static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wp, int lp);
+
+        [DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
+        private static extern IntPtr CreateRoundRectRgn(int nLeftRect, int nTopRect, int nRightRect, int nBottomRect, int nWidthEllipse, int nHeightEllipse);
+
+        private const int WM_NCLBUTTONDOWN = 0xA1;
+        private const int HT_CAPTION = 0x2;
+
+        #endregion
+
         public LoginForm()
         {
             InitializeComponent();
+
+            // Çift arabellekleme (Ekranda yırtılma ve titremeyi önler, gradient akıcı olur)
+            this.DoubleBuffered = true;
+
+            // Formun köşelerini hafifçe yuvarlatıyoruz (Elit görünüm için)
+            this.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, 30, 30));
         }
 
-        #region 🔑 1. ANA GİRİŞ MOTORU (Kullanıcı Doğrulama ve Yönetici Kodları)
+        private void LoginForm_Load(object sender, EventArgs e)
+        {
+            // 1. Ekrana o anki gerçek sürümü yazdırıyoruz!
+            lblVersiyon.Text = "Sürüm: " + Application.ProductVersion;
+
+            // 2. VIP Kapı (Güvenlik Duvarını Aşmak İçin)
+            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+
+            // 3. AutoUpdater'ı Çalıştır
+            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/main/TamgaApp/update.xml");
+        }
+
+        #region 🎨 2. ARAYÜZ TASARIMI (Renk Geçişi ve Form Taşıma)
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+
+            // TamgaApp Renk Paletimiz: 
+            // Sol Taraf: Koyu Metalik Karbon -> Zümrüt Yeşili
+            // Sağ Taraf: Temiz Açık Gri/Beyaz
+            using (LinearGradientBrush brush = new LinearGradientBrush(
+                this.ClientRectangle,
+                Color.FromArgb(26, 28, 30),       // Başlangıç
+                Color.FromArgb(248, 249, 250),    // Bitiş
+                0F)) // 0 derece = Soldan sağa düz geçiş
+            {
+                ColorBlends(brush);
+                g.FillRectangle(brush, this.ClientRectangle);
+            }
+        }
+
+        private void ColorBlends(LinearGradientBrush brush)
+        {
+            ColorBlend blend = new ColorBlend();
+            blend.Colors = new Color[]
+            {
+                Color.FromArgb(20, 22, 24),    // %0 -> En sol koyu metalik
+                Color.FromArgb(15, 76, 58),    // %40 -> Tamga Zümrüt Yeşili geçişi
+                Color.FromArgb(248, 249, 250), // %55 -> Yumuşak geçiş başlangıcı
+                Color.FromArgb(255, 255, 255)  // %100 -> En sağ tamamen beyaz
+            };
+            blend.Positions = new float[] { 0.0f, 0.40f, 0.55f, 1.0f };
+            brush.InterpolationColors = blend;
+        }
+
+        private void LoginForm_MouseDown(object sender, MouseEventArgs e)
+        {
+            // Kullanıcı formun sol tarafındaki koyu alana (X < 400) basınca formu taşıyabilsin
+            if (e.Button == MouseButtons.Left && e.X < 400)
+            {
+                ReleaseCapture();
+                SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+            }
+        }
+
+        // Sağ üstteki Çarpı (X) butonuna çift tıklayıp bu event'e bağlamayı unutma
+        private void btnExit_Click(object sender, EventArgs e)
+        {
+            // 🚀 TEK DOKUNULAN YER BURASI: Application.Exit yerine Environment.Exit(0) kullanıldı.
+            // Bu sayede programın arka planda yeniden açılması tamamen engellenir.
+            Environment.Exit(0);
+        }
+
+        #endregion
+
+        #region 🔑 3. ANA GİRİŞ MOTORU (Kullanıcı Doğrulama ve Yönetici Kodları)
 
         /// <summary>Giriş butonuna tıklandığında çalışır. Sistemdeki en kritik güvenlik kontrol kapısıdır.</summary>
         private void btnGiris_Click(object sender, EventArgs e)
@@ -114,9 +205,7 @@ namespace TamgaApp
 
         #endregion
 
-        // =========================================================================================
-
-        #region 🛡️ 2. DİNAMİK YETKİLENDİRME VE YENİLEME PENCERELERİ (KOD İLE ÜRETİLEN FORMLAR)
+        #region 🛡️ 4. DİNAMİK YETKİLENDİRME VE YENİLEME PENCERELERİ (KOD İLE ÜRETİLEN FORMLAR)
 
         /// <summary>
         /// Kullanıcının süresi bittiğinde ekrana anında geçici bir "Yönetici Şifre İsteme" penceresi (formu) çizen metot.
@@ -204,17 +293,5 @@ namespace TamgaApp
         }
 
         #endregion
-
-        private void LoginForm_Load(object sender, EventArgs e)
-        {
-            // 1. Ekrana o anki gerçek sürümü yazdırıyoruz!
-            lblVersiyon.Text = "Sürüm: " + Application.ProductVersion;
-
-            // 2. VIP Kapı (Güvenlik Duvarını Aşmak İçin)
-            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
-
-            // 3. AutoUpdater'ı Çalıştır
-            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/main/TamgaApp/update.xml");
-        }
     }
 }

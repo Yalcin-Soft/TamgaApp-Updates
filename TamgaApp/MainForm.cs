@@ -92,6 +92,7 @@ namespace TamgaApp
         {
             InitializeComponent();
             this.Load += MainForm_Load;
+            this.FormClosing += MainForm_FormClosing; // 🚀 Kapanış animasyonu için eklendi
             WireUiEvents();
         }
 
@@ -2027,10 +2028,50 @@ namespace TamgaApp
             }
         }
 
+        // =========================================================================================
+        // 🚀 ÇIKIŞ YÖNETİMİ VE ANİMASYONLU KAPANMA MOTORU
+
+        private bool kapanisBasladi = false;
+
+        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Kullanıcı sağ üstteki çarpıdan (X) kapattığında şovumuzu başlatalım
+            if (!kapanisBasladi)
+            {
+                e.Cancel = true; // Standart ve sıkıcı kapanmayı iptal et
+                CikisAnimasyonuVeKapat();
+            }
+        }
+
         private void btnCikisYap_Click(object sender, EventArgs e)
         {
-            Application.Restart();
+            // Butona tıklandığında aynı şov başlasın
+            CikisAnimasyonuVeKapat();
         }
+
+        private void CikisAnimasyonuVeKapat()
+        {
+            kapanisBasladi = true;
+
+            // Arkadaki devasa MainForm'u saniyesinde gizliyoruz
+            this.Hide();
+
+            // Veda şovu için asıl aktörü (SplashForm) sahneye çağırıyoruz!
+            SplashForm vedaEkrani = new SplashForm();
+            vedaEkrani.StartPosition = FormStartPosition.CenterScreen;
+            vedaEkrani.Show();
+
+            // 1.5 saniye bekle ve sistemi acımasızca KÖKTEN kapat
+            Timer t = new Timer();
+            t.Interval = 1500;
+            t.Tick += (s, ev) =>
+            {
+                t.Stop();
+                Environment.Exit(0);
+            };
+            t.Start();
+        }
+        // =========================================================================================
 
         private void btnKullaniciListele_Click(object sender, EventArgs e)
         {
@@ -2699,7 +2740,6 @@ namespace TamgaApp
             }
         }
 
-        // 🔫 EKSİK OLAN BARKOD OKUTMA MOTORU (BURAYA EKLENDİ!)
         private void txtBarkod_KeyDown(object sender, KeyEventArgs e)
         {
             // Eğer basılan tuş "Enter" ise işlemi başlat (Barkod tabancaları Enter basar)
@@ -2846,9 +2886,6 @@ namespace TamgaApp
                 MessageBox.Show("Listede hiç eksik ürün yok! Doğrudan 'Tam Sevk' yapabilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
-
-        // Not: Eğer önceden cmbBelgeNo_SelectedIndexChanged kullandıysan ama artık sildiysen,
-        // o metodu tamamen kaldırdım ki program hata vermesin (Çünkü btnSevkAra işini yapıyor).
 
         #endregion
 
