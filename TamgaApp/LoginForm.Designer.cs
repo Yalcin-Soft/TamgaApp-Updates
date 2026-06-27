@@ -73,7 +73,7 @@
             // 
             // btnGiris
             // 
-            this.btnGiris.BackColor = System.Drawing.Color.Crimson;
+            this.btnGiris.BackColor = System.Drawing.Color.Lime;
             this.btnGiris.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnGiris.Location = new System.Drawing.Point(437, 206);
             this.btnGiris.Name = "btnGiris";
