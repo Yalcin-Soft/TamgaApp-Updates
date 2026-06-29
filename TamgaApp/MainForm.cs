@@ -104,15 +104,57 @@ namespace TamgaApp
             // GİRİŞ YAPAN KULLANICIYI PENCERE BAŞLIĞINA YAZ
             this.Text = $"TamgaApp Otomasyon - Aktif Kullanıcı: {AktifKullaniciAdi}";
 
-            // 🛡️ YETKİLENDİRME KALKANI (Otomatik Tarama Motoru)
-            if (AktifYetkiler != "Sınırsız")
+            // --- YETKİ KUTUSUNU OTOMATİK DOLDURAN MOTOR ---
+            clbYetkiler.Items.Clear();
+            foreach (TabPage sekme in tabControl1.TabPages)
+            {
+                clbYetkiler.Items.Add(sekme.Text); // Ana sekmeyi ekle
+
+                // Eğer bu ana sekmenin içinde (örneğin Ayarlar'ın içinde) alt sekmeler varsa onları da bul
+                foreach (Control ctrl in sekme.Controls)
+                {
+                    if (ctrl is TabControl altTabControl)
+                    {
+                        foreach (TabPage altSekme in altTabControl.TabPages)
+                        {
+                            // "Yönetim" sekmesini listeye ASLA ekleme (Sadece God Mode/Yöneticiler görebilir)
+                            if (altSekme.Text != "Yönetim")
+                            {
+                                clbYetkiler.Items.Add(altSekme.Text);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 🛡️ ULTRA GÜVENLİ GOD MODE DESTEKLİ YETKİ KALKANI
+            // Eğer giren kişi ana kurucu (TamgaApp) VEYA yetkisi Sınırsız ise bu if'i tamamen atlar, HER ŞEYİ görür.
+            if (AktifKullaniciAdi != "TamgaApp" && AktifYetkiler != "Sınırsız")
             {
                 var yetkiListesi = AktifYetkiler.Split(',').Select(y => y.Trim()).ToList();
+
                 foreach (TabPage sekme in tabControl1.TabPages.Cast<TabPage>().ToList())
                 {
                     if (!yetkiListesi.Contains(sekme.Text))
                     {
-                        tabControl1.TabPages.Remove(sekme);
+                        tabControl1.TabPages.Remove(sekme); // Yetkisiz ana sekmeyi sil
+                    }
+                    else
+                    {
+                        foreach (Control ctrl in sekme.Controls)
+                        {
+                            if (ctrl is TabControl altTabControl)
+                            {
+                                foreach (TabPage altSekme in altTabControl.TabPages.Cast<TabPage>().ToList())
+                                {
+                                    // "Yönetim" sekmesini God Mode hariç HERKESE (normal yetkililere bile) kapatıyoruz!
+                                    if (altSekme.Text == "Yönetim" || !yetkiListesi.Contains(altSekme.Text))
+                                    {
+                                        altTabControl.TabPages.Remove(altSekme);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -234,6 +276,74 @@ namespace TamgaApp
 
             // AMBAR TABLOLARINI VE SÜTUNLARINI YARATAN MOTORU ÇALIŞTIR
             AmbarSisteminiHazirla();
+
+            // Karşılama mesajını yazdırıyoruz
+            lblKarsilama.Text = $"Hoş Geldin {AktifKullaniciAdi}";
+
+            // Saati başlatıyoruz
+            timerSaat.Tick += timerSaat_Tick;
+            timerSaat.Interval = 1000; // 1 saniye (1000 milisaniye)
+            timerSaat.Start();
+
+            tabControl1.SelectedIndexChanged += tabControl1_SelectedIndexChanged;
+
+            // Program ilk açıldığında Ana Panel'in (kompakt) boyutlarında ve ekranın tam ortasında başlamasını sağlar.
+            this.Size = new Size(950, 600);
+            this.CenterToScreen();
+
+            // Premium görsel makyajı aktif et
+            ElitTasarimiUygula();
+        }
+
+        private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            // Hangi sekmeye tıklandığını isminden kontrol ediyoruz
+            string seciliSekme = tabControl1.SelectedTab.Text;
+
+            if (seciliSekme == "Ana Panel")
+            {
+                // Ana ekran için şık ve derli toplu bir boyut
+                this.Size = new Size(950, 600);
+                this.CenterToScreen(); // Ekranın ortasına hizalar
+            }
+            else if (seciliSekme == "Üretim Takip") // 🚀 ÜRETİM SEKMESİ İÇİN OTOMATİK MOTOR
+            {
+                this.Size = new Size(1400, 850);
+                this.CenterToScreen();
+
+                // Otomatik Yazıcı Yükleme
+                cmbUretimYazici.Items.Clear();
+
+                // Otomatik Yazıcı Yükleme
+                cmbUretimYazici.Items.Clear();
+                foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+                {
+                    cmbUretimYazici.Items.Add(printer);
+                }
+                if (cmbUretimYazici.Items.Count > 0) cmbUretimYazici.SelectedIndex = 0;
+
+                // Sekme açılır açılmaz barkod tabancası için imleci hazırla
+                txtBarkodOkut.Focus(); 
+            }
+            else if (seciliSekme == "Çoklu Zarf Yazdırma" || seciliSekme == "Sevkiyat")
+            {
+                // Devasa tabloların olduğu sekmeler için geniş ve ferah bir boyut (Genişliği 1400 yaptık)
+                this.Size = new Size(1400, 850);
+                this.CenterToScreen();
+            }
+            else
+            {
+                // Geri kalan standart sekmeler (Yeni Firma Ekleme vs.) için orta karar bir boyut
+                this.Size = new Size(1100, 700);
+                this.CenterToScreen();
+            }
+        }
+
+        private void timerSaat_Tick(object sender, EventArgs e)
+        {
+            // Saat her saniye tık ettiğinde Label'ları günceller
+            lblSaat.Text = DateTime.Now.ToString("HH:mm:ss");
+            lblTakvim.Text = DateTime.Now.ToString("dd MMMM yyyy, dddd"); // Örn: 28 Haziran 2026, Pazar
         }
 
         /// <summary>
@@ -267,10 +377,7 @@ namespace TamgaApp
             if (dgvZarfFirmalar != null) { dgvZarfFirmalar.CellDoubleClick -= dgvZarfFirmalar_CellDoubleClick; dgvZarfFirmalar.CellDoubleClick += dgvZarfFirmalar_CellDoubleClick; }
             if (btnAmbarAra != null) { btnAmbarAra.Click -= btnAmbarAra_Click; btnAmbarAra.Click += btnAmbarAra_Click; }
             if (btnTumFirmalariSil != null) { btnTumFirmalariSil.Click -= btnTumFirmalariSil_Click; btnTumFirmalariSil.Click += btnTumFirmalariSil_Click; }
-
-            // Seçici Kutu (Geçiş Motoru) Bağlantısı
-            if (cmbZarfTuru != null) { cmbZarfTuru.SelectedIndexChanged -= cmbZarfTuru_SelectedIndexChanged; cmbZarfTuru.SelectedIndexChanged += cmbZarfTuru_SelectedIndexChanged; }
-
+                       
             // AMBAR MOTORU BAĞLANTILARI 
             if (dgvAmbarTumFirmalar != null) { dgvAmbarTumFirmalar.CellDoubleClick -= dgvAmbarTumFirmalar_CellDoubleClick; dgvAmbarTumFirmalar.CellDoubleClick += dgvAmbarTumFirmalar_CellDoubleClick; }
             if (dgvAmbarSecilenFirmalar != null) { dgvAmbarSecilenFirmalar.CellDoubleClick -= dgvAmbarSecilenFirmalar_CellDoubleClick; dgvAmbarSecilenFirmalar.CellDoubleClick += dgvAmbarSecilenFirmalar_CellDoubleClick; }
@@ -281,6 +388,41 @@ namespace TamgaApp
             if (btnAmbarListeyeEkle != null) { btnAmbarListeyeEkle.Click -= btnAmbarListeyeEkle_Click; btnAmbarListeyeEkle.Click += btnAmbarListeyeEkle_Click; }
             if (btnAmbarSil != null) { btnAmbarSil.Click -= btnAmbarSil_Click; btnAmbarSil.Click += btnAmbarSil_Click; }
             if (btnAmbarYazdir != null) { btnAmbarYazdir.Click -= btnAmbarYazdir_Click; btnAmbarYazdir.Click += btnAmbarYazdir_Click; }
+
+            if (lstFirmalar != null) { lstFirmalar.SelectedIndexChanged -= lstFirmalar_SelectedIndexChanged; lstFirmalar.SelectedIndexChanged += lstFirmalar_SelectedIndexChanged; }
+            if (lstFirmalar != null) { lstFirmalar.DoubleClick -= lstFirmalar_DoubleClick; lstFirmalar.DoubleClick += lstFirmalar_DoubleClick; }
+        }
+
+        // 🚀 PREMİUM UI GÖRSEL MAKYAJ MOTORU
+        private void ElitTasarimiUygula()
+        {
+            try
+            {
+                // 1. Karşılama Yazısı Makyajı (Segoe UI, Elit Zümrüt Yeşili)
+                lblKarsilama.Font = new Font("Segoe UI Semibold", 22, FontStyle.Italic);
+                lblKarsilama.ForeColor = Color.FromArgb(15, 76, 58); 
+
+                // 2. Dijital Saat Makyajı (Kocaman, Koyu Antrasit)
+                lblSaat.Font = new Font("Segoe UI", 36, FontStyle.Bold);
+                lblSaat.ForeColor = Color.FromArgb(45, 52, 54); 
+
+                // 3. Takvim Makyajı (Zarif ve gri)
+                lblTakvim.Font = new Font("Segoe UI", 14, FontStyle.Regular);
+                lblTakvim.ForeColor = Color.DimGray;
+                
+                // 4. Çıkış Butonu Makyajı (Flat, premium gölgesiz tasarım)
+                Control[] butonlar = this.Controls.Find("btnCikisYap", true);
+                if (butonlar.Length > 0 && butonlar[0] is Button btnCikis)
+                {
+                    btnCikis.FlatStyle = FlatStyle.Flat;
+                    btnCikis.FlatAppearance.BorderSize = 0;
+                    btnCikis.BackColor = Color.FromArgb(15, 76, 58); // TamgaApp Yeşili
+                    btnCikis.ForeColor = Color.White;
+                    btnCikis.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                    btnCikis.Cursor = Cursors.Hand;
+                }
+            }
+            catch { }
         }
 
         #endregion
@@ -354,8 +496,8 @@ namespace TamgaApp
         private void CmbPaperSize_SelectedIndexChanged(object sender, EventArgs e)
         {
             if (cmbPaperSize.SelectedIndex == 0) { txtPageWidthMm.Text = "220"; txtPageHeightMm.Text = "110"; rbLandscape.Checked = true; }
-            else if (cmbPaperSize.SelectedIndex == 1) { txtPageWidthMm.Text = "210"; txtPageHeightMm.Text = "297"; rbPortrait.Checked = true; }
-            else if (cmbPaperSize.SelectedIndex == 2) { txtPageWidthMm.Text = "100"; txtPageHeightMm.Text = "150"; rbPortrait.Checked = true; }
+            if (cmbPaperSize.SelectedIndex == 1) { txtPageWidthMm.Text = "210"; txtPageHeightMm.Text = "297"; rbPortrait.Checked = true; }
+            if (cmbPaperSize.SelectedIndex == 2) { txtPageWidthMm.Text = "100"; txtPageHeightMm.Text = "150"; rbPortrait.Checked = true; }
 
             ApplyDesignSurfaceSize();
         }
@@ -807,6 +949,7 @@ namespace TamgaApp
             }
         }
 
+        private void PointToMm(int px, out float mmX, out float mmY) { mmX = 0; mmY = 0; }
         private int SnapToGrid(int px)
         {
             using (var g = pnlDesignSurface.CreateGraphics())
@@ -1169,7 +1312,7 @@ namespace TamgaApp
         {
             if (string.IsNullOrWhiteSpace(txtFirmaAdi.Text))
             {
-                MessageBox.Show("Firma adı boş olamaz.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Firma adı boş olamaz.", "Utarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -1368,7 +1511,7 @@ namespace TamgaApp
                         {
                             if (string.IsNullOrWhiteSpace(satir)) continue;
 
-                            // 🚀 KRİTİK ÇÖZÜM BÖLÜMÜ: Excel'in eklediği o gıcık tırnak işaretlerini (") toptan yok ediyoruz!
+                            // 🚀 Excel'in eklediği o gıcık tırnak işaretlerini (") toptan yok ediyoruz!
                             string temizSatir = satir.Replace("\"", "");
 
                             string[] hucreler = temizSatir.Split(';');
@@ -1411,7 +1554,6 @@ namespace TamgaApp
             };
         }
 
-        // 💣 FİRMA DÜZENLEME SAYFASI - TOPLU SİLME MOTORU
         private void btnTumFirmalariSil_Click(object sender, EventArgs e)
         {
             DialogResult ilkCevap = MessageBox.Show(
@@ -1580,7 +1722,6 @@ namespace TamgaApp
 
             var loadedTemplate = JsonConvert.DeserializeObject<TemplateFile>(File.ReadAllText(path));
 
-            // Ekrandaki TextBox'lardan verileri alıp "Hayalet" bir Firma kaydı oluşturuyoruz
             Firma manualFirma = new Firma
             {
                 FirmaAdi = txtManFirma.Text.Trim(),
@@ -1636,7 +1777,6 @@ namespace TamgaApp
             }
         }
 
-        // Kağıdı tertemiz yapan, tüm hayaletleri silen motor
         private void BtnTemizleTasarm_Click(object sender, EventArgs e)
         {
             if (MessageBox.Show("Tüm tasarım nesnelerini silmek istediğinize emin misiniz? Bu işlem geri alınamaz!",
@@ -1656,69 +1796,44 @@ namespace TamgaApp
 
         // =========================================================================================
 
-        #region 🏭 10. ÜRETİM VE BARKOD TAKİP MOTORU (Üretim İleri/Geri, Barkod Oku, Kaydet)
+        #region 🏭 10. ÜRETİM VE BARKOD TAKİP MOTORU
 
-        private void btnUretimIleri_Click(object sender, EventArgs e)
-        {
-            pnlGunSecimi.Visible = false;
-            pnlBarkodOkuma.Visible = true;
-
-            // Bilgisayardaki yazıcıları ComboBox'a doldur
-            cmbUretimYazici.Items.Clear();
-            foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
-            {
-                cmbUretimYazici.Items.Add(printer);
-            }
-            if (cmbUretimYazici.Items.Count > 0) cmbUretimYazici.SelectedIndex = 0;
-
-            txtBarkodOkut.Focus();
-        }
-
-        private void btnUretimGeri_Click(object sender, EventArgs e)
-        {
-            pnlBarkodOkuma.Visible = false;
-            pnlGunSecimi.Visible = true;
-        }
+        // 🚀 İleri butonu imha edildi, tüm hazırlıklar sekme geçiş motorunda (SelectedIndexChanged) otomatik yapılıyor!
 
         private void txtBarkodOkut_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Enter)
             {
-                e.SuppressKeyPress = true; // "Dıt" uyarı sesini engelle
+                e.SuppressKeyPress = true; // "Dıt" sesini engelle
                 string okunanBarkod = txtBarkodOkut.Text.Trim();
 
                 if (!string.IsNullOrEmpty(okunanBarkod))
                 {
-                    // 1. GERÇEK ARAMA: Veritabanına git ve bu barkodu getir!
                     Urun bulunanUrun = DataAccess.GetUrunByBarkod(okunanBarkod);
 
-                    // Eğer okutulan barkod Excel'den çektiğimiz veritabanında YOKSA:
                     if (bulunanUrun == null)
                     {
                         bulunanUrun = new Urun { UrunKodu = "KAYITSIZ", Aciklama = "SİSTEMDE BULUNAMADI!", Barkod = okunanBarkod };
                     }
 
-                    // 2. Tabloda bu barkod zaten var mı kontrolü (Sadece Adet artırmak için)
                     bool varMi = false;
                     foreach (DataGridViewRow row in dgvUretim.Rows)
                     {
                         if (row.Cells[3].Value != null && row.Cells[3].Value.ToString() == okunanBarkod)
                         {
                             int mevcutAdet = Convert.ToInt32(row.Cells[2].Value);
-                            row.Cells[2].Value = mevcutAdet + 1; // Zaten varsa adeti 1 artır
+                            row.Cells[2].Value = mevcutAdet + 1;
                             varMi = true;
                             break;
                         }
                     }
 
-                    // 3. Tabloda yoksa veritabanından gelen GERÇEK bilgileri bas!
                     if (!varMi)
                     {
                         dgvUretim.Rows.Add(bulunanUrun.UrunKodu, bulunanUrun.Aciklama, 1, bulunanUrun.Barkod);
                     }
                 }
 
-                // Kutuyu anında temizle ve odaklan
                 txtBarkodOkut.Clear();
                 txtBarkodOkut.Focus();
             }
@@ -1764,8 +1879,7 @@ namespace TamgaApp
             MessageBox.Show($"Üretim verileri başarıyla kaydedildi!\nYol: {dosyaYolu}", "Kayıt Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             dgvUretim.Rows.Clear();
-            if (pnlBarkodOkuma != null) pnlBarkodOkuma.Visible = false;
-            if (pnlGunSecimi != null) pnlGunSecimi.Visible = true;
+
         }
 
         private void btnExcelAktar_Click(object sender, EventArgs e)
@@ -1940,9 +2054,7 @@ namespace TamgaApp
             if (cevap == DialogResult.Yes)
             {
                 DataAccess.DeleteAllUrunler();
-
                 if (dgvBarkodVerileri != null) dgvBarkodVerileri.DataSource = null;
-
                 MessageBox.Show("Veritabanı başarıyla tertemiz yapıldı!", "İşlem Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -2028,40 +2140,32 @@ namespace TamgaApp
             }
         }
 
-        // =========================================================================================
         // 🚀 ÇIKIŞ YÖNETİMİ VE ANİMASYONLU KAPANMA MOTORU
-
         private bool kapanisBasladi = false;
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            // Kullanıcı sağ üstteki çarpıdan (X) kapattığında şovumuzu başlatalım
             if (!kapanisBasladi)
             {
-                e.Cancel = true; // Standart ve sıkıcı kapanmayı iptal et
+                e.Cancel = true; // Standart kapanmayı iptal et
                 CikisAnimasyonuVeKapat();
             }
         }
 
         private void btnCikisYap_Click(object sender, EventArgs e)
         {
-            // Butona tıklandığında aynı şov başlasın
             CikisAnimasyonuVeKapat();
         }
 
         private void CikisAnimasyonuVeKapat()
         {
             kapanisBasladi = true;
-
-            // Arkadaki devasa MainForm'u saniyesinde gizliyoruz
             this.Hide();
 
-            // Veda şovu için asıl aktörü (SplashForm) sahneye çağırıyoruz!
             SplashForm vedaEkrani = new SplashForm();
             vedaEkrani.StartPosition = FormStartPosition.CenterScreen;
             vedaEkrani.Show();
 
-            // 1.5 saniye bekle ve sistemi acımasızca KÖKTEN kapat
             Timer t = new Timer();
             t.Interval = 1500;
             t.Tick += (s, ev) =>
@@ -2071,7 +2175,6 @@ namespace TamgaApp
             };
             t.Start();
         }
-        // =========================================================================================
 
         private void btnKullaniciListele_Click(object sender, EventArgs e)
         {
@@ -2130,21 +2233,7 @@ namespace TamgaApp
         // =========================================================================================
 
         #region 🚛 12. AMBAR ZARFI VE DESİ MOTORU KODLARI
-
-        private void cmbZarfTuru_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            if (cmbZarfTuru.Text == "Normal Zarf")
-            {
-                if (pnlNormal != null) pnlNormal.Visible = true;
-                if (pnlAmbar != null) pnlAmbar.Visible = false;
-            }
-            else if (cmbZarfTuru.Text == "Ambar Zarfı")
-            {
-                if (pnlNormal != null) pnlNormal.Visible = false;
-                if (pnlAmbar != null) pnlAmbar.Visible = true;
-            }
-        }
-
+                
         public double DesiHesapla(string ebatMetni)
         {
             try
@@ -2166,7 +2255,7 @@ namespace TamgaApp
         {
             if (dgvAmbarTumFirmalar == null || dgvAmbarSecilenFirmalar == null || dgvPaletler == null) return;
 
-            // 1. SAĞ TABLO (Seçilenler) SÜTUN AYARLARI
+            // 1. SAĞ TABLO SÜTUN AYARLARI
             dgvAmbarSecilenFirmalar.ColumnCount = 6;
             dgvAmbarSecilenFirmalar.Columns[0].Name = "Id"; dgvAmbarSecilenFirmalar.Columns[0].Visible = false;
             dgvAmbarSecilenFirmalar.Columns[1].Name = "Firma Adı";
@@ -2184,7 +2273,7 @@ namespace TamgaApp
             dgvPaletler.Columns[2].Name = "Desi"; dgvPaletler.Columns[2].ReadOnly = true;
             dgvPaletler.AllowUserToAddRows = false;
 
-            // 3. SOL TABLOYU VERİTABANINDAN ÇEK VE DOLDUR
+            // 3. SOL TABLO VERİLERİ
             dgvAmbarTumFirmalar.ColumnCount = 6;
             dgvAmbarTumFirmalar.Columns[0].Name = "Id"; dgvAmbarTumFirmalar.Columns[0].Visible = false;
             dgvAmbarTumFirmalar.Columns[1].Name = "Firma Adı";
@@ -2223,8 +2312,7 @@ namespace TamgaApp
                 if (dgvAmbarSecilenFirmalar.ColumnCount == 0)
                 {
                     dgvAmbarSecilenFirmalar.ColumnCount = 6;
-                    dgvAmbarSecilenFirmalar.Columns[0].Name = "Id";
-                    dgvAmbarSecilenFirmalar.Columns[0].Visible = false;
+                    dgvAmbarSecilenFirmalar.Columns[0].Name = "Id"; dgvAmbarSecilenFirmalar.Columns[0].Visible = false;
                     dgvAmbarSecilenFirmalar.Columns[1].Name = "Firma Adı";
                     dgvAmbarSecilenFirmalar.Columns[2].Name = "Adres";
                     dgvAmbarSecilenFirmalar.Columns[3].Name = "İl";
@@ -2253,10 +2341,7 @@ namespace TamgaApp
 
         private void dgvAmbarSecilenFirmalar_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.RowIndex >= 0)
-            {
-                dgvAmbarSecilenFirmalar.Rows.RemoveAt(e.RowIndex);
-            }
+            if (e.RowIndex >= 0) dgvAmbarSecilenFirmalar.Rows.RemoveAt(e.RowIndex);
         }
 
         private void cmbPaletSayisi_SelectedIndexChanged(object sender, EventArgs e)
@@ -2266,11 +2351,9 @@ namespace TamgaApp
             if (dgvPaletler.ColumnCount == 0)
             {
                 dgvPaletler.ColumnCount = 3;
-                dgvPaletler.Columns[0].Name = "Palet No";
-                dgvPaletler.Columns[0].ReadOnly = true;
+                dgvPaletler.Columns[0].Name = "Palet No"; dgvPaletler.Columns[0].ReadOnly = true;
                 dgvPaletler.Columns[1].Name = "Ebatlar (En*Boy*Yük)";
-                dgvPaletler.Columns[2].Name = "Desi";
-                dgvPaletler.Columns[2].ReadOnly = true;
+                dgvPaletler.Columns[2].Name = "Desi"; dgvPaletler.Columns[2].ReadOnly = true;
                 dgvPaletler.AllowUserToAddRows = false;
             }
 
@@ -2326,14 +2409,8 @@ namespace TamgaApp
                 dgvAmbarSonListe.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             }
 
-            if (dgvAmbarSecilenFirmalar.SelectedRows.Count == 0)
-            {
-                MessageBox.Show("Lütfen ortadaki listeden listeye eklenecek firmayı seçin!", "Uyarı"); return;
-            }
-            if (dgvPaletler.Rows.Count == 0)
-            {
-                MessageBox.Show("Lütfen palet sayısı seçip ölçüleri girin!", "Uyarı"); return;
-            }
+            if (dgvAmbarSecilenFirmalar.SelectedRows.Count == 0) { MessageBox.Show("Lütfen ortadaki listeden listeye eklenecek firmayı seçin!", "Uyarı"); return; }
+            if (dgvPaletler.Rows.Count == 0) { MessageBox.Show("Lütfen palet sayısı seçip ölçüleri girin!", "Uyarı"); return; }
 
             var firmaRow = dgvAmbarSecilenFirmalar.SelectedRows[0];
             string id = firmaRow.Cells[0].Value?.ToString();
@@ -2389,8 +2466,7 @@ namespace TamgaApp
             if (dgvAmbarTumFirmalar.ColumnCount == 0)
             {
                 dgvAmbarTumFirmalar.ColumnCount = 6;
-                dgvAmbarTumFirmalar.Columns[0].Name = "Id";
-                dgvAmbarTumFirmalar.Columns[0].Visible = false;
+                dgvAmbarTumFirmalar.Columns[0].Name = "Id"; dgvAmbarTumFirmalar.Columns[0].Visible = false;
                 dgvAmbarTumFirmalar.Columns[1].Name = "Firma Adı";
                 dgvAmbarTumFirmalar.Columns[2].Name = "Adres";
                 dgvAmbarTumFirmalar.Columns[3].Name = "İl";
@@ -2402,10 +2478,7 @@ namespace TamgaApp
 
             dgvAmbarTumFirmalar.Rows.Clear();
             var firmalar = DataAccess.GetAllFirmalar();
-            foreach (var f in firmalar)
-            {
-                dgvAmbarTumFirmalar.Rows.Add(f.Id, f.FirmaAdi, f.Adres, f.Il, f.Telefon1, f.Telefon2);
-            }
+            foreach (var f in firmalar) dgvAmbarTumFirmalar.Rows.Add(f.Id, f.FirmaAdi, f.Adres, f.Il, f.Telefon1, f.Telefon2);
         }
 
         private void btnAmbarYazdir_Click(object sender, EventArgs e)
@@ -2414,7 +2487,6 @@ namespace TamgaApp
 
             PrintDocument pd = new PrintDocument();
 
-            // Yazıcıyı seçiyoruz
             ComboBox cmbYazici = this.Controls.Find("cmbAmbarYazici", true).FirstOrDefault() as ComboBox;
             if (cmbYazici != null && cmbYazici.SelectedItem != null)
             {
@@ -2425,32 +2497,20 @@ namespace TamgaApp
                 pd.PrinterSettings.PrinterName = cmbCokluPrinter.SelectedItem.ToString();
             }
 
-            // 🎯 HATASIZ ÇÖZÜM: PaperKind kullanmadan doğrudan PaperName üzerinden DL zarfı arıyoruz
             PaperSize orijinalDlBoyutu = null;
             try
             {
                 foreach (PaperSize kagit in pd.PrinterSettings.PaperSizes)
                 {
-                    if (kagit.PaperName.ToUpper().Contains("DL"))
-                    {
-                        orijinalDlBoyutu = kagit;
-                        break;
-                    }
+                    if (kagit.PaperName.ToUpper().Contains("DL")) { orijinalDlBoyutu = kagit; break; }
                 }
             }
             catch { }
 
-            if (orijinalDlBoyutu != null)
-            {
-                pd.DefaultPageSettings.PaperSize = orijinalDlBoyutu;
-            }
-            else
-            {
-                pd.DefaultPageSettings.PaperSize = new PaperSize("DL_Zarf", 433, 866);
-            }
+            if (orijinalDlBoyutu != null) pd.DefaultPageSettings.PaperSize = orijinalDlBoyutu;
+            else pd.DefaultPageSettings.PaperSize = new PaperSize("DL_Zarf", 433, 866);
 
             pd.DefaultPageSettings.Landscape = true;
-
             pd.BeginPrint += (s, ev) => { batchIndex = 0; };
             pd.PrintPage += AmbarPrintDocument_PrintPage;
 
@@ -2462,21 +2522,14 @@ namespace TamgaApp
         {
             if (batchIndex >= dgvAmbarSonListe.Rows.Count) { e.HasMorePages = false; return; }
 
-            // 🎯 HATASIZ ÇÖZÜM: Burayı da .PaperName kontrolüyle temizledik
             bool dlBulundu = false;
             try
             {
-                if (e.PageSettings.PaperSize.PaperName.ToUpper().Contains("DL"))
-                {
-                    dlBulundu = true;
-                }
+                if (e.PageSettings.PaperSize.PaperName.ToUpper().Contains("DL")) dlBulundu = true;
             }
             catch { }
 
-            if (!dlBulundu)
-            {
-                e.PageSettings.PaperSize = new PaperSize("DL_Zarf", 433, 866);
-            }
+            if (!dlBulundu) e.PageSettings.PaperSize = new PaperSize("DL_Zarf", 433, 866);
             e.PageSettings.Landscape = true;
 
             var row = dgvAmbarSonListe.Rows[batchIndex];
@@ -2494,11 +2547,8 @@ namespace TamgaApp
 
             e.Graphics.PageUnit = GraphicsUnit.Display;
 
-            // =========================================================================================
-            // 📐 MİLİMETRİK İNCE AYAR MOTORU
-            int inceAyarX = -45; // 🎯 45 piksel SOLA kaydırdık
-            int inceAyarY = -35; // 🎯 35 piksel YUKARI kaldırdık
-            // =========================================================================================
+            int inceAyarX = -45; 
+            int inceAyarY = -35; 
 
             int ustBosluk = 76 + inceAyarY;
             int kutuYukseklik = 280;
@@ -2508,13 +2558,13 @@ namespace TamgaApp
             int kutuArasiBosluk = 20;
             int paletSolKoordinat = solBosluk + adresGenişlik + kutuArasiBosluk;
 
-            // 1. ADRES KUTUSU
+            // adreS KUTUSU
             e.Graphics.DrawRectangle(Pens.Black, solBosluk, ustBosluk, adresGenişlik, kutuYukseklik);
             e.Graphics.DrawString("ADRES", baslik, Brushes.Black, new Rectangle(solBosluk, ustBosluk, adresGenişlik, 40), ortala);
             e.Graphics.DrawLine(Pens.Black, solBosluk, ustBosluk + 40, solBosluk + adresGenişlik, ustBosluk + 40);
             e.Graphics.DrawString($"{firmaAdi}\n\n{adres}\n{il}\n{tel1} {tel2}", icerik, Brushes.Black, new Rectangle(solBosluk, ustBosluk + 50, adresGenişlik, kutuYukseklik - 60), ortala);
 
-            // 2. PALET ÖLÇÜLERİ KUTUSU
+            // PALET KUTUSU
             e.Graphics.DrawRectangle(Pens.Black, paletSolKoordinat, ustBosluk, paletGenişlik, kutuYukseklik);
             e.Graphics.DrawString("PALET ÖLÇÜLERİ", baslik, Brushes.Black, new Rectangle(paletSolKoordinat, ustBosluk, paletGenişlik, 40), ortala);
             e.Graphics.DrawLine(Pens.Black, paletSolKoordinat, ustBosluk + 40, paletSolKoordinat + paletGenişlik, ustBosluk + 40);
@@ -2540,10 +2590,7 @@ namespace TamgaApp
                 }
             }
 
-            if (dgvAmbarTumFirmalar.Rows.Count == 0)
-            {
-                MessageBox.Show("Aramanıza uygun firma bulunamadı.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            if (dgvAmbarTumFirmalar.Rows.Count == 0) MessageBox.Show("Aramanıza uygun firma bulunamadı.", "Bilgi");
         }
 
         #endregion
@@ -2557,25 +2604,17 @@ namespace TamgaApp
             Properties.Settings.Default.SqlSunucu = txtSqlSunucu.Text;
             Properties.Settings.Default.SqlVeritabani = txtSqlVeritabani.Text;
             Properties.Settings.Default.SqlKullanici = txtSqlKullanici.Text;
-
-            // ŞİFREYİ İSE KRİPTO MOTORUNDAN GEÇİRİP ÖYLE KAYDEDİYORUZ!
             Properties.Settings.Default.SqlSifre = Kripto.Sifrele(txtSqlSifre.Text);
-
             Properties.Settings.Default.Save();
             MessageBox.Show("SQL Bağlantı ayarları güvenli bir şekilde şifrelenerek kaydedildi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void btnSqlTemizle_Click(object sender, EventArgs e)
         {
-            txtSqlSunucu.Clear();
-            txtSqlVeritabani.Clear();
-            txtSqlKullanici.Clear();
-            txtSqlSifre.Clear();
+            txtSqlSunucu.Clear(); txtSqlVeritabani.Clear(); txtSqlKullanici.Clear(); txtSqlSifre.Clear();
 
-            Properties.Settings.Default.SqlSunucu = "";
-            Properties.Settings.Default.SqlVeritabani = "";
-            Properties.Settings.Default.SqlKullanici = "";
-            Properties.Settings.Default.SqlSifre = "";
+            Properties.Settings.Default.SqlSunucu = ""; Properties.Settings.Default.SqlVeritabani = "";
+            Properties.Settings.Default.SqlKullanici = ""; Properties.Settings.Default.SqlSifre = "";
             Properties.Settings.Default.Save();
 
             MessageBox.Show("SQL Ayarları ve kriptolu şifreler sistemden tamamen silindi!", "Sıfırlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2692,12 +2731,7 @@ namespace TamgaApp
         private void btnSevkAra_Click(object sender, EventArgs e)
         {
             string secilenBelge = cmbBelgeNo.Text.Trim();
-
-            if (string.IsNullOrEmpty(secilenBelge))
-            {
-                MessageBox.Show("Lütfen aranacak bir Belge No girin veya listeden seçin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (string.IsNullOrEmpty(secilenBelge)) { MessageBox.Show("Lütfen bir Belge No seçin.", "Uyarı"); return; }
 
             DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo = '{secilenBelge}'");
 
@@ -2725,33 +2759,24 @@ namespace TamgaApp
                 }
 
                 dgvMalzemeler.DataSource = dtEkran;
-                dgvMalzemeler.AllowUserToAddRows = false;
-                dgvMalzemeler.AllowUserToDeleteRows = false;
-                dgvMalzemeler.ReadOnly = true;
-                dgvMalzemeler.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
                 dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             }
             else
             {
-                MessageBox.Show("Bu Belge Numarasına ait bir sipariş bulunamadı!", "Bulunamadı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                txtMusteriAdi.Clear();
-                txtSevkMusteri.Clear();
-                dgvMalzemeler.DataSource = null;
+                MessageBox.Show("Sipariş bulunamadı!", "Bulunamadı");
             }
         }
 
         private void txtBarkod_KeyDown(object sender, KeyEventArgs e)
         {
-            // Eğer basılan tuş "Enter" ise işlemi başlat (Barkod tabancaları Enter basar)
             if (e.KeyCode == Keys.Enter)
             {
                 e.SuppressKeyPress = true;
-                string okutulanBarkod = txtBarkod.Text.Trim(); // Formdaki TextBox'ın adı txtBarkod olmalı!
+                string okutulanBarkod = txtBarkod.Text.Trim();
 
                 if (string.IsNullOrEmpty(okutulanBarkod)) return;
 
                 bool urunBulundu = false;
-
                 foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                 {
                     if (satir.Cells["Malzeme Kodu"].Value != null && satir.Cells["Malzeme Kodu"].Value.ToString() == okutulanBarkod)
@@ -2762,31 +2787,19 @@ namespace TamgaApp
 
                         if (okutulanAdet >= siparisAdedi)
                         {
-                            MessageBox.Show("DUR! Bu üründen sipariş edilen miktarı zaten tamamladınız.", "Fazla Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            txtBarkod.Clear();
-                            return;
+                            MessageBox.Show("DUR! Sipariş edilen miktarı zaten tamamladınız.", "Fazla Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            txtBarkod.Clear(); return;
                         }
 
                         okutulanAdet++;
                         satir.Cells["Okutulan"].Value = okutulanAdet;
 
-                        if (okutulanAdet == siparisAdedi)
-                        {
-                            satir.DefaultCellStyle.BackColor = System.Drawing.Color.LightGreen;
-                        }
-                        else
-                        {
-                            satir.DefaultCellStyle.BackColor = System.Drawing.Color.LightYellow;
-                        }
-
+                        satir.DefaultCellStyle.BackColor = (okutulanAdet == siparisAdedi) ? Color.LightGreen : Color.LightYellow;
                         break;
                     }
                 }
 
-                if (!urunBulundu)
-                {
-                    MessageBox.Show("HATA! Okutulan ürün bu siparişte YOK!", "Yanlış Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                if (!urunBulundu) MessageBox.Show("HATA! Ürün bu siparişte yok!", "Yanlış Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
 
                 txtBarkod.Clear();
                 txtBarkod.Focus();
@@ -2796,57 +2809,40 @@ namespace TamgaApp
         private void btnTumVerileriTemizle_Click(object sender, EventArgs e)
         {
             DialogResult onay = MessageBox.Show(
-                "DİKKAT: Kullanıcı hesapları ve yetkiler hariç; SQL bağlantı ayarları, çekilen tüm siparişler ve önbellekteki operasyonel veriler SİLİNECEKTİR! Onaylıyor musunuz?",
-                "Büyük Temizlik Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+                "DİKKAT: SQL bağlantı ayarları, çekilen tüm siparişler ve önbellekteki veriler SİLİNECEKTİR!",
+                "Büyük Temizlik Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (onay == DialogResult.Yes)
             {
-                Properties.Settings.Default.SqlSunucu = "";
-                Properties.Settings.Default.SqlVeritabani = "";
-                Properties.Settings.Default.SqlKullanici = "";
-                Properties.Settings.Default.SqlSifre = "";
+                Properties.Settings.Default.SqlSunucu = ""; Properties.Settings.Default.SqlVeritabani = "";
+                Properties.Settings.Default.SqlKullanici = ""; Properties.Settings.Default.SqlSifre = "";
                 Properties.Settings.Default.Save();
 
-                cmbBelgeNo.Text = "";
-                cmbBelgeNo.Items.Clear();
-                txtMusteriAdi.Clear();
-                txtSevkMusteri.Clear();
-                dgvMalzemeler.DataSource = null;
-
+                cmbBelgeNo.Text = ""; cmbBelgeNo.Items.Clear();
+                txtMusteriAdi.Clear(); txtSevkMusteri.Clear(); dgvMalzemeler.DataSource = null;
                 if (dtTumSiparisler != null) dtTumSiparisler.Clear();
 
-                MessageBox.Show("Kullanıcı yetkileri korunarak, tüm operasyonel veriler ve SQL ayarları başarıyla sıfırlandı!", "Temizlik Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Tüm operasyonel veriler sıfırlandı!", "Temizlik Başarılı");
             }
         }
 
         private void btnTamSevk_Click(object sender, EventArgs e)
         {
-            if (dgvMalzemeler.Rows.Count == 0)
-            {
-                MessageBox.Show("Lütfen önce bir sipariş çağırın ve ürünleri okutun!", "İşlem Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (dgvMalzemeler.Rows.Count == 0) return;
 
             bool eksikVarMi = false;
             foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
             {
-                int siparis = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
-                int okutulan = Convert.ToInt32(satir.Cells["Okutulan"].Value);
-
-                if (okutulan < siparis)
+                if (Convert.ToInt32(satir.Cells["Okutulan"].Value) < Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value))
                 {
-                    eksikVarMi = true;
-                    break;
+                    eksikVarMi = true; break;
                 }
             }
 
-            if (eksikVarMi)
-            {
-                MessageBox.Show("DUR! Bu siparişte henüz eksik okutulmuş ürünler var. 'Tam Sevk' yapabilmek için tüm ürünlerin eksiksiz okutulması gerekir!", "Eksik Ürün Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            if (eksikVarMi) MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
             else
             {
-                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz okutuldu. Tam Sevk işlemi onaylandı ve veritabanına kaydediliyor...", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı!", "Başarılı");
                 btnTumVerileriTemizle_Click(sender, e);
             }
         }
@@ -2856,7 +2852,6 @@ namespace TamgaApp
             if (dgvMalzemeler.Rows.Count == 0) return;
 
             List<string> eksikListesi = new List<string>();
-
             foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
             {
                 int siparis = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
@@ -2864,30 +2859,20 @@ namespace TamgaApp
 
                 if (okutulan < siparis)
                 {
-                    string malzemeKodu = satir.Cells["Malzeme Kodu"].Value.ToString();
-                    string malzemeAdi = satir.Cells["Malzeme Adı"].Value.ToString();
-                    eksikListesi.Add($"- {malzemeKodu} ({malzemeAdi}) | Gerekli: {siparis}, Okutulan: {okutulan}");
+                    eksikListesi.Add($"- {satir.Cells["Malzeme Kodu"].Value} | Gerekli: {siparis}, Okutulan: {okutulan}");
                 }
             }
 
             if (eksikListesi.Count > 0)
             {
-                string mesaj = "Aşağıdaki ürünler EKSİK okutuldu:\n\n" + string.Join("\n", eksikListesi) + "\n\nYine de eksik haliyle 'Kısmi Sevk' işlemini onaylıyor musunuz?";
-                DialogResult onay = MessageBox.Show(mesaj, "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-                if (onay == DialogResult.Yes)
+                if (MessageBox.Show("Eksik ürünler var. Yine de Kısmi Sevk yapılsın mı?", "Kısmi Sevk Onayı", MessageBoxButtons.YesNo) == DialogResult.Yes)
                 {
-                    MessageBox.Show("Kısmi Sevk onaylandı. Mevcut adetler veritabanına işleniyor...", "Kısmi Sevk Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Kısmi Sevk onaylandı!");
                     btnTumVerileriTemizle_Click(sender, e);
                 }
-            }
-            else
-            {
-                MessageBox.Show("Listede hiç eksik ürün yok! Doğrudan 'Tam Sevk' yapabilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
         #endregion
-
     }
 }
