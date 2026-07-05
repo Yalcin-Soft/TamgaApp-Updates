@@ -39,6 +39,14 @@ namespace TamgaApp
         {
             InitializeComponent();
 
+            if (Properties.Settings.Default.BeniHatirla)
+            {
+                // Kutuları hafızadaki bilgilerle doldur ve şifreyi Kripto motoruyla çöz!
+                txtKullaniciAdi.Text = Properties.Settings.Default.HatirlananKullanici;
+                txtSifre.Text = Kripto.Coz(Properties.Settings.Default.HatirlananSifre);
+                chkBeniHatirla.Checked = true;
+            }
+
             // Çift arabellekleme (Ekranda yırtılma ve titremeyi önler, gradient akıcı olur)
             this.DoubleBuffered = true;
 
@@ -133,6 +141,26 @@ namespace TamgaApp
 
                 // 🌟 AFİLLİ KARŞILAMA MESAJI
                 MessageBox.Show("Sisteme Hoş Geldin Patron! 😎\n\n[ ⚡ GOD MODE AKTİF ⚡ ]\nBütün güvenlik duvarları aşıldı, tüm kilitler açıldı. Sistemin tam kontrolü artık sende!", "Sistem Bildirimi: YÜCE YETKİ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
+
+                // --- BENİ HATIRLA KAYIT MOTORU ---
+                if (chkBeniHatirla.Checked)
+                {
+                    // Kutucuk işaretliyse bilgileri güvenli bir şekilde hafızaya kazı
+                    Properties.Settings.Default.BeniHatirla = true;
+                    Properties.Settings.Default.HatirlananKullanici = txtKullaniciAdi.Text.Trim();
+                    Properties.Settings.Default.HatirlananSifre = Kripto.Sifrele(txtSifre.Text.Trim()); // Şifrelenerek saklanıyor!
+                }
+                else
+                {
+                    // İşaretli değilse hafızayı tamamen temizle (başka biri girmiş olabilir)
+                    Properties.Settings.Default.BeniHatirla = false;
+                    Properties.Settings.Default.HatirlananKullanici = "";
+                    Properties.Settings.Default.HatirlananSifre = "";
+                }
+                Properties.Settings.Default.Save(); // Hafızayı kalıcı olarak diske kaydet
+                                                    // ---------------------------------
+
+                // (Buradan sonra muhtemelen senin this.DialogResult = DialogResult.OK; kodun vardır)
 
                 this.DialogResult = DialogResult.OK; // Kapıyı aç!
                 this.Close();

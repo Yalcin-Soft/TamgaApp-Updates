@@ -46,7 +46,7 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "SplashForm";
-            this.Text = "SplashForm";
+            this.Text = "Yalçın Soft";
             this.Load += new System.EventHandler(this.SplashForm_Load);
             this.ResumeLayout(false);
 

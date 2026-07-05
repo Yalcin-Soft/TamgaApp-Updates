@@ -183,6 +183,12 @@
         }
         "Entry"
         {
+        "MsmKey" = "8:_BAEDCBE0143746FA880BEC6B875BD736"
+        "OwnerKey" = "8:_UNDEFINED"
+        "MsmSig" = "8:_UNDEFINED"
+        }
+        "Entry"
+        {
         "MsmKey" = "8:_BB7872FED6284DB669717C4051501425"
         "OwnerKey" = "8:_CF8FB5FF73D03A7331880ED1DB6971B7"
         "MsmSig" = "8:_UNDEFINED"
@@ -866,6 +872,26 @@
             "IsDependency" = "11:FALSE"
             "IsolateTo" = "8:"
             }
+            "{1FB2D0AE-D3B9-43D4-B9DD-F88EC61E35DE}:_BAEDCBE0143746FA880BEC6B875BD736"
+            {
+            "SourcePath" = "8:..\\..\\..\\..\\Logo\\TamgaApp Logo\\icon.ico"
+            "TargetName" = "8:icon.ico"
+            "Tag" = "8:"
+            "Folder" = "8:_A4E0C7C1E2104A6891A53660A2D4E86B"
+            "Condition" = "8:"
+            "Transitive" = "11:FALSE"
+            "Vital" = "11:TRUE"
+            "ReadOnly" = "11:FALSE"
+            "Hidden" = "11:FALSE"
+            "System" = "11:FALSE"
+            "Permanent" = "11:FALSE"
+            "SharedLegacy" = "11:FALSE"
+            "PackageAs" = "3:1"
+            "Register" = "3:1"
+            "Exclude" = "11:FALSE"
+            "IsDependency" = "11:FALSE"
+            "IsolateTo" = "8:"
+            }
             "{9F6F8455-1EF1-4B85-886A-4223BCC8E7F7}:_BB7872FED6284DB669717C4051501425"
             {
             "AssemblyRegister" = "3:1"
@@ -1224,7 +1250,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:TamgaApp_Setup"
         "ProductCode" = "8:{B2FEDF7B-EAAB-4472-A40F-42B8012FC7EE}"
-        "PackageCode" = "8:{3B28469D-5F24-4A58-9462-3D2F2055DE74}"
+        "PackageCode" = "8:{A1E78CB0-038A-4166-A371-1F6A7692AD73}"
         "UpgradeCode" = "8:{0F3C4DE8-5653-420F-A52C-0C5CD64508FD}"
         "AspNetVersion" = "8:"
         "RestartWWWService" = "11:FALSE"
@@ -1355,7 +1381,7 @@
             "Target" = "8:_1766505380D540BA941F2D9C59EFE62E"
             "Folder" = "8:_069A23BAC8B44066925DAEBCBEB5DA6F"
             "WorkingFolder" = "8:_A4E0C7C1E2104A6891A53660A2D4E86B"
-            "Icon" = "8:"
+            "Icon" = "8:_BAEDCBE0143746FA880BEC6B875BD736"
             "Feature" = "8:"
             }
             "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_E9F8B0B0382C4061948768DA00D6ADC3"
@@ -1369,7 +1395,7 @@
             "Target" = "8:_1766505380D540BA941F2D9C59EFE62E"
             "Folder" = "8:_A4E0C7C1E2104A6891A53660A2D4E86B"
             "WorkingFolder" = "8:_A4E0C7C1E2104A6891A53660A2D4E86B"
-            "Icon" = "8:"
+            "Icon" = "8:_BAEDCBE0143746FA880BEC6B875BD736"
             "Feature" = "8:"
             }
             "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_F9A76EEC7B89442382F34704C2C233D6"
@@ -1383,7 +1409,7 @@
             "Target" = "8:_1766505380D540BA941F2D9C59EFE62E"
             "Folder" = "8:_6C1B9A9A759F46D3B146449261170A9F"
             "WorkingFolder" = "8:_A4E0C7C1E2104A6891A53660A2D4E86B"
-            "Icon" = "8:"
+            "Icon" = "8:_BAEDCBE0143746FA880BEC6B875BD736"
             "Feature" = "8:"
             }
         }

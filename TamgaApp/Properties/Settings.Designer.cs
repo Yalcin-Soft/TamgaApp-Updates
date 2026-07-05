@@ -70,5 +70,41 @@ namespace TamgaApp.Properties {
                 this["SqlSifre"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool BeniHatirla {
+            get {
+                return ((bool)(this["BeniHatirla"]));
+            }
+            set {
+                this["BeniHatirla"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HatirlananKullanici {
+            get {
+                return ((string)(this["HatirlananKullanici"]));
+            }
+            set {
+                this["HatirlananKullanici"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string HatirlananSifre {
+            get {
+                return ((string)(this["HatirlananSifre"]));
+            }
+            set {
+                this["HatirlananSifre"] = value;
+            }
+        }
     }
 }
