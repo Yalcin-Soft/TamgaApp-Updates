@@ -17,10 +17,10 @@
     <Setting Name="BeniHatirla" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
     </Setting>
-    <Setting Name="HatirlananKullanici" Type="System.String" Scope="User">
+    <Setting Name="HatirlaKullanici" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
-    <Setting Name="HatirlananSifre" Type="System.String" Scope="User">
+    <Setting Name="HatirlaSifre" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
   </Settings>

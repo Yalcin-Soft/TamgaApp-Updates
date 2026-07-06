@@ -248,21 +248,7 @@ namespace TamgaApp
 
             SetupPaperSizes();
             SetupResponsiveLayout();
-
-            // Manuel Yazdırma Şablon Listesini Doldur
-            if (cmbManualTemplate != null)
-            {
-                cmbManualTemplate.Items.Clear();
-                string templatesDir = GetTemplatesDirectory();
-                var files = Directory.GetFiles(templatesDir, "*.json")
-                                     .Select(Path.GetFileName)
-                                     .Where(f => f != PrinterSettingsFile)
-                                     .ToArray();
-
-                cmbManualTemplate.Items.AddRange(files);
-                if (files.Length > 0) cmbManualTemplate.SelectedIndex = 0;
-            }
-
+                        
             // Manuel Etiket İçin Varsayılan Yazıcıları Doldur
             if (cmbManuelPrinter != null)
             {
@@ -1934,22 +1920,35 @@ namespace TamgaApp
         {
             string templatesDir = GetTemplatesDirectory();
 
-            // Klasördeki json dosyalarını bul ama "printer_settings.json" (yazıcı ayar dosyası) hariç tut
+            // Klasördeki tüm geçerli şablon dosyalarını oku
             var files = Directory.GetFiles(templatesDir, "*.json")
                                  .Select(Path.GetFileName)
                                  .Where(f => f != PrinterSettingsFile)
                                  .OrderBy(n => n)
                                  .ToArray();
 
-            // Listeleri önce temizle
+            // Tüm ilgili arayüz elemanlarını sıfırla
             lstTemplates.Items.Clear();
             cmbPrintStyle.Items.Clear();
 
-            // Dosyalar varsa ilgili arayüz elemanlarına (ListBox ve ComboBox) ekle
+            // 🌟 TAM SENKRONİZASYON ZIRHI: Manuel şablon kutusunu da buraya bağlıyoruz
+            if (cmbManualTemplate != null) cmbManualTemplate.Items.Clear();
+
             if (files.Length > 0)
             {
+                // Verileri tüm listelere tek tıkla topluca dağıtıyoruz
                 lstTemplates.Items.AddRange(files);
                 cmbPrintStyle.Items.AddRange(files);
+
+                if (cmbManualTemplate != null)
+                {
+                    cmbManualTemplate.Items.AddRange(files);
+                    // Eğer hiçbir şey seçili değilse otomatik olarak ilk şablonu seçili getir
+                    if (cmbManualTemplate.SelectedIndex == -1) cmbManualTemplate.SelectedIndex = 0;
+                }
+
+                if (cmbPrintStyle.Items.Count > 0 && cmbPrintStyle.SelectedIndex == -1)
+                    cmbPrintStyle.SelectedIndex = 0;
             }
         }
         #endregion

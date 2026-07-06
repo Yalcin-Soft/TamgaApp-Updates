@@ -86,24 +86,24 @@ namespace TamgaApp.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string HatirlananKullanici {
+        public string HatirlaKullanici {
             get {
-                return ((string)(this["HatirlananKullanici"]));
+                return ((string)(this["HatirlaKullanici"]));
             }
             set {
-                this["HatirlananKullanici"] = value;
+                this["HatirlaKullanici"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string HatirlananSifre {
+        public string HatirlaSifre {
             get {
-                return ((string)(this["HatirlananSifre"]));
+                return ((string)(this["HatirlaSifre"]));
             }
             set {
-                this["HatirlananSifre"] = value;
+                this["HatirlaSifre"] = value;
             }
         }
     }

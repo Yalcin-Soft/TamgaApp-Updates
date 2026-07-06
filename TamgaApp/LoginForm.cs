@@ -19,7 +19,9 @@ namespace TamgaApp
     /// </summary>
     public partial class LoginForm : Form
     {
-        #region 📐 1. GÖRSEL MOTOR (Yuvarlak Köşe ve Sürükleme Ayarları)
+        // =========================================================================================
+
+        #region 📐 01. GÖRSEL MOTOR VE API TANIMLAMALARI (DLL IMPORTS)
 
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();
@@ -35,17 +37,13 @@ namespace TamgaApp
 
         #endregion
 
+        // =========================================================================================
+
+        #region ⚙️ 02. BAŞLANGIÇ AYARLARI VE YÜKLEME (INIT & LOAD)
+
         public LoginForm()
         {
             InitializeComponent();
-
-            if (Properties.Settings.Default.BeniHatirla)
-            {
-                // Kutuları hafızadaki bilgilerle doldur ve şifreyi Kripto motoruyla çöz!
-                txtKullaniciAdi.Text = Properties.Settings.Default.HatirlananKullanici;
-                txtSifre.Text = Kripto.Coz(Properties.Settings.Default.HatirlananSifre);
-                chkBeniHatirla.Checked = true;
-            }
 
             // Çift arabellekleme (Ekranda yırtılma ve titremeyi önler, gradient akıcı olur)
             this.DoubleBuffered = true;
@@ -64,9 +62,31 @@ namespace TamgaApp
 
             // 3. AutoUpdater'ı Çalıştır
             AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/main/TamgaApp/update.xml");
+
+            // 4. BENİ HATIRLA MOTORU (Form ve Kutular yüklendikten sonra çalışmalı)
+            if (Properties.Settings.Default.BeniHatirla)
+            {
+                txtKullaniciAdi.Text = Properties.Settings.Default.HatirlaKullanici;
+
+                // Şifre güvenli olması için Kripto class'ı ile çözülmeli
+                try
+                {
+                    txtSifre.Text = Kripto.Coz(Properties.Settings.Default.HatirlaSifre);
+                }
+                catch
+                {
+                    txtSifre.Text = Properties.Settings.Default.HatirlaSifre; // Şifreleme hatası olursa düz yazıyı bas
+                }
+
+                chkBeniHatirla.Checked = true;
+            }
         }
 
-        #region 🎨 2. ARAYÜZ TASARIMI (Renk Geçişi ve Form Taşıma)
+        #endregion
+
+        // =========================================================================================
+
+        #region 🎨 03. ARAYÜZ TASARIMI VE PENCERE KONTROLLERİ (UI)
 
         protected override void OnPaint(PaintEventArgs e)
         {
@@ -121,7 +141,34 @@ namespace TamgaApp
 
         #endregion
 
-        #region 🔑 3. ANA GİRİŞ MOTORU (Kullanıcı Doğrulama ve Yönetici Kodları)
+        // =========================================================================================
+
+        #region 🔑 04. GÜVENLİK, HAFIZA VE ANA GİRİŞ MOTORU
+
+        // ✨ MERKEZİ HAFIZA KAYIT SİSTEMİ: Sadece başarılı girişlerde çalışır
+        private void BeniHatirlaAyariniKaydet(string kAdi, string sifre)
+        {
+            if (chkBeniHatirla.Checked)
+            {
+                Properties.Settings.Default.BeniHatirla = true;
+                Properties.Settings.Default.HatirlaKullanici = kAdi;
+                try
+                {
+                    Properties.Settings.Default.HatirlaSifre = Kripto.Sifrele(sifre); // Güvenlik için kriptola
+                }
+                catch
+                {
+                    Properties.Settings.Default.HatirlaSifre = sifre;
+                }
+            }
+            else
+            {
+                Properties.Settings.Default.BeniHatirla = false;
+                Properties.Settings.Default.HatirlaKullanici = "";
+                Properties.Settings.Default.HatirlaSifre = "";
+            }
+            Properties.Settings.Default.Save();
+        }
 
         /// <summary>Giriş butonuna tıklandığında çalışır. Sistemdeki en kritik güvenlik kontrol kapısıdır.</summary>
         private void btnGiris_Click(object sender, EventArgs e)
@@ -139,28 +186,10 @@ namespace TamgaApp
                 MainForm.AktifKullaniciAdi = "Kurucu (TamgaApp)";
                 MainForm.AktifYetkiler = "Sınırsız";
 
+                BeniHatirlaAyariniKaydet(kAdi, sifre); // ✅ GİRİŞ BAŞARILI, ŞİFREYİ KAYDET
+
                 // 🌟 AFİLLİ KARŞILAMA MESAJI
                 MessageBox.Show("Sisteme Hoş Geldin Patron! 😎\n\n[ ⚡ GOD MODE AKTİF ⚡ ]\nBütün güvenlik duvarları aşıldı, tüm kilitler açıldı. Sistemin tam kontrolü artık sende!", "Sistem Bildirimi: YÜCE YETKİ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-
-                // --- BENİ HATIRLA KAYIT MOTORU ---
-                if (chkBeniHatirla.Checked)
-                {
-                    // Kutucuk işaretliyse bilgileri güvenli bir şekilde hafızaya kazı
-                    Properties.Settings.Default.BeniHatirla = true;
-                    Properties.Settings.Default.HatirlananKullanici = txtKullaniciAdi.Text.Trim();
-                    Properties.Settings.Default.HatirlananSifre = Kripto.Sifrele(txtSifre.Text.Trim()); // Şifrelenerek saklanıyor!
-                }
-                else
-                {
-                    // İşaretli değilse hafızayı tamamen temizle (başka biri girmiş olabilir)
-                    Properties.Settings.Default.BeniHatirla = false;
-                    Properties.Settings.Default.HatirlananKullanici = "";
-                    Properties.Settings.Default.HatirlananSifre = "";
-                }
-                Properties.Settings.Default.Save(); // Hafızayı kalıcı olarak diske kaydet
-                                                    // ---------------------------------
-
-                // (Buradan sonra muhtemelen senin this.DialogResult = DialogResult.OK; kodun vardır)
 
                 this.DialogResult = DialogResult.OK; // Kapıyı aç!
                 this.Close();
@@ -174,6 +203,8 @@ namespace TamgaApp
             {
                 MainForm.AktifKullaniciAdi = "Yönetici";
                 MainForm.AktifYetkiler = "Sınırsız";
+
+                BeniHatirlaAyariniKaydet(kAdi, sifre); // ✅ GİRİŞ BAŞARILI, ŞİFREYİ KAYDET
 
                 MessageBox.Show("Hoş Geldiniz Yönetici Bey. Tüm departmanlar rapor vermeye hazır.", "Yönetici Girişi", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -222,6 +253,8 @@ namespace TamgaApp
                 MainForm.AktifKullaniciAdi = giren.KullaniciAdi;
                 MainForm.AktifYetkiler = giren.Yetkiler;
 
+                BeniHatirlaAyariniKaydet(kAdi, sifre); // ✅ GİRİŞ BAŞARILI, ŞİFREYİ KAYDET
+
                 this.DialogResult = DialogResult.OK; // Ana programa sinyali çak
                 this.Close(); // Login ekranını devreden çıkar
             }
@@ -233,7 +266,9 @@ namespace TamgaApp
 
         #endregion
 
-        #region 🛡️ 4. DİNAMİK YETKİLENDİRME VE YENİLEME PENCERELERİ (KOD İLE ÜRETİLEN FORMLAR)
+        // =========================================================================================
+
+        #region 🛡️ 05. DİNAMİK YETKİLENDİRME VE YÖNETİCİ KONTROLLERİ
 
         /// <summary>
         /// Kullanıcının süresi bittiğinde ekrana anında geçici bir "Yönetici Şifre İsteme" penceresi (formu) çizen metot.
