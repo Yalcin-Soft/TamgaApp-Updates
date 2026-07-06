@@ -3568,102 +3568,121 @@ namespace TamgaApp
                     return;
                 }
 
+                // 🌟 ÇEVİRMEN KÖPRÜSÜ: Excel'den aktarılan veritabanında bu 13 haneli barkodu bul
+                Urun yerelUrun = DataAccess.GetUrunByBarkod(okutulanBarkod);
+
+                // Eğer ürün veritabanında varsa onun "Malzeme Kodunu (UrunKodu)" al, yoksa direkt okutulan barkodu kullan
+                string arananMalzemeKodu = (yerelUrun != null && !string.IsNullOrEmpty(yerelUrun.UrunKodu))
+                                            ? yerelUrun.UrunKodu
+                                            : okutulanBarkod;
+
                 int aktifPaletSutunIndex = cmbAktifPalet.SelectedIndex;
                 bool urunBulundu = false;
 
-                // Okutulan ürün sipariş listesinde var mı diye satır satır ara
+                // SQL'den gelen sipariş tablosunda ara
                 foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                 {
-                    if (satir.Cells["Malzeme Kodu"].Value != null && satir.Cells["Malzeme Kodu"].Value.ToString() == okutulanBarkod)
+                    if (satir.Cells["Malzeme Kodu"].Value != null)
                     {
-                        urunBulundu = true;
-                        int siparisAdedi = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
-                        int okutulanAdet = Convert.ToInt32(satir.Cells["Okutulan"].Value);
+                        string tablodakiKod = satir.Cells["Malzeme Kodu"].Value.ToString().Trim();
 
-                        // Gerekenden fazla okutulmasını engelle (ZIRH)
-                        if (okutulanAdet >= siparisAdedi)
+                        // 🛡️ ÇİFT ZIRH: Tablodaki kod, hem direkt okutulan barkoda hem de yerel veritabanından çevrilen Malzeme Koduna uyuyor mu diye bak
+                        if (tablodakiKod == okutulanBarkod || tablodakiKod == arananMalzemeKodu)
                         {
-                            MessageBox.Show("DUR! Sipariş edilen miktarı zaten tamamladınız.", "Fazla Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            txtBarkod.Clear(); return;
-                        }
+                            urunBulundu = true;
+                            int siparisAdedi = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
+                            int okutulanAdet = Convert.ToInt32(satir.Cells["Okutulan"].Value);
 
-                        okutulanAdet++; // Adeti 1 arttır
-                        satir.Cells["Okutulan"].Value = okutulanAdet;
-
-                        // 🟢 RENK VE SES KONTROLÜ
-                        if (okutulanAdet == siparisAdedi)
-                        {
-                            // Sipariş edilen miktara ulaşıldıysa yeşile boya
-                            satir.DefaultCellStyle.BackColor = Color.LightGreen;
-
-                            // 🎵 DİT-DİT: Ürün tamamlandı şov sesi (İnce ve hızlı)
-                            Console.Beep(2000, 100);
-                            System.Threading.Thread.Sleep(50);
-                            Console.Beep(2000, 100);
-                        }
-                        else
-                        {
-                            // Eksik ürün ise sarıya boya
-                            satir.DefaultCellStyle.BackColor = Color.LightYellow;
-                        }
-
-                        // --------- PALETE EKLEME MANTIĞI ---------
-                        string urunAdi = satir.Cells["Malzeme Adı"].Value.ToString();
-                        bool paletSutunundaVarMi = false;
-
-                        // Seçilen palette bu ürün daha önce okutulmuş mu kontrol et
-                        foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
-                        {
-                            if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null)
+                            // Gerekenden fazla okutulmasını engelle
+                            if (okutulanAdet >= siparisAdedi)
                             {
-                                string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
-
-                                // Eğer ürün bu palette zaten varsa, sadece miktar kısmını artır (| Adet: 2 gibi)
-                                if (hucreMetni.StartsWith(okutulanBarkod))
-                                {
-                                    string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
-                                    if (parcalar.Length == 2)
-                                    {
-                                        int mevcutPaletAdeti = int.Parse(parcalar[1]);
-                                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {mevcutPaletAdeti + 1}";
-                                    }
-                                    paletSutunundaVarMi = true;
-                                    break;
-                                }
+                                MessageBox.Show("DUR! Sipariş edilen miktarı zaten tamamladınız.", "Fazla Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                txtBarkod.Clear(); return;
                             }
-                        }
 
-                        // Ürün bu palette hiç yoksa, boş bir hücre bulup yeni satır olarak ekle
-                        if (!paletSutunundaVarMi)
-                        {
-                            bool bosHucreBulundu = false;
+                            okutulanAdet++; // Adeti 1 arttır
+                            satir.Cells["Okutulan"].Value = okutulanAdet;
+
+                            // 🟢 RENK VE SES KONTROLÜ
+                            if (okutulanAdet == siparisAdedi)
+                            {
+                                satir.DefaultCellStyle.BackColor = Color.LightGreen;
+
+                                // 🎵 GERÇEK HOPARLÖR SESİ (BAŞARILI)
+                                try
+                                {
+                                    string wavYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "basarili.wav");
+                                    if (System.IO.File.Exists(wavYolu)) new System.Media.SoundPlayer(wavYolu).Play();
+                                    else System.Media.SystemSounds.Asterisk.Play(); // WAV dosyası yoksa Windows bildirim sesini çal
+                                }
+                                catch { }
+                            }
+                            else
+                            {
+                                satir.DefaultCellStyle.BackColor = Color.LightYellow;
+                            }
+
+                            // --------- PALETE EKLEME MANTIĞI ---------
+                            string urunAdi = satir.Cells["Malzeme Adı"].Value.ToString();
+                            bool paletSutunundaVarMi = false;
+
                             foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
                             {
-                                if (paletSatiri.Cells[aktifPaletSutunIndex].Value == null || string.IsNullOrWhiteSpace(paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString()))
+                                if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null)
                                 {
-                                    paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{okutulanBarkod} - {urunAdi} | Adet: 1";
-                                    bosHucreBulundu = true;
-                                    break;
+                                    string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
+
+                                    if (hucreMetni.StartsWith(okutulanBarkod) || hucreMetni.StartsWith(arananMalzemeKodu))
+                                    {
+                                        string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
+                                        if (parcalar.Length == 2)
+                                        {
+                                            int mevcutPaletAdeti = int.Parse(parcalar[1]);
+                                            paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {mevcutPaletAdeti + 1}";
+                                        }
+                                        paletSutunundaVarMi = true;
+                                        break;
+                                    }
                                 }
                             }
 
-                            // Eğer sütunda hiç boş hücre kalmadıysa yeni bir satır oluşturup ekle
-                            if (!bosHucreBulundu)
+                            if (!paletSutunundaVarMi)
                             {
-                                int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
-                                dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{okutulanBarkod} - {urunAdi} | Adet: 1";
+                                bool bosHucreBulundu = false;
+                                foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                                {
+                                    if (paletSatiri.Cells[aktifPaletSutunIndex].Value == null || string.IsNullOrWhiteSpace(paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString()))
+                                    {
+                                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{okutulanBarkod} - {urunAdi} | Adet: 1";
+                                        bosHucreBulundu = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!bosHucreBulundu)
+                                {
+                                    int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
+                                    dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{okutulanBarkod} - {urunAdi} | Adet: 1";
+                                }
                             }
+                            break; // Ürünü bulduk, diğer satırlara bakmaya gerek yok
                         }
-                        break; // Ürünü bulduk, diğer satırlara bakmaya gerek yok
                     }
                 }
 
                 // Barkod hiçbir sipariş satırı ile eşleşmediyse yanlış üründür
                 if (!urunBulundu)
                 {
-                    // 🎵 DATTTT: Hatalı ürün alarmı (Kalın ve uzun)
-                    Console.Beep(300, 700);
-                    MessageBox.Show("HATA! Okutulan bu ürün ilgili siparişte yok!", "Yanlış Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // 🎵 GERÇEK HOPARLÖR SESİ (HATA)
+                    try
+                    {
+                        string wavYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hata.wav");
+                        if (System.IO.File.Exists(wavYolu)) new System.Media.SoundPlayer(wavYolu).Play();
+                        else System.Media.SystemSounds.Hand.Play(); // WAV dosyası yoksa Windows Kritik Hata (Daaaat!) sesini çal
+                    }
+                    catch { }
+
+                    MessageBox.Show("HATA! Okutulan ürün siparişte yok veya Excel listesinde kayıtlı değil!", "Yanlış Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
 
                 txtBarkod.Clear();
