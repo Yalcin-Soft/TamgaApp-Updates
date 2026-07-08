@@ -89,22 +89,23 @@ namespace TamgaApp
             this.ÜrünAdeti = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.ÜrünBarkodu = new System.Windows.Forms.DataGridViewTextBoxColumn();
             this.tabPage12 = new System.Windows.Forms.TabPage();
-            this.label34 = new System.Windows.Forms.Label();
-            this.cmbManuelPrinter = new System.Windows.Forms.ComboBox();
-            this.label33 = new System.Windows.Forms.Label();
-            this.label32 = new System.Windows.Forms.Label();
-            this.label17 = new System.Windows.Forms.Label();
-            this.label16 = new System.Windows.Forms.Label();
-            this.label15 = new System.Windows.Forms.Label();
+            this.panel12 = new System.Windows.Forms.Panel();
             this.label14 = new System.Windows.Forms.Label();
-            this.btnManuelYazdir = new System.Windows.Forms.Button();
-            this.btnManuelOnizle = new System.Windows.Forms.Button();
-            this.txtManTel2 = new System.Windows.Forms.TextBox();
-            this.txtManTel1 = new System.Windows.Forms.TextBox();
-            this.txtManIl = new System.Windows.Forms.TextBox();
-            this.txtManAdres = new System.Windows.Forms.TextBox();
-            this.txtManFirma = new System.Windows.Forms.TextBox();
+            this.label34 = new System.Windows.Forms.Label();
             this.cmbManualTemplate = new System.Windows.Forms.ComboBox();
+            this.cmbManuelPrinter = new System.Windows.Forms.ComboBox();
+            this.txtManFirma = new System.Windows.Forms.TextBox();
+            this.label33 = new System.Windows.Forms.Label();
+            this.txtManAdres = new System.Windows.Forms.TextBox();
+            this.label32 = new System.Windows.Forms.Label();
+            this.txtManIl = new System.Windows.Forms.TextBox();
+            this.label17 = new System.Windows.Forms.Label();
+            this.txtManTel1 = new System.Windows.Forms.TextBox();
+            this.label16 = new System.Windows.Forms.Label();
+            this.txtManTel2 = new System.Windows.Forms.TextBox();
+            this.label15 = new System.Windows.Forms.Label();
+            this.btnManuelOnizle = new System.Windows.Forms.Button();
+            this.btnManuelYazdir = new System.Windows.Forms.Button();
             this.TabPage = new System.Windows.Forms.TabPage();
             this.tabPrintSettings = new System.Windows.Forms.TabControl();
             this.tabPage11 = new System.Windows.Forms.TabPage();
@@ -160,11 +161,12 @@ namespace TamgaApp
             this.label18 = new System.Windows.Forms.Label();
             this.txtPageWidthMm = new System.Windows.Forms.TextBox();
             this.tabPage6 = new System.Windows.Forms.TabPage();
-            this.label13 = new System.Windows.Forms.Label();
-            this.label12 = new System.Windows.Forms.Label();
+            this.panel10 = new System.Windows.Forms.Panel();
             this.btnSavePrinterMapping = new System.Windows.Forms.Button();
-            this.cmbPrinters = new System.Windows.Forms.ComboBox();
+            this.label13 = new System.Windows.Forms.Label();
             this.cmbPrintingPages = new System.Windows.Forms.ComboBox();
+            this.label12 = new System.Windows.Forms.Label();
+            this.cmbPrinters = new System.Windows.Forms.ComboBox();
             this.tabPage8 = new System.Windows.Forms.TabPage();
             this.btnTumVerileriSil = new System.Windows.Forms.Button();
             this.btnKayitYeriSec = new System.Windows.Forms.Button();
@@ -301,8 +303,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.panel10 = new System.Windows.Forms.Panel();
-            this.panel12 = new System.Windows.Forms.Panel();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
             this.splitContainer5.Panel1.SuspendLayout();
@@ -321,6 +321,7 @@ namespace TamgaApp
             this.panel5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvUretim)).BeginInit();
             this.tabPage12.SuspendLayout();
+            this.panel12.SuspendLayout();
             this.TabPage.SuspendLayout();
             this.tabPrintSettings.SuspendLayout();
             this.tabPage11.SuspendLayout();
@@ -334,6 +335,7 @@ namespace TamgaApp
             this.panel2.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numGridMm)).BeginInit();
             this.tabPage6.SuspendLayout();
+            this.panel10.SuspendLayout();
             this.tabPage8.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvBarkodVerileri)).BeginInit();
             this.tabPage9.SuspendLayout();
@@ -372,8 +374,6 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).BeginInit();
             this.panel4.SuspendLayout();
-            this.panel10.SuspendLayout();
-            this.panel12.SuspendLayout();
             this.SuspendLayout();
             // 
             // printPreviewDialog1
@@ -969,68 +969,29 @@ namespace TamgaApp
             this.tabPage12.Text = "Manuel Etiket";
             this.tabPage12.UseVisualStyleBackColor = true;
             // 
-            // label34
+            // panel12
             // 
-            this.label34.AutoSize = true;
-            this.label34.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label34.Location = new System.Drawing.Point(97, 157);
-            this.label34.Name = "label34";
-            this.label34.Size = new System.Drawing.Size(85, 15);
-            this.label34.TabIndex = 15;
-            this.label34.Text = "Yazıcı Seçimi:";
-            // 
-            // cmbManuelPrinter
-            // 
-            this.cmbManuelPrinter.FormattingEnabled = true;
-            this.cmbManuelPrinter.Location = new System.Drawing.Point(252, 154);
-            this.cmbManuelPrinter.Name = "cmbManuelPrinter";
-            this.cmbManuelPrinter.Size = new System.Drawing.Size(201, 21);
-            this.cmbManuelPrinter.TabIndex = 2;
-            // 
-            // label33
-            // 
-            this.label33.AutoSize = true;
-            this.label33.Location = new System.Drawing.Point(97, 311);
-            this.label33.Name = "label33";
-            this.label33.Size = new System.Drawing.Size(99, 13);
-            this.label33.TabIndex = 13;
-            this.label33.Text = "Telefon 2 (Ek Bilgi):";
-            // 
-            // label32
-            // 
-            this.label32.AutoSize = true;
-            this.label32.Location = new System.Drawing.Point(97, 285);
-            this.label32.Name = "label32";
-            this.label32.Size = new System.Drawing.Size(99, 13);
-            this.label32.TabIndex = 12;
-            this.label32.Text = "Telefon 1 (Ek Bilgi):";
-            // 
-            // label17
-            // 
-            this.label17.AutoSize = true;
-            this.label17.Location = new System.Drawing.Point(97, 259);
-            this.label17.Name = "label17";
-            this.label17.Size = new System.Drawing.Size(77, 13);
-            this.label17.TabIndex = 11;
-            this.label17.Text = "İl (Örn: Çorum):";
-            // 
-            // label16
-            // 
-            this.label16.AutoSize = true;
-            this.label16.Location = new System.Drawing.Point(97, 233);
-            this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(154, 13);
-            this.label16.TabIndex = 10;
-            this.label16.Text = "Adres (Örn: Dünyanın Merkezi):";
-            // 
-            // label15
-            // 
-            this.label15.AutoSize = true;
-            this.label15.Location = new System.Drawing.Point(97, 207);
-            this.label15.Name = "label15";
-            this.label15.Size = new System.Drawing.Size(153, 13);
-            this.label15.TabIndex = 9;
-            this.label15.Text = "Firma Adı (Örn: Uğur Software):";
+            this.panel12.Controls.Add(this.label14);
+            this.panel12.Controls.Add(this.label34);
+            this.panel12.Controls.Add(this.cmbManualTemplate);
+            this.panel12.Controls.Add(this.cmbManuelPrinter);
+            this.panel12.Controls.Add(this.txtManFirma);
+            this.panel12.Controls.Add(this.label33);
+            this.panel12.Controls.Add(this.txtManAdres);
+            this.panel12.Controls.Add(this.label32);
+            this.panel12.Controls.Add(this.txtManIl);
+            this.panel12.Controls.Add(this.label17);
+            this.panel12.Controls.Add(this.txtManTel1);
+            this.panel12.Controls.Add(this.label16);
+            this.panel12.Controls.Add(this.txtManTel2);
+            this.panel12.Controls.Add(this.label15);
+            this.panel12.Controls.Add(this.btnManuelOnizle);
+            this.panel12.Controls.Add(this.btnManuelYazdir);
+            this.panel12.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel12.Location = new System.Drawing.Point(3, 3);
+            this.panel12.Name = "panel12";
+            this.panel12.Size = new System.Drawing.Size(1763, 828);
+            this.panel12.TabIndex = 16;
             // 
             // label14
             // 
@@ -1042,15 +1003,111 @@ namespace TamgaApp
             this.label14.TabIndex = 8;
             this.label14.Text = "Etiket Şablonu:";
             // 
-            // btnManuelYazdir
+            // label34
             // 
-            this.btnManuelYazdir.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelYazdir.Location = new System.Drawing.Point(285, 348);
-            this.btnManuelYazdir.Name = "btnManuelYazdir";
-            this.btnManuelYazdir.Size = new System.Drawing.Size(168, 79);
-            this.btnManuelYazdir.TabIndex = 9;
-            this.btnManuelYazdir.Text = "Yazdır";
-            this.btnManuelYazdir.UseVisualStyleBackColor = true;
+            this.label34.AutoSize = true;
+            this.label34.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label34.Location = new System.Drawing.Point(97, 157);
+            this.label34.Name = "label34";
+            this.label34.Size = new System.Drawing.Size(85, 15);
+            this.label34.TabIndex = 15;
+            this.label34.Text = "Yazıcı Seçimi:";
+            // 
+            // cmbManualTemplate
+            // 
+            this.cmbManualTemplate.FormattingEnabled = true;
+            this.cmbManualTemplate.Location = new System.Drawing.Point(252, 100);
+            this.cmbManualTemplate.Name = "cmbManualTemplate";
+            this.cmbManualTemplate.Size = new System.Drawing.Size(201, 21);
+            this.cmbManualTemplate.TabIndex = 1;
+            // 
+            // cmbManuelPrinter
+            // 
+            this.cmbManuelPrinter.FormattingEnabled = true;
+            this.cmbManuelPrinter.Location = new System.Drawing.Point(252, 154);
+            this.cmbManuelPrinter.Name = "cmbManuelPrinter";
+            this.cmbManuelPrinter.Size = new System.Drawing.Size(201, 21);
+            this.cmbManuelPrinter.TabIndex = 2;
+            // 
+            // txtManFirma
+            // 
+            this.txtManFirma.Location = new System.Drawing.Point(252, 200);
+            this.txtManFirma.Name = "txtManFirma";
+            this.txtManFirma.Size = new System.Drawing.Size(201, 20);
+            this.txtManFirma.TabIndex = 3;
+            // 
+            // label33
+            // 
+            this.label33.AutoSize = true;
+            this.label33.Location = new System.Drawing.Point(97, 311);
+            this.label33.Name = "label33";
+            this.label33.Size = new System.Drawing.Size(99, 13);
+            this.label33.TabIndex = 13;
+            this.label33.Text = "Telefon 2 (Ek Bilgi):";
+            // 
+            // txtManAdres
+            // 
+            this.txtManAdres.Location = new System.Drawing.Point(252, 226);
+            this.txtManAdres.Name = "txtManAdres";
+            this.txtManAdres.Size = new System.Drawing.Size(201, 20);
+            this.txtManAdres.TabIndex = 4;
+            // 
+            // label32
+            // 
+            this.label32.AutoSize = true;
+            this.label32.Location = new System.Drawing.Point(97, 285);
+            this.label32.Name = "label32";
+            this.label32.Size = new System.Drawing.Size(99, 13);
+            this.label32.TabIndex = 12;
+            this.label32.Text = "Telefon 1 (Ek Bilgi):";
+            // 
+            // txtManIl
+            // 
+            this.txtManIl.Location = new System.Drawing.Point(252, 252);
+            this.txtManIl.Name = "txtManIl";
+            this.txtManIl.Size = new System.Drawing.Size(201, 20);
+            this.txtManIl.TabIndex = 5;
+            // 
+            // label17
+            // 
+            this.label17.AutoSize = true;
+            this.label17.Location = new System.Drawing.Point(97, 259);
+            this.label17.Name = "label17";
+            this.label17.Size = new System.Drawing.Size(77, 13);
+            this.label17.TabIndex = 11;
+            this.label17.Text = "İl (Örn: Çorum):";
+            // 
+            // txtManTel1
+            // 
+            this.txtManTel1.Location = new System.Drawing.Point(252, 278);
+            this.txtManTel1.Name = "txtManTel1";
+            this.txtManTel1.Size = new System.Drawing.Size(201, 20);
+            this.txtManTel1.TabIndex = 6;
+            // 
+            // label16
+            // 
+            this.label16.AutoSize = true;
+            this.label16.Location = new System.Drawing.Point(97, 233);
+            this.label16.Name = "label16";
+            this.label16.Size = new System.Drawing.Size(154, 13);
+            this.label16.TabIndex = 10;
+            this.label16.Text = "Adres (Örn: Dünyanın Merkezi):";
+            // 
+            // txtManTel2
+            // 
+            this.txtManTel2.Location = new System.Drawing.Point(252, 304);
+            this.txtManTel2.Name = "txtManTel2";
+            this.txtManTel2.Size = new System.Drawing.Size(201, 20);
+            this.txtManTel2.TabIndex = 7;
+            // 
+            // label15
+            // 
+            this.label15.AutoSize = true;
+            this.label15.Location = new System.Drawing.Point(97, 207);
+            this.label15.Name = "label15";
+            this.label15.Size = new System.Drawing.Size(153, 13);
+            this.label15.TabIndex = 9;
+            this.label15.Text = "Firma Adı (Örn: Uğur Software):";
             // 
             // btnManuelOnizle
             // 
@@ -1062,48 +1119,15 @@ namespace TamgaApp
             this.btnManuelOnizle.Text = "Önizle";
             this.btnManuelOnizle.UseVisualStyleBackColor = true;
             // 
-            // txtManTel2
+            // btnManuelYazdir
             // 
-            this.txtManTel2.Location = new System.Drawing.Point(252, 304);
-            this.txtManTel2.Name = "txtManTel2";
-            this.txtManTel2.Size = new System.Drawing.Size(201, 20);
-            this.txtManTel2.TabIndex = 7;
-            // 
-            // txtManTel1
-            // 
-            this.txtManTel1.Location = new System.Drawing.Point(252, 278);
-            this.txtManTel1.Name = "txtManTel1";
-            this.txtManTel1.Size = new System.Drawing.Size(201, 20);
-            this.txtManTel1.TabIndex = 6;
-            // 
-            // txtManIl
-            // 
-            this.txtManIl.Location = new System.Drawing.Point(252, 252);
-            this.txtManIl.Name = "txtManIl";
-            this.txtManIl.Size = new System.Drawing.Size(201, 20);
-            this.txtManIl.TabIndex = 5;
-            // 
-            // txtManAdres
-            // 
-            this.txtManAdres.Location = new System.Drawing.Point(252, 226);
-            this.txtManAdres.Name = "txtManAdres";
-            this.txtManAdres.Size = new System.Drawing.Size(201, 20);
-            this.txtManAdres.TabIndex = 4;
-            // 
-            // txtManFirma
-            // 
-            this.txtManFirma.Location = new System.Drawing.Point(252, 200);
-            this.txtManFirma.Name = "txtManFirma";
-            this.txtManFirma.Size = new System.Drawing.Size(201, 20);
-            this.txtManFirma.TabIndex = 3;
-            // 
-            // cmbManualTemplate
-            // 
-            this.cmbManualTemplate.FormattingEnabled = true;
-            this.cmbManualTemplate.Location = new System.Drawing.Point(252, 100);
-            this.cmbManualTemplate.Name = "cmbManualTemplate";
-            this.cmbManualTemplate.Size = new System.Drawing.Size(201, 21);
-            this.cmbManualTemplate.TabIndex = 1;
+            this.btnManuelYazdir.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnManuelYazdir.Location = new System.Drawing.Point(285, 348);
+            this.btnManuelYazdir.Name = "btnManuelYazdir";
+            this.btnManuelYazdir.Size = new System.Drawing.Size(168, 79);
+            this.btnManuelYazdir.TabIndex = 9;
+            this.btnManuelYazdir.Text = "Yazdır";
+            this.btnManuelYazdir.UseVisualStyleBackColor = true;
             // 
             // TabPage
             // 
@@ -1727,25 +1751,18 @@ namespace TamgaApp
             this.tabPage6.Text = "Yazdırma Ayarları";
             this.tabPage6.UseVisualStyleBackColor = true;
             // 
-            // label13
+            // panel10
             // 
-            this.label13.AutoSize = true;
-            this.label13.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label13.Location = new System.Drawing.Point(394, 106);
-            this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(86, 19);
-            this.label13.TabIndex = 4;
-            this.label13.Text = "Yazıcı Listesi";
-            // 
-            // label12
-            // 
-            this.label12.AutoSize = true;
-            this.label12.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label12.Location = new System.Drawing.Point(157, 106);
-            this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(87, 19);
-            this.label12.TabIndex = 3;
-            this.label12.Text = "Sayfa Seçimi";
+            this.panel10.Controls.Add(this.btnSavePrinterMapping);
+            this.panel10.Controls.Add(this.label13);
+            this.panel10.Controls.Add(this.cmbPrintingPages);
+            this.panel10.Controls.Add(this.label12);
+            this.panel10.Controls.Add(this.cmbPrinters);
+            this.panel10.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel10.Location = new System.Drawing.Point(3, 3);
+            this.panel10.Name = "panel10";
+            this.panel10.Size = new System.Drawing.Size(1751, 798);
+            this.panel10.TabIndex = 5;
             // 
             // btnSavePrinterMapping
             // 
@@ -1757,13 +1774,15 @@ namespace TamgaApp
             this.btnSavePrinterMapping.Text = "KAYDET";
             this.btnSavePrinterMapping.UseVisualStyleBackColor = true;
             // 
-            // cmbPrinters
+            // label13
             // 
-            this.cmbPrinters.FormattingEnabled = true;
-            this.cmbPrinters.Location = new System.Drawing.Point(339, 143);
-            this.cmbPrinters.Name = "cmbPrinters";
-            this.cmbPrinters.Size = new System.Drawing.Size(200, 21);
-            this.cmbPrinters.TabIndex = 1;
+            this.label13.AutoSize = true;
+            this.label13.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label13.Location = new System.Drawing.Point(394, 106);
+            this.label13.Name = "label13";
+            this.label13.Size = new System.Drawing.Size(86, 19);
+            this.label13.TabIndex = 4;
+            this.label13.Text = "Yazıcı Listesi";
             // 
             // cmbPrintingPages
             // 
@@ -1772,6 +1791,24 @@ namespace TamgaApp
             this.cmbPrintingPages.Name = "cmbPrintingPages";
             this.cmbPrintingPages.Size = new System.Drawing.Size(200, 21);
             this.cmbPrintingPages.TabIndex = 0;
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label12.Location = new System.Drawing.Point(157, 106);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(87, 19);
+            this.label12.TabIndex = 3;
+            this.label12.Text = "Sayfa Seçimi";
+            // 
+            // cmbPrinters
+            // 
+            this.cmbPrinters.FormattingEnabled = true;
+            this.cmbPrinters.Location = new System.Drawing.Point(339, 143);
+            this.cmbPrinters.Name = "cmbPrinters";
+            this.cmbPrinters.Size = new System.Drawing.Size(200, 21);
+            this.cmbPrinters.TabIndex = 1;
             // 
             // tabPage8
             // 
@@ -2486,9 +2523,6 @@ namespace TamgaApp
             // 
             // panel9
             // 
-            this.panel9.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.panel9.Controls.Add(this.label53);
             this.panel9.Controls.Add(this.btnTopluAktar);
             this.panel9.Controls.Add(this.txtTel2);
@@ -2502,9 +2536,10 @@ namespace TamgaApp
             this.panel9.Controls.Add(this.label2);
             this.panel9.Controls.Add(this.btnKaydet);
             this.panel9.Controls.Add(this.label1);
-            this.panel9.Location = new System.Drawing.Point(562, 152);
+            this.panel9.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panel9.Location = new System.Drawing.Point(2, 2);
             this.panel9.Name = "panel9";
-            this.panel9.Size = new System.Drawing.Size(604, 399);
+            this.panel9.Size = new System.Drawing.Size(1765, 830);
             this.panel9.TabIndex = 35;
             // 
             // label53
@@ -3273,45 +3308,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // panel10
-            // 
-            this.panel10.Controls.Add(this.btnSavePrinterMapping);
-            this.panel10.Controls.Add(this.label13);
-            this.panel10.Controls.Add(this.cmbPrintingPages);
-            this.panel10.Controls.Add(this.label12);
-            this.panel10.Controls.Add(this.cmbPrinters);
-            this.panel10.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel10.Location = new System.Drawing.Point(3, 3);
-            this.panel10.Name = "panel10";
-            this.panel10.Size = new System.Drawing.Size(1751, 798);
-            this.panel10.TabIndex = 5;
-            // 
-            // panel12
-            // 
-            this.panel12.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.panel12.Controls.Add(this.label14);
-            this.panel12.Controls.Add(this.label34);
-            this.panel12.Controls.Add(this.cmbManualTemplate);
-            this.panel12.Controls.Add(this.cmbManuelPrinter);
-            this.panel12.Controls.Add(this.txtManFirma);
-            this.panel12.Controls.Add(this.label33);
-            this.panel12.Controls.Add(this.txtManAdres);
-            this.panel12.Controls.Add(this.label32);
-            this.panel12.Controls.Add(this.txtManIl);
-            this.panel12.Controls.Add(this.label17);
-            this.panel12.Controls.Add(this.txtManTel1);
-            this.panel12.Controls.Add(this.label16);
-            this.panel12.Controls.Add(this.txtManTel2);
-            this.panel12.Controls.Add(this.label15);
-            this.panel12.Controls.Add(this.btnManuelOnizle);
-            this.panel12.Controls.Add(this.btnManuelYazdir);
-            this.panel12.Location = new System.Drawing.Point(635, 190);
-            this.panel12.Name = "panel12";
-            this.panel12.Size = new System.Drawing.Size(517, 491);
-            this.panel12.TabIndex = 16;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -3345,6 +3341,8 @@ namespace TamgaApp
             this.panel5.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvUretim)).EndInit();
             this.tabPage12.ResumeLayout(false);
+            this.panel12.ResumeLayout(false);
+            this.panel12.PerformLayout();
             this.TabPage.ResumeLayout(false);
             this.tabPrintSettings.ResumeLayout(false);
             this.tabPage11.ResumeLayout(false);
@@ -3361,6 +3359,8 @@ namespace TamgaApp
             this.panel2.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numGridMm)).EndInit();
             this.tabPage6.ResumeLayout(false);
+            this.panel10.ResumeLayout(false);
+            this.panel10.PerformLayout();
             this.tabPage8.ResumeLayout(false);
             this.tabPage8.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvBarkodVerileri)).EndInit();
@@ -3410,10 +3410,6 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).EndInit();
             this.panel4.ResumeLayout(false);
             this.panel4.PerformLayout();
-            this.panel10.ResumeLayout(false);
-            this.panel10.PerformLayout();
-            this.panel12.ResumeLayout(false);
-            this.panel12.PerformLayout();
             this.ResumeLayout(false);
 
         }
