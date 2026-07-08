@@ -168,6 +168,7 @@ namespace TamgaApp
                 }
             }
 
+
             // 🛡️ ULTRA GÜVENLİ GOD MODE DESTEKLİ YETKİ KALKANI
             // Giriş yapan kullanıcı "TamgaApp" (Ana Admin) değilse ve yetkisi "Sınırsız" değilse çalışır.
             // Kullanıcının yetkisi olmayan sekmeleri program açılırken fiziksel olarak siler/gizler.
@@ -212,6 +213,7 @@ namespace TamgaApp
             InitializePrinterSettingsTab();
             AmbarSisteminiHazirla();
             SayimSisteminiHazirla();
+            YaziciAyarlariniYukle();
 
             // Tasarım Ekranı Özellikler Paneli (Properties) Varsayılan Ayarları
             numPropFontSize.Minimum = 6;
@@ -248,23 +250,8 @@ namespace TamgaApp
 
             SetupPaperSizes();
             SetupResponsiveLayout();
-                        
-            // Manuel Etiket İçin Varsayılan Yazıcıları Doldur
-            if (cmbManuelPrinter != null)
-            {
-                cmbManuelPrinter.Items.Clear();
-                foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
-                {
-                    cmbManuelPrinter.Items.Add(printer);
-                }
 
-                PrintDocument pd = new PrintDocument();
-                string defaultPrinter = pd.PrinterSettings.PrinterName;
-                if (cmbManuelPrinter.Items.Contains(defaultPrinter)) cmbManuelPrinter.SelectedItem = defaultPrinter;
-                else if (cmbManuelPrinter.Items.Count > 0) cmbManuelPrinter.SelectedIndex = 0;
-            }
-
-            // Çoklu Zarf İçin Varsayılan Yazıcıları Doldur
+            // --- ÇOKLU ZARF SEKMESİ YAZICI DOLDURMA ---
             if (cmbCokluPrinter != null)
             {
                 cmbCokluPrinter.Items.Clear();
@@ -273,10 +260,45 @@ namespace TamgaApp
                     cmbCokluPrinter.Items.Add(printer);
                 }
 
-                PrintDocument pdCoklu = new PrintDocument();
-                string defPrinterCoklu = pdCoklu.PrinterSettings.PrinterName;
-                if (cmbCokluPrinter.Items.Contains(defPrinterCoklu)) cmbCokluPrinter.SelectedItem = defPrinterCoklu;
-                else if (cmbCokluPrinter.Items.Count > 0) cmbCokluPrinter.SelectedIndex = 0;
+                // 🌟 Önce ayarlara bak, özel atanmış yazıcı var mı?
+                string ozelYazici = Properties.Settings.Default.YaziciCokluZarf;
+
+                if (!string.IsNullOrEmpty(ozelYazici) && cmbCokluPrinter.Items.Contains(ozelYazici))
+                {
+                    cmbCokluPrinter.SelectedItem = ozelYazici;
+                }
+                else
+                {
+                    System.Drawing.Printing.PrintDocument pd = new System.Drawing.Printing.PrintDocument();
+                    string defaultPrinter = pd.PrinterSettings.PrinterName;
+                    if (cmbCokluPrinter.Items.Contains(defaultPrinter)) cmbCokluPrinter.SelectedItem = defaultPrinter;
+                    else if (cmbCokluPrinter.Items.Count > 0) cmbCokluPrinter.SelectedIndex = 0;
+                }
+            }
+
+            // --- MANUEL ETİKET SEKMESİ YAZICI DOLDURMA ---
+            if (cmbManuelPrinter != null)
+            {
+                cmbManuelPrinter.Items.Clear();
+                foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+                {
+                    cmbManuelPrinter.Items.Add(printer);
+                }
+
+                // 🌟 Önce ayarlara bak, özel atanmış yazıcı var mı?
+                string ozelYazici = Properties.Settings.Default.YaziciManuelEtiket;
+
+                if (!string.IsNullOrEmpty(ozelYazici) && cmbManuelPrinter.Items.Contains(ozelYazici))
+                {
+                    cmbManuelPrinter.SelectedItem = ozelYazici;
+                }
+                else
+                {
+                    System.Drawing.Printing.PrintDocument pd = new System.Drawing.Printing.PrintDocument();
+                    string defaultPrinter = pd.PrinterSettings.PrinterName;
+                    if (cmbManuelPrinter.Items.Contains(defaultPrinter)) cmbManuelPrinter.SelectedItem = defaultPrinter;
+                    else if (cmbManuelPrinter.Items.Count > 0) cmbManuelPrinter.SelectedIndex = 0;
+                }
             }
 
             // Tasarım Masası Olaylarını Bağla
@@ -1700,14 +1722,31 @@ namespace TamgaApp
         #endregion
 
         #region 📋 07.2 LİSTELEME VE ARAMA MOTORU
-        // Veritabanındaki tüm firmaları form üzerindeki basit ListBox'a doldurur
+        // Veritabanındaki tüm firmaları form üzerindeki basit ListBox'a VE DGV Tablosuna doldurur
         private void LoadFirmalar()
         {
-            lstFirmalar.Items.Clear();
+            // 1. Önce hem sağdaki listeyi hem de soldaki koca tabloyu temizle
+            if (lstFirmalar != null) lstFirmalar.Items.Clear();
+            if (dgvFirmalar != null) dgvFirmalar.Rows.Clear();
+
+            // 2. Veritabanından tüm firmaları çek
             var firmalar = DataAccess.GetAllFirmalar();
+
+            // 3. Çekilen her bir firma için döngüye gir
             foreach (var f in firmalar)
             {
-                lstFirmalar.Items.Add($"{f.Id} - {f.FirmaAdi}");
+                // Sağ taraftaki ListBox'a ekleme (Eski Kod)
+                if (lstFirmalar != null)
+                {
+                    lstFirmalar.Items.Add($"{f.Id} - {f.FirmaAdi}");
+                }
+
+                // 🌟 YENİ: Sol taraftaki devasa DataGridView tablosuna satır satır ekleme
+                if (dgvFirmalar != null)
+                {
+                    // Not: Tablonda ID, Firma Adı, Adres, İl, Telefon1, Telefon2 şeklinde 6 sütun olmalı!
+                    dgvFirmalar.Rows.Add(f.Id, f.FirmaAdi, f.Adres, f.Il, f.Telefon1, f.Telefon2);
+                }
             }
         }
 
@@ -3218,8 +3257,8 @@ namespace TamgaApp
 
             // YAZICI OFSET KALİBRASYONLARI
             // Bu değerler kağıdın fiziksel olarak yazıcıya girdiği yere göre tasarımın kaymasını düzeltir.
-            int inceAyarX = -45; // Sağa veya sola kaydır
-            int inceAyarY = -35; // Aşağı veya yukarı kaydır
+            int inceAyarX = 0; // Sağa veya sola kaydır
+            int inceAyarY = -25; // Aşağı veya yukarı kaydır
 
             // Kutuların X-Y Koordinat ve Boyut Matematiği
             int ustBosluk = 76 + inceAyarY;
@@ -4382,7 +4421,65 @@ namespace TamgaApp
             frmGununSevkleri.ShowDialog();
         }
         #endregion
-       
+
         #endregion
+
+        // =========================================================================================
+
+        #region ⚙️ 15. AYARLAR SEKMESİ (YAZICI ATAMALARI)
+
+        // Ayarlar sekmesindeki kutuları doldurur
+        private void YaziciAyarlariniYukle()
+        {
+            cmbPrintingPages.Items.Clear();
+            cmbPrintingPages.Items.Add("Normal Zarf Yazdırma");
+            cmbPrintingPages.Items.Add("Çoklu Zarf Yazdırma");
+            cmbPrintingPages.Items.Add("Manuel Etiket");
+
+            cmbPrinters.Items.Clear();
+            foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+            {
+                cmbPrinters.Items.Add(printer);
+            }
+        }
+
+        // Sayfa seçimi değiştiğinde, hafızadaki yazıcıyı getirir
+        private void cmbPrintingPages_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            string seciliSayfa = cmbPrintingPages.Text;
+            string kayitliYazici = "";
+
+            if (seciliSayfa == "Normal Zarf Yazdırma") kayitliYazici = Properties.Settings.Default.YaziciNormalZarf;
+            else if (seciliSayfa == "Çoklu Zarf Yazdırma") kayitliYazici = Properties.Settings.Default.YaziciCokluZarf;
+            else if (seciliSayfa == "Manuel Etiket") kayitliYazici = Properties.Settings.Default.YaziciManuelEtiket;
+
+            if (!string.IsNullOrEmpty(kayitliYazici) && cmbPrinters.Items.Contains(kayitliYazici))
+                cmbPrinters.SelectedItem = kayitliYazici;
+            else
+                cmbPrinters.SelectedIndex = -1;
+        }
+
+        // KAYDET Butonu
+        private void btnSavePrinterMapping_Click(object sender, EventArgs e)
+        {
+            if (cmbPrintingPages.SelectedIndex == -1 || cmbPrinters.SelectedIndex == -1)
+            {
+                MessageBox.Show("Lütfen atama yapmak için önce bir Sayfa ve bir Yazıcı seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string seciliSayfa = cmbPrintingPages.Text;
+            string seciliYazici = cmbPrinters.Text;
+
+            if (seciliSayfa == "Normal Zarf Yazdırma") Properties.Settings.Default.YaziciNormalZarf = seciliYazici;
+            else if (seciliSayfa == "Çoklu Zarf Yazdırma") Properties.Settings.Default.YaziciCokluZarf = seciliYazici;
+            else if (seciliSayfa == "Manuel Etiket") Properties.Settings.Default.YaziciManuelEtiket = seciliYazici;
+
+            Properties.Settings.Default.Save();
+            MessageBox.Show($"{seciliSayfa} ekranı için varsayılan yazıcı başarıyla\n[{seciliYazici}]\nolarak ayarlandı!", "Atama Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        #endregion
+
     }
 }

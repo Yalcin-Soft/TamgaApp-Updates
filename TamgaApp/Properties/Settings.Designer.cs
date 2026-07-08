@@ -106,5 +106,41 @@ namespace TamgaApp.Properties {
                 this["HatirlaSifre"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string YaziciNormalZarf {
+            get {
+                return ((string)(this["YaziciNormalZarf"]));
+            }
+            set {
+                this["YaziciNormalZarf"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string YaziciCokluZarf {
+            get {
+                return ((string)(this["YaziciCokluZarf"]));
+            }
+            set {
+                this["YaziciCokluZarf"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string YaziciManuelEtiket {
+            get {
+                return ((string)(this["YaziciManuelEtiket"]));
+            }
+            set {
+                this["YaziciManuelEtiket"] = value;
+            }
+        }
     }
 }
