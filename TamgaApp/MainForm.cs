@@ -2630,7 +2630,8 @@ namespace TamgaApp
                                     UrunKodu = row[0].ToString().Trim(),
                                     Aciklama = row.ItemArray.Length > 1 ? row[1].ToString().Trim() : "",
                                     IngilizceAciklama = row.ItemArray.Length > 2 ? row[2].ToString().Trim() : "",
-                                    Barkod = row.ItemArray.Length > 3 ? row[3].ToString().Trim() : ""
+                                    Barkod = row.ItemArray.Length > 3 ? row[3].ToString().Trim() : "",
+                                    Renk = row.ItemArray.Length > 4 ? row[4].ToString().Trim() : "" // 🌟 5. Sütun (Renk) Eklendi!
                                 };
 
                                 DataAccess.InsertUrun(yeniUrun);
@@ -2669,6 +2670,7 @@ namespace TamgaApp
             if (dgvBarkodVerileri.Columns["Aciklama"] != null) dgvBarkodVerileri.Columns["Aciklama"].HeaderText = "Açıklama";
             if (dgvBarkodVerileri.Columns["IngilizceAciklama"] != null) dgvBarkodVerileri.Columns["IngilizceAciklama"].HeaderText = "İngilizce Açıklama";
             if (dgvBarkodVerileri.Columns["Barkod"] != null) dgvBarkodVerileri.Columns["Barkod"].HeaderText = "Barkod (EAN)";
+            if (dgvBarkodVerileri.Columns["Renk"] != null) dgvBarkodVerileri.Columns["Renk"].HeaderText = "Renk"; // 🌟 Rengi Ekranda Göster
         }
 
         // ⚠️ TEHLİKELİ İŞLEM: Veritabanındaki on binlerce ürünü tek tuşla tamamen siler
@@ -4724,6 +4726,9 @@ namespace TamgaApp
             frmHafiza.ShowDialog();
         }
 
+
         #endregion
+
+
     }
 }   

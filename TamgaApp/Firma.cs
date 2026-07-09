@@ -48,6 +48,8 @@
 
         /// <summary>Barkod okuyucular için tanımlanmış sayısal/alfanumerik barkod verisi</summary>
         public string Barkod { get; set; }
+
+        public string Renk { get; set; }
     }
     #endregion
 
