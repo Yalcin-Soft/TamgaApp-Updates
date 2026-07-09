@@ -142,5 +142,17 @@ namespace TamgaApp.Properties {
                 this["YaziciManuelEtiket"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AyarlarTasindi {
+            get {
+                return ((bool)(this["AyarlarTasindi"]));
+            }
+            set {
+                this["AyarlarTasindi"] = value;
+            }
+        }
     }
 }

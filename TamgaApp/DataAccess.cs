@@ -1,7 +1,6 @@
 ﻿using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.Data.OleDb;
 
 namespace TamgaApp
 {
@@ -150,7 +149,7 @@ namespace TamgaApp
 
         // =========================================================================================
 
-        #region 📦 2. ÜRETİM TAKİP VE ÜRÜN MOTORLARI
+        #region 📦 2. ÜRETİM TAKİP VE ÜRÜN MOTORLARI (RENK EKLENTİLİ)
 
         /// <summary>Barkod okutulduğunda eşleşen ürünü bulup getirir.</summary>
         public static Urun GetUrunByBarkod(string barkod)
@@ -160,7 +159,7 @@ namespace TamgaApp
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT Id, UrunKodu, Aciklama, IngilizceAciklama, Barkod FROM Urunler WHERE Barkod=@barkod;";
+                    cmd.CommandText = "SELECT Id, UrunKodu, Aciklama, IngilizceAciklama, Barkod, Renk FROM Urunler WHERE Barkod=@barkod;";
                     cmd.Parameters.AddWithValue("@barkod", barkod ?? string.Empty);
 
                     using (var reader = cmd.ExecuteReader())
@@ -173,7 +172,8 @@ namespace TamgaApp
                                 UrunKodu = reader.IsDBNull(1) ? "" : reader.GetString(1),
                                 Aciklama = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                 IngilizceAciklama = reader.IsDBNull(3) ? "" : reader.GetString(3),
-                                Barkod = reader.IsDBNull(4) ? "" : reader.GetString(4)
+                                Barkod = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                                Renk = reader.IsDBNull(5) ? "" : reader.GetString(5) // 🌟 YENİ: Renk Sütunu
                             };
                         }
                     }
@@ -190,12 +190,13 @@ namespace TamgaApp
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = @"INSERT INTO Urunler (UrunKodu, Aciklama, IngilizceAciklama, Barkod) 
-                                        VALUES (@kod, @aciklama, @ing, @barkod);";
+                    cmd.CommandText = @"INSERT INTO Urunler (UrunKodu, Aciklama, IngilizceAciklama, Barkod, Renk) 
+                                        VALUES (@kod, @aciklama, @ing, @barkod, @renk);";
                     cmd.Parameters.AddWithValue("@kod", u.UrunKodu ?? string.Empty);
                     cmd.Parameters.AddWithValue("@aciklama", u.Aciklama ?? string.Empty);
                     cmd.Parameters.AddWithValue("@ing", u.IngilizceAciklama ?? string.Empty);
                     cmd.Parameters.AddWithValue("@barkod", u.Barkod ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@renk", u.Renk ?? string.Empty); // 🌟 YENİ: Renk Sütunu
                     cmd.ExecuteNonQuery();
                 }
             }
@@ -210,12 +211,13 @@ namespace TamgaApp
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"UPDATE Urunler 
-                                        SET Aciklama=@aciklama, IngilizceAciklama=@ing, Barkod=@barkod 
+                                        SET Aciklama=@aciklama, IngilizceAciklama=@ing, Barkod=@barkod, Renk=@renk 
                                         WHERE UrunKodu=@kod;";
                     cmd.Parameters.AddWithValue("@kod", u.UrunKodu ?? string.Empty);
                     cmd.Parameters.AddWithValue("@aciklama", u.Aciklama ?? string.Empty);
                     cmd.Parameters.AddWithValue("@ing", u.IngilizceAciklama ?? string.Empty);
                     cmd.Parameters.AddWithValue("@barkod", u.Barkod ?? string.Empty);
+                    cmd.Parameters.AddWithValue("@renk", u.Renk ?? string.Empty); // 🌟 YENİ: Renk Sütunu
                     cmd.ExecuteNonQuery();
                 }
             }
@@ -245,7 +247,7 @@ namespace TamgaApp
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT Id, UrunKodu, Aciklama, IngilizceAciklama, Barkod FROM Urunler;";
+                    cmd.CommandText = "SELECT Id, UrunKodu, Aciklama, IngilizceAciklama, Barkod, Renk FROM Urunler;";
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
@@ -256,7 +258,8 @@ namespace TamgaApp
                                 UrunKodu = reader.IsDBNull(1) ? "" : reader.GetString(1),
                                 Aciklama = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                 IngilizceAciklama = reader.IsDBNull(3) ? "" : reader.GetString(3),
-                                Barkod = reader.IsDBNull(4) ? "" : reader.GetString(4)
+                                Barkod = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                                Renk = reader.IsDBNull(5) ? "" : reader.GetString(5) // 🌟 YENİ: Renk Sütunu
                             });
                         }
                     }

@@ -143,6 +143,15 @@ namespace TamgaApp
         #region 🚀 02.1 FORM LOAD (AÇILIŞ MOTORU)
         private void MainForm_Load(object sender, EventArgs e)
         {
+
+            // 🛡️ SÜRÜM GÜNCELLEME ZIRHI: Eski sürümdeki SQL ve Yazıcı ayarlarını yeni sürüme göç ettirir!
+            if (!Properties.Settings.Default.AyarlarTasindi)
+            {
+                Properties.Settings.Default.Upgrade(); // Eski sürümdeki ayarları bul ve buraya kopyala
+                Properties.Settings.Default.AyarlarTasindi = true; // Taşıma işlemi bitti, şalteri kapat
+                Properties.Settings.Default.Save(); // Yeni durumu kaydet
+            }
+
             // Giriş yapan aktif kullanıcının adını programın üst başlığına yazdırır
             this.Text = $"TamgaApp Otomasyon - Aktif Kullanıcı: {AktifKullaniciAdi}";
 
@@ -1793,7 +1802,21 @@ namespace TamgaApp
         // Zarf sekmesindeki arama kutusuna göre DataGridView'i dinamik olarak filtreler
         private void btnAra_Click(object sender, EventArgs e)
         {
+            if (dgvZarfFirmalar == null) return;
 
+            string aranan = txtAramaFirmaAdi.Text.Trim().ToLower();
+            dgvZarfFirmalar.Rows.Clear();
+            var firmalar = DataAccess.GetAllFirmalar();
+
+            foreach (var f in firmalar)
+            {
+                if (f.FirmaAdi.ToLower().Contains(aranan))
+                {
+                    dgvZarfFirmalar.Rows.Add(f.Id, f.FirmaAdi, f.Adres, f.Il, f.Telefon1, f.Telefon2);
+                }
+            }
+
+            if (dgvZarfFirmalar.Rows.Count == 0) MessageBox.Show("Aramanıza uygun firma bulunamadı.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         #endregion
 
