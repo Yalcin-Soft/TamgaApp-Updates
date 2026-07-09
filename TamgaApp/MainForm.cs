@@ -1793,16 +1793,7 @@ namespace TamgaApp
         // Zarf sekmesindeki arama kutusuna göre DataGridView'i dinamik olarak filtreler
         private void btnAra_Click(object sender, EventArgs e)
         {
-            string aranan = txtAramaFirmaAdi.Text.Trim().ToLower();
-            dgvZarfFirmalar.Rows.Clear();
-            var firmalar = DataAccess.GetAllFirmalar();
 
-            foreach (var f in firmalar)
-            {
-                if (f.FirmaAdi.ToLower().StartsWith(aranan))
-                    dgvZarfFirmalar.Rows.Add(f.Id, f.FirmaAdi, f.Adres, f.Il, f.Telefon1, f.Telefon2);
-            }
-            if (dgvZarfFirmalar.Rows.Count == 0) MessageBox.Show("Aramanıza uygun firma bulunamadı.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         #endregion
 
@@ -4725,6 +4716,7 @@ namespace TamgaApp
             btnKapat.Click += (s, args) => { frmHafiza.Close(); };
             frmHafiza.ShowDialog();
         }
+
 
 
         #endregion

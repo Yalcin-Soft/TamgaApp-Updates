@@ -642,6 +642,7 @@ namespace TamgaApp
             this.btnSevkAra.TabIndex = 4;
             this.btnSevkAra.Text = "Ara";
             this.btnSevkAra.UseVisualStyleBackColor = true;
+            this.btnSevkAra.Click += new System.EventHandler(this.btnSevkAra_Click);
             // 
             // cmbSevkPaletSayisi
             // 
