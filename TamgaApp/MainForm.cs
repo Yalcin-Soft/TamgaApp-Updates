@@ -465,6 +465,8 @@ namespace TamgaApp
             if (btnKismiSevk != null) { btnKismiSevk.Click -= btnKismiSevk_Click; btnKismiSevk.Click += btnKismiSevk_Click; }
             if (btnSevkAskayaAl != null) { btnSevkAskayaAl.Click -= btnSevkAskayaAl_Click; btnSevkAskayaAl.Click += btnSevkAskayaAl_Click; }
             if (txtBarkod != null) { txtBarkod.KeyDown -= txtBarkod_KeyDown; txtBarkod.KeyDown += txtBarkod_KeyDown; }
+
+            if (btnManuelEkle != null) { btnManuelEkle.Click -= btnManuelEkle_Click; btnManuelEkle.Click += btnManuelEkle_Click; }
         }
         #endregion
 
@@ -3778,6 +3780,100 @@ namespace TamgaApp
                     txtBarkod.Focus();
                 }
             }
+        }
+
+        // 🌟 ACİL DURUM BUTONU: Barkodu olmayan veya okumayan ürünleri manuel olarak palete ekler
+        private void btnManuelEkle_Click(object sender, EventArgs e)
+        {
+            // 1. Palet seçili mi kalkanı
+            if (cmbAktifPalet.SelectedItem == null)
+            {
+                MessageBox.Show("Lütfen manuel ekleme yapmadan önce sağdan bir AKTİF PALET seçin!", "Palet Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2. Tablodan ürün seçilmiş mi kalkanı
+            if (dgvMalzemeler.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Lütfen tablodan okutulmuş saymak istediğiniz ürünü (satırı) seçin!", "Ürün Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Kullanıcının tablodan tıkladığı satırı yakala
+            DataGridViewRow hedefSatir = dgvMalzemeler.SelectedRows[0];
+
+            if (hedefSatir.IsNewRow || hedefSatir.Cells["Malzeme Kodu"].Value == null) return;
+
+            int siparisAdedi = Convert.ToInt32(hedefSatir.Cells["Sipariş Adedi"].Value);
+            int okutulanAdet = Convert.ToInt32(hedefSatir.Cells["Okutulan"].Value);
+
+            if (okutulanAdet >= siparisAdedi)
+            {
+                MessageBox.Show("Bu ürünün sipariş kotası zaten dolmuş, daha fazla ekleyemezsiniz!", "Kota Dolu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 3. Adedi 1 arttır ve satırın rengini duruma göre boya
+            okutulanAdet++;
+            hedefSatir.Cells["Okutulan"].Value = okutulanAdet;
+
+            if (okutulanAdet == siparisAdedi)
+            {
+                hedefSatir.DefaultCellStyle.BackColor = Color.LightGreen;
+                try { string wavYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "basarili.wav"); if (System.IO.File.Exists(wavYolu)) new System.Media.SoundPlayer(wavYolu).Play(); else System.Media.SystemSounds.Asterisk.Play(); } catch { }
+            }
+            else
+            {
+                hedefSatir.DefaultCellStyle.BackColor = Color.LightYellow;
+            }
+
+            // 4. PALETE EKLEME MANTIĞI (Barkod okutulmuş gibi palet matrisine yaz)
+            int aktifPaletSutunIndex = cmbAktifPalet.SelectedIndex;
+            string urunAdi = hedefSatir.Cells["Malzeme Adı"].Value.ToString();
+            string aitOlduguBelge = hedefSatir.Cells["Belge No"].Value.ToString();
+            string tablodakiBarkod = hedefSatir.Cells["Barkod"].Value.ToString().Trim();
+
+            bool paletSutunundaVarMi = false;
+
+            foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+            {
+                if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null)
+                {
+                    string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
+                    if (hucreMetni.Contains(tablodakiBarkod) && hucreMetni.Contains(aitOlduguBelge))
+                    {
+                        string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
+                        if (parcalar.Length == 2)
+                        {
+                            int mevcutPaletAdeti = int.Parse(parcalar[1]);
+                            paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {mevcutPaletAdeti + 1}";
+                        }
+                        paletSutunundaVarMi = true; break;
+                    }
+                }
+            }
+
+            if (!paletSutunundaVarMi)
+            {
+                bool bosHucreBulundu = false;
+                foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                {
+                    if (paletSatiri.Cells[aktifPaletSutunIndex].Value == null || string.IsNullOrWhiteSpace(paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString()))
+                    {
+                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
+                        bosHucreBulundu = true; break;
+                    }
+                }
+
+                if (!bosHucreBulundu)
+                {
+                    int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
+                    dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
+                }
+            }
+
+            // Son olarak barkod kutusuna geri odaklan ki, adam seri okutmaya devam edebilsin
+            txtBarkod.Focus();
         }
 
         // Olası kilitlenmelerde SQL bağlantısını ve önbellekteki çekilmiş siparişleri sıfırlar.
