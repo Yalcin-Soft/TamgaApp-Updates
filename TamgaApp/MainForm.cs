@@ -446,17 +446,25 @@ namespace TamgaApp
             if (btnSayimYenile != null) { btnSayimYenile.Click -= BtnSayimYenile_Click; btnSayimYenile.Click += BtnSayimYenile_Click; }
             if (btnSayimAc != null) { btnSayimAc.Click -= BtnSayimAc_Click; btnSayimAc.Click += BtnSayimAc_Click; }
 
-            // Sevkiyat ve Yarım Kalanlar (Askı) Sistemi
-            if (btnYarimGetir != null) { btnYarimGetir.Click -= btnYarimGetir_Click; btnYarimGetir.Click += btnYarimGetir_Click; }
-            if (btnYarimAc != null) { btnYarimAc.Click -= btnYarimAc_Click; btnYarimAc.Click += btnYarimAc_Click; }
-            if (btnGecmisSevkleriListele != null) { btnGecmisSevkleriListele.Click -= btnGecmisSevkleriListele_Click; btnGecmisSevkleriListele.Click += btnGecmisSevkleriListele_Click; }
-
             // ⚡ KRİTİK HATA ÇÖZÜMÜ: Müşteri Seçildiğinde Belge No Kutusunu Doldurur
             if (cmbMusteri != null)
             {
                 cmbMusteri.SelectedIndexChanged -= cmbMusteri_SelectedIndexChanged;
                 cmbMusteri.SelectedIndexChanged += cmbMusteri_SelectedIndexChanged;
             }
+
+            // Sevkiyat ve Yarım Kalanlar (Askı) Sistemi
+            if (btnYarimGetir != null) { btnYarimGetir.Click -= btnYarimGetir_Click; btnYarimGetir.Click += btnYarimGetir_Click; }
+            if (btnYarimAc != null) { btnYarimAc.Click -= btnYarimAc_Click; btnYarimAc.Click += btnYarimAc_Click; }
+            if (btnGecmisSevkleriListele != null) { btnGecmisSevkleriListele.Click -= btnGecmisSevkleriListele_Click; btnGecmisSevkleriListele.Click += btnGecmisSevkleriListele_Click; }
+
+            // 🌟 SEVKİYAT SAYFASI MOTORU BAĞLANTI KÖPRÜLERİ
+            if (cmbSevkPaletSayisi != null) { cmbSevkPaletSayisi.SelectedIndexChanged -= cmbSevkPaletSayisi_SelectedIndexChanged; cmbSevkPaletSayisi.SelectedIndexChanged += cmbSevkPaletSayisi_SelectedIndexChanged; }
+            if (btnSevkAra != null) { btnSevkAra.Click -= btnSevkAra_Click; btnSevkAra.Click += btnSevkAra_Click; }
+            if (btnTamSevk != null) { btnTamSevk.Click -= btnTamSevk_Click; btnTamSevk.Click += btnTamSevk_Click; }
+            if (btnKismiSevk != null) { btnKismiSevk.Click -= btnKismiSevk_Click; btnKismiSevk.Click += btnKismiSevk_Click; }
+            if (btnSevkAskayaAl != null) { btnSevkAskayaAl.Click -= btnSevkAskayaAl_Click; btnSevkAskayaAl.Click += btnSevkAskayaAl_Click; }
+            if (txtBarkod != null) { txtBarkod.KeyDown -= txtBarkod_KeyDown; txtBarkod.KeyDown += txtBarkod_KeyDown; }
         }
         #endregion
 
@@ -3802,7 +3810,10 @@ namespace TamgaApp
                 cmbBelgeNo.Items.Clear();
                 cmbBelgeNo.Text = "";
                 cmbSevkPaletSayisi.SelectedIndex = -1;
-                if (dgvMalzemeler.DataSource == null) dgvMalzemeler.Rows.Clear();
+
+                // 🌟 DOĞRU TEMİZLİK: Veri bağı koparılarak tablo sıfırlanır
+                dgvMalzemeler.DataSource = null;
+
                 dgvPaletMatrisi.Columns.Clear();
                 dgvPaletMatrisi.Rows.Clear();
                 cmbAktifPalet.Items.Clear();
@@ -3810,11 +3821,11 @@ namespace TamgaApp
                 // Müşteri kutusunu kalan güncel siparişlere göre yeniden doldur
                 cmbMusteri.Items.Clear();
                 var kalanMusteriler = dtTumSiparisler.AsEnumerable()
-                                                    .Select(r => r.Field<string>("MusteriAdi")?.Trim())
-                                                    .Where(m => !string.IsNullOrEmpty(m))
-                                                    .Distinct()
-                                                    .OrderBy(m => m)
-                                                    .ToArray();
+                                                            .Select(r => r.Field<string>("MusteriAdi")?.Trim())
+                                                            .Where(m => !string.IsNullOrEmpty(m))
+                                                            .Distinct()
+                                                            .OrderBy(m => m)
+                                                            .ToArray();
                 cmbMusteri.Items.AddRange(kalanMusteriler);
             }
         }
@@ -3851,7 +3862,7 @@ namespace TamgaApp
                     // 👻 GHOST MODU: Kısmi sevk bitince de belgeyi KALICI kara listeye al
                     string bitenBelge = cmbBelgeNo.Text.Trim();
 
-                    KaliciKaraListeyeEkle(bitenBelge); // <--- Txt Kalıcı Hafıza Motoru
+                    KaliciKaraListeyeEkle(bitenBelge); // Txt Kalıcı Hafıza Motoru
 
                     // Mevcut RAM tablosundan belgeyi uçur
                     for (int i = dtTumSiparisler.Rows.Count - 1; i >= 0; i--)
@@ -3870,7 +3881,10 @@ namespace TamgaApp
                     cmbBelgeNo.Items.Clear();
                     cmbBelgeNo.Text = "";
                     cmbSevkPaletSayisi.SelectedIndex = -1;
-                    if (dgvMalzemeler.DataSource == null) dgvMalzemeler.Rows.Clear();
+
+                    // 🌟 DOĞRU TEMİZLİK: Veri bağı koparılarak tablo sıfırlanır
+                    dgvMalzemeler.DataSource = null;
+
                     dgvPaletMatrisi.Columns.Clear();
                     dgvPaletMatrisi.Rows.Clear();
                     cmbAktifPalet.Items.Clear();
@@ -3878,11 +3892,11 @@ namespace TamgaApp
                     // Müşteri kutusunu güncel siparişlere göre yeniden doldur
                     cmbMusteri.Items.Clear();
                     var kalanMusteriler = dtTumSiparisler.AsEnumerable()
-                                                        .Select(r => r.Field<string>("MusteriAdi")?.Trim())
-                                                        .Where(m => !string.IsNullOrEmpty(m))
-                                                        .Distinct()
-                                                        .OrderBy(m => m)
-                                                        .ToArray();
+                                                                .Select(r => r.Field<string>("MusteriAdi")?.Trim())
+                                                                .Where(m => !string.IsNullOrEmpty(m))
+                                                                .Distinct()
+                                                                .OrderBy(m => m)
+                                                                .ToArray();
                     cmbMusteri.Items.AddRange(kalanMusteriler);
                 }
             }
