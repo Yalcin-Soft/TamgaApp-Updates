@@ -308,6 +308,8 @@ namespace TamgaApp
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
             this.btnManuelEkle = new System.Windows.Forms.Button();
+            this.btnPalettenSil = new System.Windows.Forms.Button();
+            this.btnSevkTemizle = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -560,6 +562,8 @@ namespace TamgaApp
             // 
             // panel7
             // 
+            this.panel7.Controls.Add(this.btnSevkTemizle);
+            this.panel7.Controls.Add(this.btnPalettenSil);
             this.panel7.Controls.Add(this.btnManuelEkle);
             this.panel7.Controls.Add(this.btnUzerineEkle);
             this.panel7.Controls.Add(this.cmbBelgeNo);
@@ -616,7 +620,7 @@ namespace TamgaApp
             // 
             // txtBarkod
             // 
-            this.txtBarkod.Location = new System.Drawing.Point(131, 437);
+            this.txtBarkod.Location = new System.Drawing.Point(132, 477);
             this.txtBarkod.Name = "txtBarkod";
             this.txtBarkod.Size = new System.Drawing.Size(201, 20);
             this.txtBarkod.TabIndex = 7;
@@ -625,7 +629,7 @@ namespace TamgaApp
             // 
             this.label56.AutoSize = true;
             this.label56.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label56.Location = new System.Drawing.Point(35, 439);
+            this.label56.Location = new System.Drawing.Point(36, 479);
             this.label56.Name = "label56";
             this.label56.Size = new System.Drawing.Size(90, 15);
             this.label56.TabIndex = 35;
@@ -706,7 +710,7 @@ namespace TamgaApp
             "40",
             "41",
             "42"});
-            this.cmbSevkPaletSayisi.Location = new System.Drawing.Point(131, 382);
+            this.cmbSevkPaletSayisi.Location = new System.Drawing.Point(132, 422);
             this.cmbSevkPaletSayisi.Name = "cmbSevkPaletSayisi";
             this.cmbSevkPaletSayisi.Size = new System.Drawing.Size(201, 21);
             this.cmbSevkPaletSayisi.TabIndex = 5;
@@ -725,7 +729,7 @@ namespace TamgaApp
             // 
             this.label59.AutoSize = true;
             this.label59.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label59.Location = new System.Drawing.Point(50, 384);
+            this.label59.Location = new System.Drawing.Point(51, 424);
             this.label59.Name = "label59";
             this.label59.Size = new System.Drawing.Size(76, 15);
             this.label59.TabIndex = 39;
@@ -735,7 +739,7 @@ namespace TamgaApp
             // 
             this.label60.AutoSize = true;
             this.label60.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label60.Location = new System.Drawing.Point(54, 412);
+            this.label60.Location = new System.Drawing.Point(55, 452);
             this.label60.Name = "label60";
             this.label60.Size = new System.Drawing.Size(71, 15);
             this.label60.TabIndex = 40;
@@ -781,7 +785,7 @@ namespace TamgaApp
             // cmbAktifPalet
             // 
             this.cmbAktifPalet.FormattingEnabled = true;
-            this.cmbAktifPalet.Location = new System.Drawing.Point(131, 410);
+            this.cmbAktifPalet.Location = new System.Drawing.Point(132, 450);
             this.cmbAktifPalet.Name = "cmbAktifPalet";
             this.cmbAktifPalet.Size = new System.Drawing.Size(201, 21);
             this.cmbAktifPalet.TabIndex = 6;
@@ -3377,6 +3381,28 @@ namespace TamgaApp
             this.btnManuelEkle.Text = "Manuel Ekle";
             this.btnManuelEkle.UseVisualStyleBackColor = false;
             // 
+            // btnPalettenSil
+            // 
+            this.btnPalettenSil.BackColor = System.Drawing.Color.OrangeRed;
+            this.btnPalettenSil.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnPalettenSil.Location = new System.Drawing.Point(5, 314);
+            this.btnPalettenSil.Name = "btnPalettenSil";
+            this.btnPalettenSil.Size = new System.Drawing.Size(393, 41);
+            this.btnPalettenSil.TabIndex = 46;
+            this.btnPalettenSil.Text = "Kalem Sil";
+            this.btnPalettenSil.UseVisualStyleBackColor = false;
+            // 
+            // btnSevkTemizle
+            // 
+            this.btnSevkTemizle.BackColor = System.Drawing.Color.Red;
+            this.btnSevkTemizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkTemizle.Location = new System.Drawing.Point(6, 361);
+            this.btnSevkTemizle.Name = "btnSevkTemizle";
+            this.btnSevkTemizle.Size = new System.Drawing.Size(393, 45);
+            this.btnSevkTemizle.TabIndex = 47;
+            this.btnSevkTemizle.Text = "TEMİZLE";
+            this.btnSevkTemizle.UseVisualStyleBackColor = false;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -3764,6 +3790,8 @@ namespace TamgaApp
         private Button btnZarfHafiza;
         private Button btnUzerineEkle;
         private Button btnManuelEkle;
+        private Button btnSevkTemizle;
+        private Button btnPalettenSil;
     }
 }
 

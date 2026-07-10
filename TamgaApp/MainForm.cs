@@ -467,6 +467,9 @@ namespace TamgaApp
             if (txtBarkod != null) { txtBarkod.KeyDown -= txtBarkod_KeyDown; txtBarkod.KeyDown += txtBarkod_KeyDown; }
 
             if (btnManuelEkle != null) { btnManuelEkle.Click -= btnManuelEkle_Click; btnManuelEkle.Click += btnManuelEkle_Click; }
+
+            if (btnPalettenSil != null) { btnPalettenSil.Click -= btnPalettenSil_Click; btnPalettenSil.Click += btnPalettenSil_Click; }
+            if (btnSevkTemizle != null) { btnSevkTemizle.Click -= btnSevkTemizle_Click; btnSevkTemizle.Click += btnSevkTemizle_Click; }
         }
         #endregion
 
@@ -3874,6 +3877,117 @@ namespace TamgaApp
 
             // Son olarak barkod kutusuna geri odaklan ki, adam seri okutmaya devam edebilsin
             txtBarkod.Focus();
+        }
+
+        // 🌟 GERİ ALMA (UNDO) MOTORU: Paletten seçilen ürünün okutulmasını geri alır
+        private void btnPalettenSil_Click(object sender, EventArgs e)
+        {
+            // Hücre seçili mi veya içi boş mu kontrolü
+            if (dgvPaletMatrisi.CurrentCell == null || dgvPaletMatrisi.CurrentCell.Value == null || string.IsNullOrWhiteSpace(dgvPaletMatrisi.CurrentCell.Value.ToString()))
+            {
+                MessageBox.Show("Lütfen sağdaki palet tablosundan silmek (geri almak) istediğiniz ürünü seçin!", "Seçim Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string hucreMetni = dgvPaletMatrisi.CurrentCell.Value.ToString();
+
+            try
+            {
+                // Örnek Metin: "869123456 - Klavye (SE-001) | Adet: 3"
+                string[] anaParcalar = hucreMetni.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+                if (anaParcalar.Length != 2) return;
+
+                string urunVeBelge = anaParcalar[0];
+                int paletAdeti = int.Parse(anaParcalar[1]);
+
+                // Metnin içinden Belge No'yu ve Barkodu (veya Kodu) cımbızla çek
+                int sonParantezAc = urunVeBelge.LastIndexOf('(');
+                int sonParantezKapat = urunVeBelge.LastIndexOf(')');
+
+                string belgeNo = "";
+                if (sonParantezAc > 0 && sonParantezKapat > sonParantezAc)
+                {
+                    belgeNo = urunVeBelge.Substring(sonParantezAc + 1, sonParantezKapat - sonParantezAc - 1);
+                }
+
+                string barkod = urunVeBelge.Substring(0, urunVeBelge.IndexOf(" - ")).Trim();
+
+                // 1. ADIM: Soldaki Ana Tablodan (dgvMalzemeler) Düşüş Yap ve Rengi Düzelt
+                bool solTablodaBulundu = false;
+                foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                {
+                    if (row.IsNewRow) continue;
+
+                    string rowBarkod = row.Cells["Barkod"].Value?.ToString();
+                    string rowMalzeme = row.Cells["Malzeme Kodu"].Value?.ToString();
+                    string rowBelge = row.Cells["Belge No"].Value?.ToString();
+
+                    // Ürün ve Belge No eşleştiyse
+                    if ((rowBarkod == barkod || rowMalzeme == barkod) && rowBelge == belgeNo)
+                    {
+                        int okutulan = Convert.ToInt32(row.Cells["Okutulan"].Value);
+                        if (okutulan > 0)
+                        {
+                            okutulan--;
+                            row.Cells["Okutulan"].Value = okutulan;
+
+                            int siparis = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+
+                            // Adet düştüğü için renkleri eski haline (Beyaz veya Sarı) çevir
+                            if (okutulan == 0) row.DefaultCellStyle.BackColor = Color.White;
+                            else if (okutulan < siparis) row.DefaultCellStyle.BackColor = Color.LightYellow;
+
+                            solTablodaBulundu = true;
+                            break; // Ürünü bulduk ve düşürdük, döngüyü kır
+                        }
+                    }
+                }
+
+                if (!solTablodaBulundu)
+                {
+                    MessageBox.Show("Bu ürün sol tabloda bulunamadığı veya zaten '0' olduğu için silinemiyor!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // 2. ADIM: Sağdaki Palet Matrisini Güncelle
+                if (paletAdeti > 1)
+                {
+                    // Palette 1'den fazla varsa sayıyı 1 düşür
+                    dgvPaletMatrisi.CurrentCell.Value = $"{urunVeBelge} | Adet: {paletAdeti - 1}";
+                }
+                else
+                {
+                    // Palette son 1 tane kaldıysa metni tamamen sil (hücreyi boşalt)
+                    dgvPaletMatrisi.CurrentCell.Value = "";
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Silme işlemi sırasında metin ayrıştırma hatası oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // 🌟 BÜYÜK TEMİZLİK (RESTART) MOTORU: Ekrandaki her şeyi sıfırlar
+        private void btnSevkTemizle_Click(object sender, EventArgs e)
+        {
+            DialogResult cevap = MessageBox.Show("DİKKAT: Ekranda okutulmuş olan TÜM ÜRÜNLER ve paletler silinecek. Sevkiyata en baştan başlamak zorunda kalacaksınız.\n\nEmin misiniz?", "Tüm Ekranı Sıfırla", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (cevap == DialogResult.Yes)
+            {
+                txtMusteriAdi.Clear();
+                txtSevkMusteri.Clear();
+                txtBarkod.Clear();
+                cmbBelgeNo.Text = "";
+
+                dgvMalzemeler.DataSource = null; // Sol tabloyu uçur
+
+                dgvPaletMatrisi.Columns.Clear(); // Palet sütunlarını uçur
+                dgvPaletMatrisi.Rows.Clear();    // Palet satırlarını uçur
+                cmbAktifPalet.Items.Clear();
+                cmbSevkPaletSayisi.SelectedIndex = -1;
+
+                MessageBox.Show("Ekran başarıyla sıfırlandı. Müşteri seçerek en baştan başlayabilirsiniz.", "Temizlendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         // Olası kilitlenmelerde SQL bağlantısını ve önbellekteki çekilmiş siparişleri sıfırlar.
