@@ -57,6 +57,8 @@ namespace TamgaApp
         private Firma currentPreviewFirma;                             // Ekranda tekli önizlemesi yapılan (aktif) firma verisi
         private List<Firma> batchFirms;                                // Çoklu zarf yazdırma işlemine sokulan firmaların toplu sırası
         private int batchIndex;                                        // Çoklu yazdırmada anlık olarak kaçıncı kağıdın/firmanın yazdırıldığını tutar
+                                                                       // Sadece Ambar yazdırma sekmesine hizmet eden, kendi hafızası olan özel motor
+        private PrintDocument ambarOzelMotor = null;
 
         // Yazıcı Hafızası
         private Dictionary<string, string> printerMappings = new Dictionary<string, string>(); // Hangi ekranın hangi yazıcıyı varsayılan kullanacağını tutar
@@ -3205,52 +3207,101 @@ namespace TamgaApp
 
         #region 🖨️ 12.5 DL ZARF YAZDIRMA MOTORU (SPOOLER)
         // En alttaki listede biriken firmaları ve ebatları standart bir DL Zarfa ortalayarak yazdırır.
-        private void btnAmbarYazdir_Click(object sender, EventArgs e)
+        // DİKKAT: Metodun adının yanına 'async' kelimesi eklendi!
+        private async void btnAmbarYazdir_Click(object sender, EventArgs e)
         {
-            if (dgvAmbarSonListe.Rows.Count == 0) { MessageBox.Show("Yazdırılacak hiç palet/firma yok!"); return; }
-
-            PrintDocument pd = new PrintDocument();
-
-            // Özel Ambar Yazıcısını Seç
-            ComboBox cmbYazici = this.Controls.Find("cmbAmbarYazici", true).FirstOrDefault() as ComboBox;
-            if (cmbYazici != null && cmbYazici.SelectedItem != null)
+            if (dgvAmbarSonListe.Rows.Count == 0)
             {
-                pd.PrinterSettings.PrinterName = cmbYazici.SelectedItem.ToString();
-            }
-            // Yoksa sistemin genel çoklu yazıcısını (fallback) kullan
-            else if (cmbCokluPrinter != null && cmbCokluPrinter.SelectedItem != null)
-            {
-                pd.PrinterSettings.PrinterName = cmbCokluPrinter.SelectedItem.ToString();
+                MessageBox.Show("DUR! Yazdırılacak hiç palet/firma yok.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            // Windows'a tanıtılmış kağıtlar arasında "DL" ismini taşıyan zarf türünü ara
-            PaperSize orijinalDlBoyutu = null;
-            try
+            // 1. HTML İSKELETİ VE CSS AYARLARI (TARAYICI YAZILARINI GİZLEME)
+            System.Text.StringBuilder htmlBuilder = new System.Text.StringBuilder();
+            htmlBuilder.Append(@"    <html>    <head>        <style>            /* İŞTE SİHİRLİ KOD: Tarayıcının üst/alt bilgi (Tarih, Link, 1/2) basmasını engeller */            @page { margin: 0; }            @media print {                body { margin: 1cm; }                /* Her paletten sonra yeni kağıda geçmesi için */                .sayfa-kes { page-break-after: always; }             }                                body { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }            .dis-cerceve {                 border: 2px solid black;                 width: 100%;                 max-width: 850px;                 display: flex;                 margin: 20px auto;            }            .sol-kutu, .sag-kutu {                 width: 50%;                 padding: 15px;                 text-align: center;             }            .sol-kutu { border-right: 2px solid black; }            .baslik { font-size: 20px; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }            .veri { font-size: 15px; font-weight: bold; line-height: 1.5; }        </style>    </head>    <body>");
+
+            // 2. TABLODAKİ VERİLERİ DÖNGÜYLE HTML'E EKLE
+            // Gönderdiğin fotoğraftaki sağ alt listeye (dgvAmbarSonListe) göre verileri çekiyoruz.
+            foreach (DataGridViewRow row in dgvAmbarSonListe.Rows)
             {
-                foreach (PaperSize kagit in pd.PrinterSettings.PaperSizes)
-                {
-                    if (kagit.PaperName.ToUpper().Contains("DL")) { orijinalDlBoyutu = kagit; break; }
-                }
+                if (row.IsNewRow) continue;
+
+                string firmaAdi = row.Cells[1].Value?.ToString() ?? "";
+                string adres = row.Cells[2].Value?.ToString() ?? "";
+                string il = row.Cells[3].Value?.ToString() ?? "";
+                string tel1 = row.Cells[4].Value?.ToString() ?? "";
+                string tel2 = row.Cells[5].Value?.ToString() ?? "";
+                string paletSayisi = row.Cells[6].Value?.ToString() ?? "";
+
+                // 1. Ölçüleri çek
+                string olculer = row.Cells[7].Value?.ToString() ?? "";
+
+                // 🌟 SİHİRLİ DOKUNUŞ: Her ") " parçasından sonra HTML'e alt satıra inmesini (<br>) söylüyoruz!
+                olculer = olculer.Replace(")", ")<br>");
+
+                string toplamDesi = row.Cells[8].Value?.ToString() ?? "";
+
+                htmlBuilder.Append($@"        <div class='dis-cerceve sayfa-kes'>            <div class='sol-kutu'>                <div class='baslik'>ADRES</div>                <div class='veri'>                    {firmaAdi}<br><br>                    {adres}<br>                    {il}<br><br>                    {tel1} / {tel2}                </div>            </div>            <div class='sag-kutu'>                <div class='baslik'>PALET ÖLÇÜLERİ</div>                <div class='veri'>                    <br>                    {olculer}<br>                    ----------------------<br>                    Genel Toplam: {toplamDesi}<br><br>                    TOPLAM: {paletSayisi} PALET                </div>            </div>        </div>");
             }
-            catch { }
 
-            // Eğer yazıcının hafızasında resmi bir DL Zarf boyutu varsa onu kullan,
-            // Yoksa (ZIRH), milimetrik ölçüleri inch cinsinden vererek sanal bir DL zarf oluştur.
-            if (orijinalDlBoyutu != null) pd.DefaultPageSettings.PaperSize = orijinalDlBoyutu;
-            else pd.DefaultPageSettings.PaperSize = new PaperSize("DL_Zarf", 433, 866);
+            htmlBuilder.Append(@"    </body>    </html>");
 
-            pd.DefaultPageSettings.Landscape = true; // Zarfın geniş kısmı her zaman yatay olur
-            pd.BeginPrint += (s, ev) => { batchIndex = 0; };
-            pd.PrintPage += AmbarPrintDocument_PrintPage;
+            // 3. YAZDIRMA ALANI PENCERESİNİ DÜZENLE (LOGO VE BAŞLIK)
+            Form modernOnizleme = new Form();
+            modernOnizleme.Text = "Yazdırma Alanı"; // İstediğin başlık
+            modernOnizleme.ShowIcon = false;      // O çirkin logoyu gizler!
+            modernOnizleme.Width = 1000;
+            modernOnizleme.Height = 600;
+            modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
 
-            // Hata önleme amacıyla direkt yazdırmak yerine önce önizleme penceresini aç
-            PrintPreviewDialog ppd = new PrintPreviewDialog { Document = pd };
-            try { ppd.ShowDialog(); } catch { }
+            // 4. WEB MOTORUNU BAĞLA VE ÖZEL HAFIZA (PROFİL) OLUŞTUR
+            Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
+            webCizici.Dock = DockStyle.Fill;
+            modernOnizleme.Controls.Add(webCizici);
+
+            modernOnizleme.Show();
+
+            // 🌟 YENİ EKLENEN KISIM: Zarf ayarlarına özel hafıza klasörü oluşturuyoruz
+            string zarfHafizaYolu = System.IO.Path.Combine(Application.StartupPath, "Profil_CokluZarf");
+            var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
+
+            // Motoru bu özel hafızayla uyandırıyoruz (Eskiden burası 'null' idi)
+            await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+
+            // Ürettiğimiz o dinamik HTML kodunu motora veriyoruz
+            webCizici.NavigateToString(htmlBuilder.ToString());
+
+            webCizici.NavigationCompleted += (s, args) =>
+            {
+                webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            };
         }
 
         // Zarf üzerine kutuları ve yazıları çizen çekirdek çizim metodu
         private void AmbarPrintDocument_PrintPage(object sender, PrintPageEventArgs e)
         {
+
+            // 🌟 OTOMATİK MERKEZLEME (ORTALAMA) MOTORU
+            // Bu kod, takılan kağıdın boyutunu okur ve tasarımı tam ortaya hizalar.
+
+            // 1. Senin çizdiğin o siyah çerçevenin TOPLAM boyutlarını buraya yazmalısın.
+            // (Aşağıdaki rakamları kendi DrawRectangle kodundaki Genişlik ve Yükseklik ile değiştir)
+            int tasarimGenislik = 800;  // Örnek: Adres ve Palet kutusunun toplam genişliği
+            int tasarimYukseklik = 350; // Örnek: Kutuların yukarıdan aşağı yüksekliği
+
+            // 2. Kağıdın (Zarfın) o anki gerçek boyutunu sistemden çekiyoruz
+            int kagitGenislik = e.PageBounds.Width;
+            int kagitYukseklik = e.PageBounds.Height;
+
+            // 3. MATEMATİK: Kağıttan tasarımı çıkarıp 2'ye bölerek tam ortayı buluyoruz!
+            int otomatikX = (kagitGenislik - tasarimGenislik) / 2;
+            int otomatikY = (kagitYukseklik - tasarimYukseklik) / 2;
+
+            // 4. Tuvali bulduğumuz bu kusursuz merkez noktasına kaydır!
+            e.Graphics.TranslateTransform(otomatikX, otomatikY);
+
+            // ... Senin mevcut çizim kodların (DrawRectangle, DrawString vb.) bu satırın altında aynen kalacak ...
+
             // Çizilecek başka firma kalmadıysa yazdırma motorunu durdur
             if (batchIndex >= dgvAmbarSonListe.Rows.Count) { e.HasMorePages = false; return; }
 
