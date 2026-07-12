@@ -3206,8 +3206,8 @@ namespace TamgaApp
         #endregion
 
         #region 🖨️ 12.5 DL ZARF YAZDIRMA MOTORU (SPOOLER)
-        // En alttaki listede biriken firmaları ve ebatları standart bir DL Zarfa ortalayarak yazdırır.
-        // DİKKAT: Metodun adının yanına 'async' kelimesi eklendi!
+        // En alttaki listede biriken firmaları ve ebatları standart bir DL Zarfa HTML/Edge Motoru ile yazdırır.
+
         private async void btnAmbarYazdir_Click(object sender, EventArgs e)
         {
             if (dgvAmbarSonListe.Rows.Count == 0)
@@ -3218,10 +3218,39 @@ namespace TamgaApp
 
             // 1. HTML İSKELETİ VE CSS AYARLARI (TARAYICI YAZILARINI GİZLEME)
             System.Text.StringBuilder htmlBuilder = new System.Text.StringBuilder();
-            htmlBuilder.Append(@"    <html>    <head>        <style>            /* İŞTE SİHİRLİ KOD: Tarayıcının üst/alt bilgi (Tarih, Link, 1/2) basmasını engeller */            @page { margin: 0; }            @media print {                body { margin: 1cm; }                /* Her paletten sonra yeni kağıda geçmesi için */                .sayfa-kes { page-break-after: always; }             }                                body { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }            .dis-cerceve {                 border: 2px solid black;                 width: 100%;                 max-width: 850px;                 display: flex;                 margin: 20px auto;            }            .sol-kutu, .sag-kutu {                 width: 50%;                 padding: 15px;                 text-align: center;             }            .sol-kutu { border-right: 2px solid black; }            .baslik { font-size: 20px; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }            .veri { font-size: 15px; font-weight: bold; line-height: 1.5; }        </style>    </head>    <body>");
+            htmlBuilder.Append(@"
+    <html>
+    <head>
+        <style>
+            /* Tarayıcının üst/alt bilgi (Tarih, Link, 1/2) basmasını engeller */
+            @page { margin: 0; }
+            @media print {
+                body { margin: 1cm; }
+                /* Her paletten sonra yeni kağıda geçmesi için */
+                .sayfa-kes { page-break-after: always; } 
+            }
+            
+            body { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
+            .dis-cerceve { 
+                border: 2px solid black; 
+                width: 100%; 
+                max-width: 850px; 
+                display: flex; 
+                margin: 20px auto;
+            }
+            .sol-kutu, .sag-kutu { 
+                width: 50%; 
+                padding: 15px; 
+                text-align: center; 
+            }
+            .sol-kutu { border-right: 2px solid black; }
+            .baslik { font-size: 20px; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+            .veri { font-size: 15px; font-weight: bold; line-height: 1.5; }
+        </style>
+    </head>
+    <body>");
 
             // 2. TABLODAKİ VERİLERİ DÖNGÜYLE HTML'E EKLE
-            // Gönderdiğin fotoğraftaki sağ alt listeye (dgvAmbarSonListe) göre verileri çekiyoruz.
             foreach (DataGridViewRow row in dgvAmbarSonListe.Rows)
             {
                 if (row.IsNewRow) continue;
@@ -3233,42 +3262,79 @@ namespace TamgaApp
                 string tel2 = row.Cells[5].Value?.ToString() ?? "";
                 string paletSayisi = row.Cells[6].Value?.ToString() ?? "";
 
-                // 1. Ölçüleri çek
-                string olculer = row.Cells[7].Value?.ToString() ?? "";
+                // 🌟 AKILLI TELEFON SATIRI: Alt alta yazdırır, 2. telefon boşsa boşluk bırakmaz!
+                string telefonlar = tel1;
+                if (!string.IsNullOrWhiteSpace(tel2))
+                {
+                    telefonlar += "<br>" + tel2;
+                }
 
-                // 🌟 SİHİRLİ DOKUNUŞ: Her ") " parçasından sonra HTML'e alt satıra inmesini (<br>) söylüyoruz!
+                // 🌟 AKILLI ÖLÇÜ SATIRI: Tüm ölçüleri alt alta dizer!
+                string olculer = row.Cells[7].Value?.ToString() ?? "";
                 olculer = olculer.Replace(")", ")<br>");
 
                 string toplamDesi = row.Cells[8].Value?.ToString() ?? "";
 
-                htmlBuilder.Append($@"        <div class='dis-cerceve sayfa-kes'>            <div class='sol-kutu'>                <div class='baslik'>ADRES</div>                <div class='veri'>                    {firmaAdi}<br><br>                    {adres}<br>                    {il}<br><br>                    {tel1} / {tel2}                </div>            </div>            <div class='sag-kutu'>                <div class='baslik'>PALET ÖLÇÜLERİ</div>                <div class='veri'>                    <br>                    {olculer}<br>                    ----------------------<br>                    Genel Toplam: {toplamDesi}<br><br>                    TOPLAM: {paletSayisi} PALET                </div>            </div>        </div>");
+                // HTML Tasarımına Ekle
+                htmlBuilder.Append($@"
+        <div class='dis-cerceve sayfa-kes'>
+            <div class='sol-kutu'>
+                <div class='baslik'>ADRES</div>
+                <div class='veri'>
+                    {firmaAdi}<br>
+                    {adres}<br>
+                    {il}<br>
+                    {telefonlar}
+                </div>
+            </div>
+            <div class='sag-kutu'>
+                <div class='baslik'>PALET ÖLÇÜLERİ</div>
+                <div class='veri'>
+                    <br>
+                    {olculer}<br>
+                    ----------------------<br>
+                    Genel Toplam: {toplamDesi}<br><br>
+                    TOPLAM: {paletSayisi} PALET
+                </div>
+            </div>
+        </div>");
             }
 
-            htmlBuilder.Append(@"    </body>    </html>");
+            htmlBuilder.Append(@"
+    </body>
+    </html>");
 
             // 3. YAZDIRMA ALANI PENCERESİNİ DÜZENLE (LOGO VE BAŞLIK)
             Form modernOnizleme = new Form();
-            modernOnizleme.Text = "Yazdırma Alanı"; // İstediğin başlık
-            modernOnizleme.ShowIcon = false;      // O çirkin logoyu gizler!
+            modernOnizleme.Text = "Yazdırma Alanı";
+            modernOnizleme.ShowIcon = false;
             modernOnizleme.Width = 1000;
             modernOnizleme.Height = 600;
             modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
 
-            // 4. WEB MOTORUNU BAĞLA VE ÖZEL HAFIZA (PROFİL) OLUŞTUR
+            // 4. WEB MOTORUNU BAĞLA VE YAZDIR
             Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
             webCizici.Dock = DockStyle.Fill;
             modernOnizleme.Controls.Add(webCizici);
 
+            // 🌟 SİHİRLİ DOKUNUŞ 1: Kullanıcı pencereyi kapattığında Edge motorunu öldür, klasörü serbest bıraksın!
+            modernOnizleme.FormClosed += (s, ev) =>
+            {
+                webCizici.Dispose();
+            };
+
             modernOnizleme.Show();
 
-            // 🌟 YENİ EKLENEN KISIM: Zarf ayarlarına özel hafıza klasörü oluşturuyoruz
-            string zarfHafizaYolu = System.IO.Path.Combine(Application.StartupPath, "Profil_CokluZarf");
+            // 🌟 SİHİRLİ DOKUNUŞ 2: Hafıza klasörünü "AppData/Local" klasörüne alıyoruz (Yetki sorunu çözümü)
+            string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_CokluZarf");
+
             var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
 
-            // Motoru bu özel hafızayla uyandırıyoruz (Eskiden burası 'null' idi)
+            // Motoru bu özel hafızayla uyandırıyoruz
             await webCizici.EnsureCoreWebView2Async(ozelHafiza);
 
-            // Ürettiğimiz o dinamik HTML kodunu motora veriyoruz
+            // Ürettiğimiz dinamik HTML kodunu motora veriyoruz
             webCizici.NavigateToString(htmlBuilder.ToString());
 
             webCizici.NavigationCompleted += (s, args) =>
@@ -3276,101 +3342,7 @@ namespace TamgaApp
                 webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
             };
         }
-
-        // Zarf üzerine kutuları ve yazıları çizen çekirdek çizim metodu
-        private void AmbarPrintDocument_PrintPage(object sender, PrintPageEventArgs e)
-        {
-
-            // 🌟 OTOMATİK MERKEZLEME (ORTALAMA) MOTORU
-            // Bu kod, takılan kağıdın boyutunu okur ve tasarımı tam ortaya hizalar.
-
-            // 1. Senin çizdiğin o siyah çerçevenin TOPLAM boyutlarını buraya yazmalısın.
-            // (Aşağıdaki rakamları kendi DrawRectangle kodundaki Genişlik ve Yükseklik ile değiştir)
-            int tasarimGenislik = 800;  // Örnek: Adres ve Palet kutusunun toplam genişliği
-            int tasarimYukseklik = 350; // Örnek: Kutuların yukarıdan aşağı yüksekliği
-
-            // 2. Kağıdın (Zarfın) o anki gerçek boyutunu sistemden çekiyoruz
-            int kagitGenislik = e.PageBounds.Width;
-            int kagitYukseklik = e.PageBounds.Height;
-
-            // 3. MATEMATİK: Kağıttan tasarımı çıkarıp 2'ye bölerek tam ortayı buluyoruz!
-            int otomatikX = (kagitGenislik - tasarimGenislik) / 2;
-            int otomatikY = (kagitYukseklik - tasarimYukseklik) / 2;
-
-            // 4. Tuvali bulduğumuz bu kusursuz merkez noktasına kaydır!
-            e.Graphics.TranslateTransform(otomatikX, otomatikY);
-
-            // ... Senin mevcut çizim kodların (DrawRectangle, DrawString vb.) bu satırın altında aynen kalacak ...
-
-            // Çizilecek başka firma kalmadıysa yazdırma motorunu durdur
-            if (batchIndex >= dgvAmbarSonListe.Rows.Count) { e.HasMorePages = false; return; }
-
-            // Çift Zırh: Yazdırma esnasında kağıt ölçüsü bozulursa, son bir kez daha DL Zarf ayarlarını bas
-            bool dlBulundu = false;
-            try
-            {
-                if (e.PageSettings.PaperSize.PaperName.ToUpper().Contains("DL")) dlBulundu = true;
-            }
-            catch { }
-
-            if (!dlBulundu) e.PageSettings.PaperSize = new PaperSize("DL_Zarf", 433, 866);
-            e.PageSettings.Landscape = true;
-
-            // Sıradaki satırın bilgilerini UI'dan çek
-            var row = dgvAmbarSonListe.Rows[batchIndex];
-            string firmaAdi = row.Cells[1].Value?.ToString();
-            string adres = row.Cells[2].Value?.ToString();
-            string il = row.Cells[3].Value?.ToString();
-            string tel1 = row.Cells[4].Value?.ToString();
-            string tel2 = row.Cells[5].Value?.ToString();
-            string paletSayisi = row.Cells[6].Value?.ToString();
-            string olculer = row.Cells[7].Value?.ToString();
-
-            // Kalemlerin fontlarını ayarla
-            Font baslik = new Font("Arial", 16, FontStyle.Bold);
-            Font icerik = new Font("Arial", 12, FontStyle.Bold);
-
-            // Zarfın üzerindeki kutucuklarda (Rectangle) yazıların her zaman TAM ORTADA çıkmasını sağla
-            StringFormat ortala = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-
-            e.Graphics.PageUnit = GraphicsUnit.Display;
-
-            // YAZICI OFSET KALİBRASYONLARI
-            // Bu değerler kağıdın fiziksel olarak yazıcıya girdiği yere göre tasarımın kaymasını düzeltir.
-            int inceAyarX = 0; // Sağa veya sola kaydır
-            int inceAyarY = -25; // Aşağı veya yukarı kaydır
-
-            // Kutuların X-Y Koordinat ve Boyut Matematiği
-            int ustBosluk = 76 + inceAyarY;
-            int kutuYukseklik = 280;
-            int adresGenişlik = 470;
-            int paletGenişlik = 296;
-            int solBosluk = 40 + inceAyarX;
-            int kutuArasiBosluk = 20; // İki kare arasındaki boşluk
-            int paletSolKoordinat = solBosluk + adresGenişlik + kutuArasiBosluk; // İkinci kutuyu, birinci kutunun yanına yerleştir
-
-            // 1. SOL KUTU (FİRMA VE ADRES BİLGİLERİ)
-            e.Graphics.DrawRectangle(Pens.Black, solBosluk, ustBosluk, adresGenişlik, kutuYukseklik); // Dış çerçeve
-            e.Graphics.DrawString("ADRES", baslik, Brushes.Black, new Rectangle(solBosluk, ustBosluk, adresGenişlik, 40), ortala); // Üst başlık alanı
-            e.Graphics.DrawLine(Pens.Black, solBosluk, ustBosluk + 40, solBosluk + adresGenişlik, ustBosluk + 40); // Başlığın altını çizen çizgi
-
-            // Verileri alt alta (Satır başı yaparak) tek bir metin halinde yazdır
-            e.Graphics.DrawString($"{firmaAdi}\n\n{adres}\n{il}\n{tel1} {tel2}", icerik, Brushes.Black, new Rectangle(solBosluk, ustBosluk + 50, adresGenişlik, kutuYukseklik - 60), ortala);
-
-            // 2. SAĞ KUTU (PALET VE EBAT BİLGİLERİ)
-            e.Graphics.DrawRectangle(Pens.Black, paletSolKoordinat, ustBosluk, paletGenişlik, kutuYukseklik); // Dış çerçeve
-            e.Graphics.DrawString("PALET ÖLÇÜLERİ", baslik, Brushes.Black, new Rectangle(paletSolKoordinat, ustBosluk, paletGenişlik, 40), ortala);
-            e.Graphics.DrawLine(Pens.Black, paletSolKoordinat, ustBosluk + 40, paletSolKoordinat + paletGenişlik, ustBosluk + 40);
-            e.Graphics.DrawString($"{olculer}\n\nTOPLAM: {paletSayisi} PALET", icerik, Brushes.Black, new Rectangle(paletSolKoordinat, ustBosluk + 50, paletGenişlik, kutuYukseklik - 60), ortala);
-
-            // Sıradaki firmaya geç
-            batchIndex++;
-
-            // Yazdırılacak başka firma kalmadıysa (Listenin sonuysa) döngüyü/motoru durdur
-            e.HasMorePages = (batchIndex < dgvAmbarSonListe.Rows.Count);
-        }
         #endregion
-
         #endregion
 
         // =========================================================================================
