@@ -173,7 +173,7 @@ namespace TamgaApp
                                 Aciklama = reader.IsDBNull(2) ? "" : reader.GetString(2),
                                 IngilizceAciklama = reader.IsDBNull(3) ? "" : reader.GetString(3),
                                 Barkod = reader.IsDBNull(4) ? "" : reader.GetString(4),
-                                Renk = reader.IsDBNull(5) ? "" : reader.GetString(5) // 🌟 YENİ: Renk Sütunu
+                                Renk = reader.IsDBNull(5) ? "" : reader.GetString(5) // Veritabanından gelen Renk
                             };
                         }
                     }

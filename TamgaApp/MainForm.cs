@@ -1,16 +1,17 @@
-﻿using Newtonsoft.Json;
+﻿using AutoUpdaterDotNET;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using static TamgaApp.DataAccess;
-using AutoUpdaterDotNET;
-using System.Data;
-using System.Net.Http;
 
 namespace TamgaApp
 {
@@ -262,6 +263,22 @@ namespace TamgaApp
             SetupPaperSizes();
             SetupResponsiveLayout();
 
+            // 🌟 --- ANA PANEL (ÜRETİM) YAZICI DOLDURMA --- 🌟
+            if (cmbUretimYazici != null)
+            {
+                cmbUretimYazici.Items.Clear();
+                foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
+                {
+                    cmbUretimYazici.Items.Add(printer);
+                }
+
+                // Varsayılan yazıcıyı seçili getir
+                System.Drawing.Printing.PrintDocument pd = new System.Drawing.Printing.PrintDocument();
+                string defaultPrinter = pd.PrinterSettings.PrinterName;
+                if (cmbUretimYazici.Items.Contains(defaultPrinter)) cmbUretimYazici.SelectedItem = defaultPrinter;
+                else if (cmbUretimYazici.Items.Count > 0) cmbUretimYazici.SelectedIndex = 0;
+            }
+
             // --- ÇOKLU ZARF SEKMESİ YAZICI DOLDURMA ---
             if (cmbCokluPrinter != null)
             {
@@ -324,6 +341,14 @@ namespace TamgaApp
             }
 
             // Üretim Takip (A4) DataGridView Ayarları
+
+            // 🌟 YENİ EKLENEN: Lavabo Renkleri (Sistem Otomatik Dolduracak)
+            if (!dgvUretim.Columns.Contains("LavaboRenkleri"))
+            {
+                dgvUretim.Columns.Add("LavaboRenkleri", "Lavabo Renkleri");
+                dgvUretim.Columns["LavaboRenkleri"].ReadOnly = true; // Personel elle değiştiremesin diye kilitledik!
+            }
+
             dgvUretim.ReadOnly = false;
             dgvUretim.Columns["ÜrünKodu"].ReadOnly = true;
             dgvUretim.Columns["ÜrünAçıklaması"].ReadOnly = true;
@@ -331,7 +356,6 @@ namespace TamgaApp
             dgvUretim.Columns["ÜrünAdeti"].ReadOnly = false;
             dgvUretim.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvBarkodVerileri.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-
             // Saat ve Takvim Başlatıcı
             lblKarsilama.Text = $"Hoş Geldin {AktifKullaniciAdi}";
             timerSaat.Tick += timerSaat_Tick;
@@ -1377,6 +1401,10 @@ namespace TamgaApp
             if (printDocument1 != null) { printDocument1.Dispose(); }
             printDocument1 = new PrintDocument();
 
+            // 🌟 YENİ EKLENEN: Windows'un gizli 2.5 cm'lik kenar boşluklarını SIFIRLIYORUZ!
+            printDocument1.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+            printDocument1.OriginAtMargins = false;
+
             // Kağıt boyutlarını (Milimetre) al
             if (!float.TryParse(txtPageWidthMm.Text, out float pageW)) pageW = 220f;
             if (!float.TryParse(txtPageHeightMm.Text, out float pageH)) pageH = 110f;
@@ -1430,6 +1458,10 @@ namespace TamgaApp
 
             if (printDocument1 != null) { printDocument1.Dispose(); }
             printDocument1 = new PrintDocument();
+
+            // 🌟 YENİ EKLENEN: Windows'un gizli 2.5 cm'lik kenar boşluklarını SIFIRLIYORUZ!
+            printDocument1.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
+            printDocument1.OriginAtMargins = false;
 
             // Bu sekme için JSON'dan kaydedilmiş bir yazıcı varsa otomatik onu seç
             ApplyPrinterMapping(printDocument1, "Tekli Zarf Yazdırma");
@@ -1556,9 +1588,25 @@ namespace TamgaApp
                 if (designItems == null || designItems.Count == 0) { e.HasMorePages = false; return; }
 
                 // Kağıt üzerindeki tüm nesneleri (Etiket, Çerçeve, Resim vb.) tek tek çiz
+                // 🌟 YAZICI KALİBRASYON (KAYMA) AYARLARI (MİLİMETRE CİNSİNDEN) 🌟
+                // Yazıcı markasına göre fiziksel kenar boşlukları değişebilir. 
+                // Eğer yazılar kağıtta sağa/sola veya aşağı/yukarı kayıyorsa buradaki 0 değerlerini değiştir.
+                // Örnek: Sağa 5mm kaydırmak için 5f, Yukarı kaydırmak için -5f yazabilirsin.
+                float xKaymaMm = 0f;
+                float yKaymaMm = 0f;
+
+                // Çizilecek hiçbir nesne yoksa işlemi bitir
+                if (designItems == null || designItems.Count == 0) { e.HasMorePages = false; return; }
+
+                // Kağıt üzerindeki tüm nesneleri (Etiket, Çerçeve, Resim vb.) tek tek çiz
                 foreach (var item in designItems)
                 {
-                    float x = item.Xmm * printerMmToPx, y = item.Ymm * printerMmToPx, w = item.Wmm * printerMmToPx, h = item.Hmm * printerMmToPx;
+                    // 🌟 KAYMA AYARLARINI (xKaymaMm ve yKaymaMm) BURADA DAHİL EDİYORUZ
+                    float x = (item.Xmm + xKaymaMm) * printerMmToPx;
+                    float y = (item.Ymm + yKaymaMm) * printerMmToPx;
+                    float w = item.Wmm * printerMmToPx;
+                    float h = item.Hmm * printerMmToPx;
+
                     RectangleF rect = new RectangleF(x, y, w, h);
 
                     // Çerçeve (Kare) Çizimi
@@ -2292,30 +2340,25 @@ namespace TamgaApp
         // kontrol eder ve üretim listesine (DataGridView) yansıtır.
         private void txtBarkodOkut_KeyDown(object sender, KeyEventArgs e)
         {
-            // Cihaz barkodu okuduktan sonra otomatik ENTER tuşuna basar
             if (e.KeyCode == Keys.Enter)
             {
-                e.SuppressKeyPress = true; // Sistemin "ding" diye hata sesi vermesini engelle
+                e.SuppressKeyPress = true;
                 string okunanBarkod = txtBarkodOkut.Text.Trim();
 
                 if (!string.IsNullOrEmpty(okunanBarkod))
                 {
-                    // Barkodu veritabanında ara
                     Urun bulunanUrun = DataAccess.GetUrunByBarkod(okunanBarkod);
 
-                    // Ürün veritabanında (Excel aktarımında) yoksa "Kayıtsız" olarak işaretle
                     if (bulunanUrun == null)
                     {
-                        bulunanUrun = new Urun { UrunKodu = "KAYITSIZ", Aciklama = "SİSTEMDE BULUNAMADI!", Barkod = okunanBarkod };
+                        bulunanUrun = new Urun { UrunKodu = "KAYITSIZ", Aciklama = "SİSTEMDE BULUNAMADI!", Barkod = okunanBarkod, Renk = "" };
                     }
 
                     bool varMi = false;
-                    // Okutulan ürün halihazırda listeye eklenmiş mi kontrol et
                     foreach (DataGridViewRow row in dgvUretim.Rows)
                     {
                         if (row.Cells[3].Value != null && row.Cells[3].Value.ToString() == okunanBarkod)
                         {
-                            // Ürün listede varsa, sadece adet miktarını 1 arttır
                             int mevcutAdet = Convert.ToInt32(row.Cells[2].Value);
                             row.Cells[2].Value = mevcutAdet + 1;
                             varMi = true;
@@ -2323,14 +2366,13 @@ namespace TamgaApp
                         }
                     }
 
-                    // Ürün listede ilk kez okutuluyorsa, yeni bir satır olarak ekle
                     if (!varMi)
                     {
-                        dgvUretim.Rows.Add(bulunanUrun.UrunKodu, bulunanUrun.Aciklama, 1, bulunanUrun.Barkod);
+                        // Artık tek bir tanımlama var, hata vermeyecek:
+                        string lavaboRengi = bulunanUrun.Renk;
+                        dgvUretim.Rows.Add(bulunanUrun.UrunKodu, bulunanUrun.Aciklama, 1, bulunanUrun.Barkod, lavaboRengi);
                     }
                 }
-
-                // Barkod kutusunu yeni okutma için temizle ve odakla
                 txtBarkodOkut.Clear();
                 txtBarkodOkut.Focus();
             }
@@ -2375,45 +2417,34 @@ namespace TamgaApp
 
             DateTime secilenTarih = dtpUretimTarihi.Value;
 
-            // Kayıt yerini belirle (Kullanıcı seçmemişse Masaüstüne klasör aç)
+            // Klasör yapısını oluştur
             string anaYol = string.IsNullOrWhiteSpace(txtKayitYeri.Text)
-                ? System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Günlük Üretim Takip")
+                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Günlük Üretim Takip")
                 : txtKayitYeri.Text;
 
-            // Düzenli arşivleme için Yıl/Ay/Gün şeklinde içiçe klasörler oluştur
-            string yil = secilenTarih.ToString("yyyy");
-            string ay = secilenTarih.ToString("MMMM");
-            string gun = secilenTarih.ToString("dd-MM-yyyy");
+            if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
-            string tamHedefKlasor = Path.Combine(anaYol, yil, ay, gun);
-            if (!Directory.Exists(tamHedefKlasor)) Directory.CreateDirectory(tamHedefKlasor);
+            // 🌟 SİHİRLİ DOKUNUŞ: Dosya adını direkt tarih yapıyoruz
+            string dosyaAdi = $"{secilenTarih:dd.MM.yyyy}.csv";
+            string dosyaYolu = Path.Combine(anaYol, dosyaAdi);
 
-            // Aynı günde birden fazla vardiya kaydı olabileceği için ismine saat-dakika-saniye ekle
-            string dosyaAdi = $"Uretim_{DateTime.Now.ToString("HHmmss")}.csv";
-            string dosyaYolu = Path.Combine(tamHedefKlasor, dosyaAdi);
-
-            // Dosyayı Türkçe karakter destekli (UTF8) oluştur ve satırları yazdır
+            // Aynı isimde dosya varsa üzerine yazar veya ekleme yapar (burada üzerine yazıyor)
             using (StreamWriter sw = new StreamWriter(dosyaYolu, false, System.Text.Encoding.UTF8))
             {
-                sw.WriteLine("Ürün Kodu;Ürün Açıklaması;Ürün Adeti;Ürün Barkodu"); // Excel Sütun Başlıkları
+                sw.WriteLine("Ürün Kodu;Ürün Açıklaması;Ürün Adeti;Ürün Barkodu");
                 foreach (DataGridViewRow row in dgvUretim.Rows)
                 {
-                    if (row.Cells[0].Value != null)
+                    if (!row.IsNewRow && row.Cells[0].Value != null)
                     {
                         sw.WriteLine($"{row.Cells[0].Value};{row.Cells[1].Value};{row.Cells[2].Value};{row.Cells[3].Value}");
                     }
                 }
             }
 
-            // Kullanıcı "Kaydederken A4 Kağıda Yazdır" tikini işaretlediyse yazdırma motoruna gönder
-            if (chkYazdir != null && chkYazdir.Checked)
-            {
-                UretimListesiYazdir(secilenTarih);
-            }
+            if (chkYazdir != null && chkYazdir.Checked) UretimListesiYazdir(secilenTarih);
 
-            MessageBox.Show($"Üretim verileri başarıyla kaydedildi!\nYol: {dosyaYolu}", "Kayıt Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            dgvUretim.Rows.Clear(); // Bir sonraki vardiya için ekranı temizle
+            MessageBox.Show($"Üretim verileri başarıyla kaydedildi!\nDosya: {dosyaAdi}", "Kayıt Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            dgvUretim.Rows.Clear();
         }
 
         // Üretim raporunu (A4 boyutunda standart yazıcıdan) kağıda döken Spooler Motoru
@@ -2521,61 +2552,56 @@ namespace TamgaApp
         // Seçilen CSV dosyasını okuyup, program içinde yeni bir pencerede (rapor okuyucu) açar
         private void btnRaporAc_Click(object sender, EventArgs e)
         {
-            if (lstRaporlar.SelectedItem == null)
-            {
-                MessageBox.Show("Lütfen açmak istediğiniz raporu listeden seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (lstRaporlar.SelectedItem == null) { MessageBox.Show("Lütfen rapor seçin!"); return; }
 
             System.IO.FileInfo secilenDosya = (System.IO.FileInfo)lstRaporlar.SelectedItem;
-            string dosyaYolu = secilenDosya.FullName;
 
-            if (!System.IO.File.Exists(dosyaYolu)) return;
+            Form frm = new Form { Text = "Rapor Detayı: " + secilenDosya.Name, Size = new Size(1000, 700), StartPosition = FormStartPosition.CenterScreen, Icon = this.Icon };
+            DataGridView dgv = new DataGridView { Dock = DockStyle.Fill, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, AllowUserToAddRows = false, ReadOnly = true, BackgroundColor = Color.WhiteSmoke };
 
-            // Yeni, boş bir popup (Form) penceresi oluştur
-            Form raporPenceresi = new Form();
-            raporPenceresi.Text = "TamgaApp Rapor Detayı: " + secilenDosya.Name;
-            raporPenceresi.Size = new Size(900, 600);
-            raporPenceresi.StartPosition = FormStartPosition.CenterScreen;
-            raporPenceresi.Icon = this.Icon;
+            // DataTable oluştur
+            DataTable dt = new DataTable();
+            string[] satirlar = File.ReadAllLines(secilenDosya.FullName, System.Text.Encoding.UTF8);
 
-            // Pencerenin içine sadece okunabilir (ReadOnly) bir tablo göm
-            DataGridView dgvRapor = new DataGridView();
-            dgvRapor.Dock = DockStyle.Fill;
-            dgvRapor.AllowUserToAddRows = false;
-            dgvRapor.ReadOnly = true;
-            dgvRapor.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-            dgvRapor.BackgroundColor = Color.WhiteSmoke;
-            dgvRapor.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-
-            raporPenceresi.Controls.Add(dgvRapor);
-
-            try
+            if (satirlar.Length > 0)
             {
-                // Dosyayı oku ve hücrelere böl
-                string[] satirlar = System.IO.File.ReadAllLines(dosyaYolu, System.Text.Encoding.UTF8);
-                if (satirlar.Length > 0)
-                {
-                    string[] basliklar = satirlar[0].Split(';'); // İlk satır Sütun Başlıklarıdır
-                    foreach (string baslik in basliklar)
-                    {
-                        dgvRapor.Columns.Add(baslik, baslik);
-                    }
-
-                    for (int i = 1; i < satirlar.Length; i++) // 1'den başla ki verileri çeksin (başlık haricinde)
-                    {
-                        if (string.IsNullOrWhiteSpace(satirlar[i])) continue;
-                        dgvRapor.Rows.Add(satirlar[i].Split(';'));
-                    }
-                }
-
-                // Tablo dolduğunda pencereyi kullanıcının önüne fırlat
-                raporPenceresi.ShowDialog();
+                string[] basliklar = satirlar[0].Split(';');
+                foreach (string b in basliklar) dt.Columns.Add(b);
+                for (int i = 1; i < satirlar.Length; i++) dt.Rows.Add(satirlar[i].Split(';'));
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Rapor okunurken bir hata oluştu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+
+            BindingSource bs = new BindingSource { DataSource = dt };
+            dgv.DataSource = bs;
+
+            // Filtreleme Paneli ve TextBox'ı
+            Panel pnl = new Panel { Dock = DockStyle.Top, Height = 45, BackColor = Color.FromArgb(240, 240, 240) };
+
+            // GÜNCEL WATERMARK (HAYALET YAZI) MOTORU
+            TextBox txtFiltre = new TextBox { Width = 300, Location = new Point(60, 10), Font = new Font("Segoe UI", 10), Text = "Buraya yazarak filtrele...", ForeColor = Color.Gray };
+
+            // Enter/Leave Olaylarını Bağlayalım
+            txtFiltre.Enter += (s, ev) => {
+                if (txtFiltre.Text == "Buraya yazarak filtrele...") { txtFiltre.Text = ""; txtFiltre.ForeColor = Color.Black; }
+            };
+            txtFiltre.Leave += (s, ev) => {
+                if (string.IsNullOrWhiteSpace(txtFiltre.Text)) { txtFiltre.Text = "Buraya yazarak filtrele..."; txtFiltre.ForeColor = Color.Gray; }
+            };
+
+            // Filtreleme Mantığı
+            txtFiltre.TextChanged += (s, ev) => {
+                if (txtFiltre.Text == "Buraya yazarak filtrele...") return;
+
+                // Tırnak işaretlerini kaçırarak (escape) SQL hatasını önle
+                string aranan = txtFiltre.Text.Replace("'", "''");
+                bs.Filter = string.Join(" OR ", dt.Columns.Cast<DataColumn>().Select(c => $"[{c.ColumnName}] LIKE '%{aranan}%'"));
+            };
+
+            pnl.Controls.Add(new Label { Text = "Filtre:", Location = new Point(10, 12), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) });
+            pnl.Controls.Add(txtFiltre);
+
+            frm.Controls.Add(dgv);
+            frm.Controls.Add(pnl);
+            frm.ShowDialog();
         }
 
         // Üretim raporlarının ana (root) olarak kaydedileceği klasörü değiştirmeyi sağlar
@@ -2602,78 +2628,80 @@ namespace TamgaApp
         #region 📊 10.4 EXCEL'DEN VERİTABANINA ÜRÜN AKTARIMI VE SİLME
         // Dışarıdan (Muhasebeden / ERP'den) gelen güncel barkodlu ürün listesini (Excel)
         // tek tıkla veritabanına almayı sağlar.
-        private void btnExcelAktar_Click(object sender, EventArgs e)
+        private async void btnExcelAktar_Click(object sender, EventArgs e)
         {
-            using (OpenFileDialog ofd = new OpenFileDialog { Filter = "Excel Dosyası|*.xlsx;*.xls", Title = "Ürün Listesi Seçin" })
+            using (OpenFileDialog ofd = new OpenFileDialog { Filter = "Excel Dosyası|*.xlsx;*.xls" })
             {
                 if (ofd.ShowDialog() == DialogResult.OK)
                 {
+                    // 1. ADIM: İşlem Başlamadan ProgressBar Formunu Oluştur ve Aç
+                    Form progressForm = new Form
+                    {
+                        Text = "Veri Aktarılıyor",
+                        ControlBox = false,
+                        StartPosition = FormStartPosition.CenterScreen,
+                        Size = new Size(350, 100),
+                        FormBorderStyle = FormBorderStyle.FixedDialog
+                    };
+                    ProgressBar pb = new ProgressBar
+                    {
+                        Dock = DockStyle.Top,
+                        Height = 30,
+                        Style = ProgressBarStyle.Marquee, // Hareketli çubuk
+                        MarqueeAnimationSpeed = 30
+                    };
+                    Label lbl = new Label { Text = "Lütfen bekleyiniz, veriler işleniyor...", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter };
+                    progressForm.Controls.Add(pb);
+                    progressForm.Controls.Add(lbl);
+                    progressForm.Show(); // Formu göster
+
                     try
                     {
-                        // Microsoft'un ACE OLEDB sürücüsünü kullanarak Excel dosyasına bir veritabanı gibi bağlan
-                        string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={ofd.FileName};Extended Properties=\"Excel 12.0 Xml;HDR=YES;IMEX=1\";";
-
-                        using (System.Data.OleDb.OleDbConnection conn = new System.Data.OleDb.OleDbConnection(connString))
+                        // 2. ADIM: Ağır işi arka plana at (Ekran donmasın)
+                        await Task.Run(() =>
                         {
-                            conn.Open();
-
-                            // Excel'in içindeki sayfaların (Sheet1, Sayfa2 vb.) isimlerini bul
-                            System.Data.DataTable dtExcelSchema = conn.GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Tables, null);
-
-                            string sheetName = "";
-                            foreach (System.Data.DataRow schemaRow in dtExcelSchema.Rows)
+                            string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={ofd.FileName};Extended Properties=\"Excel 12.0 Xml;HDR=YES;IMEX=1\";";
+                            using (System.Data.OleDb.OleDbConnection conn = new System.Data.OleDb.OleDbConnection(connString))
                             {
-                                string tempName = schemaRow["TABLE_NAME"].ToString();
-                                // 🛡️ ZIRH: Sayfa isimleri her zaman $ işareti ile bitmelidir, 
-                                // yazıcı bölgesi (Print_Area) gibi sahte sayfaları dışlamak için.
-                                if (tempName.EndsWith("$") || tempName.EndsWith("$'"))
+                                conn.Open();
+                                System.Data.DataTable dtExcelSchema = conn.GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Tables, null);
+                                string sheetName = dtExcelSchema.Rows[0]["TABLE_NAME"].ToString();
+
+                                System.Data.OleDb.OleDbDataAdapter da = new System.Data.OleDb.OleDbDataAdapter($"SELECT * FROM [{sheetName}]", conn);
+                                System.Data.DataTable dt = new System.Data.DataTable();
+                                da.Fill(dt);
+
+                                foreach (System.Data.DataRow row in dt.Rows)
                                 {
-                                    sheetName = tempName;
-                                    break;
+                                    if (row[0] == DBNull.Value || string.IsNullOrWhiteSpace(row[0].ToString())) continue;
+
+                                    Urun yeniUrun = new Urun
+                                    {
+                                        UrunKodu = row[0].ToString().Trim(),
+                                        Aciklama = row.ItemArray.Length > 1 ? row[1].ToString().Trim() : "",
+                                        IngilizceAciklama = row.ItemArray.Length > 2 ? row[2].ToString().Trim() : "",
+                                        Barkod = row.ItemArray.Length > 3 ? row[3].ToString().Trim() : "",
+                                        Renk = row.ItemArray.Length > 4 ? row[4].ToString().Trim() : ""
+                                    };
+                                    DataAccess.InsertUrun(yeniUrun);
                                 }
                             }
+                        });
 
-                            // Şayet $ işareti ile biten bir sayfa bulamadıysa, ilk bulduğu tabloyu al
-                            if (string.IsNullOrEmpty(sheetName)) sheetName = dtExcelSchema.Rows[0]["TABLE_NAME"].ToString();
-
-                            // Bulunan ilk sayfadaki tüm verileri (SELECT *) DataTable'a aktar
-                            System.Data.OleDb.OleDbDataAdapter da = new System.Data.OleDb.OleDbDataAdapter($"SELECT * FROM [{sheetName}]", conn);
-                            System.Data.DataTable dt = new System.Data.DataTable();
-                            da.Fill(dt);
-
-                            int eklenenSayisi = 0;
-                            int atlananSayisi = 0;
-
-                            // Tablodaki her bir satırı veritabanına işle
-                            foreach (System.Data.DataRow row in dt.Rows)
-                            {
-                                // 1. Sütun (Ürün Kodu) boş ise o satırı geç
-                                if (row[0] == DBNull.Value || string.IsNullOrWhiteSpace(row[0].ToString()))
-                                {
-                                    atlananSayisi++;
-                                    continue;
-                                }
-
-                                Urun yeniUrun = new Urun
-                                {
-                                    UrunKodu = row[0].ToString().Trim(),
-                                    Aciklama = row.ItemArray.Length > 1 ? row[1].ToString().Trim() : "",
-                                    IngilizceAciklama = row.ItemArray.Length > 2 ? row[2].ToString().Trim() : "",
-                                    Barkod = row.ItemArray.Length > 3 ? row[3].ToString().Trim() : "",
-                                    Renk = row.ItemArray.Length > 4 ? row[4].ToString().Trim() : "" // 🌟 5. Sütun (Renk) Eklendi!
-                                };
-
-                                DataAccess.InsertUrun(yeniUrun);
-                                eklenenSayisi++;
-                            }
-
-                            MessageBox.Show($"İşlem Tamamlandı!\n\nExcel'de Bulunan Toplam Satır: {dt.Rows.Count}\nVeritabanına Başarıyla Eklenen: {eklenenSayisi}\nBoş Olduğu İçin Atlanan: {atlananSayisi}", "Excel Aktarım Raporu", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
+                        MessageBox.Show("Aktarım başarıyla tamamlandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
-                        // Not: 64-bit ve 32-bit ofis uyumsuzluğundan dolayı hata fırlatabilir.
-                        MessageBox.Show("Excel okunurken veya veritabanına kaydedilirken hata oluştu!\n(Not: Bilgisayarınızda Microsoft Access Database Engine 2010 yüklü olmayabilir)\n\nHata Detayı: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        // 3. ADIM: İşlem biter bitmez (hata olsa bile) ProgressBar formunu kapat
+                        progressForm.Close();
+                        progressForm.Dispose();
+
+                        // Listeyi yenile ki yeni gelen ürünler anında görünsün
+                        btnBarkodVerileri.PerformClick();
                     }
                 }
             }
@@ -4072,7 +4100,8 @@ namespace TamgaApp
                 string birlesikBelgeIsmi = string.Join("_", bitenBelgeler);
 
                 // İşlemi geçmiş arşivi (CSV) olarak tek bir dosya halinde kaydet
-                SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text);
+                string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
+                SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "TAM_SEVK", secilenPalet);
 
                 // Her bir belgeyi tek tek Ghost Modu (Kara Liste) listesine at ve RAM'den uçur
                 foreach (string bitenBelge in bitenBelgeler)
@@ -4150,7 +4179,8 @@ namespace TamgaApp
                     }
 
                     string birlesikBelgeIsmi = string.Join("_", bitenBelgeler);
-                    SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text);
+                    string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
+                    SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "KISMI_SEVK", secilenPalet);
 
                     foreach (string bitenBelge in bitenBelgeler)
                     {
@@ -4249,10 +4279,15 @@ namespace TamgaApp
         {
             if (dgvSayim == null) return;
 
-            dgvSayim.ColumnCount = 3;
+            // Sütun sayısını 3'ten 4'e çıkardık
+            dgvSayim.ColumnCount = 4;
             dgvSayim.Columns[0].Name = "Barkod"; dgvSayim.Columns[0].ReadOnly = true;
             dgvSayim.Columns[1].Name = "Açıklama"; dgvSayim.Columns[1].ReadOnly = true;
-            dgvSayim.Columns[2].Name = "Adet"; // Sayım esnasında adet elle değiştirilebilir
+
+            // 🌟 YENİ: Renk Sütunu
+            dgvSayim.Columns[2].Name = "Renk"; dgvSayim.Columns[2].ReadOnly = true;
+
+            dgvSayim.Columns[3].Name = "Adet"; // Sayım esnasında adet elle değiştirilebilir
 
             dgvSayim.AllowUserToAddRows = false;
             dgvSayim.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
@@ -4269,36 +4304,51 @@ namespace TamgaApp
             {
                 e.SuppressKeyPress = true; // Hata sesini (bip) engelle
                 string okunanBarkod = txtSayimBarkod.Text.Trim();
-                if (string.IsNullOrEmpty(okunanBarkod)) return;
 
-                bool urunZatenVarMi = false;
-
-                // 1. ADIM: Okutulan ürün listede daha önce taranmış mı kontrol et
-                foreach (DataGridViewRow row in dgvSayim.Rows)
+                if (!string.IsNullOrEmpty(okunanBarkod))
                 {
-                    if (row.Cells["Barkod"].Value != null && row.Cells["Barkod"].Value.ToString() == okunanBarkod)
+                    bool urunZatenVarMi = false;
+
+                    // 1. ADIM: Okutulan ürün listede daha önce taranmış mı kontrol et
+                    foreach (DataGridViewRow row in dgvSayim.Rows)
                     {
-                        // Ürün tabloda zaten mevcutsa, miktarını 1 birim yükselt
-                        int mevcutAdet = Convert.ToInt32(row.Cells["Adet"].Value);
-                        row.Cells["Adet"].Value = mevcutAdet + 1;
-                        urunZatenVarMi = true;
-                        break;
+                        if (row.Cells["Barkod"].Value != null && row.Cells["Barkod"].Value.ToString() == okunanBarkod)
+                        {
+                            // Ürün tabloda zaten mevcutsa, miktarını 1 birim yükselt
+                            int mevcutAdet = Convert.ToInt32(row.Cells["Adet"].Value);
+                            row.Cells["Adet"].Value = mevcutAdet + 1;
+                            urunZatenVarMi = true;
+
+                            // ŞIKLIK: Hangi ürün okutulduysa tabloda o satırı seçili hale getirip kaydır (Adam ekranda görsün)
+                            row.Selected = true;
+                            dgvSayim.FirstDisplayedScrollingRowIndex = row.Index;
+                            break;
+                        }
+                    }
+
+                    // 2. ADIM: Ürün ilk defa okutuluyorsa veritabanından çek ve ekle
+                    if (!urunZatenVarMi)
+                    {
+                        Urun bulunanUrun = DataAccess.GetUrunByBarkod(okunanBarkod);
+                        string aciklama = bulunanUrun != null ? bulunanUrun.Aciklama : "SİSTEMDE KAYITLI DEĞİL!";
+
+                        // 🌟 Rengi veritabanından cımbızla çekiyoruz
+                        string renk = bulunanUrun != null ? bulunanUrun.Renk : "";
+
+                        // Tabloya yeni sütun sırasıyla (Barkod, Açıklama, Renk, Adet) ekliyoruz
+                        int yeniSatir = dgvSayim.Rows.Add(okunanBarkod, aciklama, renk, 1);
+                        dgvSayim.Rows[yeniSatir].Selected = true;
+                        dgvSayim.FirstDisplayedScrollingRowIndex = yeniSatir;
                     }
                 }
 
-                // 2. ADIM: Ürün ilk defa okutuluyorsa yerel barkod tablosundan açıklamasını sorgula
-                if (!urunZatenVarMi)
-                {
-                    Urun bulunanUrun = DataAccess.GetUrunByBarkod(okunanBarkod);
-                    string aciklama = bulunanUrun != null ? bulunanUrun.Aciklama : "SİSTEMDE KAYITLI DEĞİL!";
-
-                    // Tabloya 1 adet olarak yeni kayıt gir
-                    dgvSayim.Rows.Add(okunanBarkod, aciklama, 1);
-                }
-
-                // Bir sonraki ürün taraması için kutuyu temizle ve odağı (focus) kaybetme
+                // Bir sonraki ürün taraması için kutuyu hemen temizle
                 txtSayimBarkod.Clear();
-                txtSayimBarkod.Focus();
+
+                // 🌟 SİHİRLİ DOKUNUŞ BURADA: Tablonun odağı çalmasını engellemek için Focus'u zorla geri çakıyoruz!
+                this.BeginInvoke(new Action(() => {
+                    txtSayimBarkod.Focus();
+                }));
             }
         }
         #endregion
@@ -4323,11 +4373,15 @@ namespace TamgaApp
             // Verileri Excel ve notepad ile uyumlu olacak şekilde UTF8 formatında satır satır yaz dök
             using (StreamWriter sw = new StreamWriter(tamYol, false, System.Text.Encoding.UTF8))
             {
-                sw.WriteLine("Barkod;Açıklama;Adet"); // Başlık satırı
+                // 🌟 Başlığa "Renk" bilgisini ekledik
+                sw.WriteLine("Barkod;Açıklama;Renk;Adet");
                 foreach (DataGridViewRow row in dgvSayim.Rows)
                 {
                     if (row.Cells[0].Value != null)
-                        sw.WriteLine($"{row.Cells[0].Value};{row.Cells[1].Value};{row.Cells[2].Value}");
+                    {
+                        // 🌟 4 sütunu da (0, 1, 2 ve 3) araya noktalı virgül koyarak yazıyoruz
+                        sw.WriteLine($"{row.Cells[0].Value};{row.Cells[1].Value};{row.Cells[2].Value};{row.Cells[3].Value}");
+                    }
                 }
             }
 
@@ -4597,20 +4651,27 @@ namespace TamgaApp
         }
 
         // Tam veya Kısmi teslimatı biten belgelerin palet içerik dökümlerini gün bazlı CSV arşivine yazar.
-        private void SevkiyatArsivle(string belgeNo, string musteri, string sevkMusteri)
+        // Parametrelere 'sevkTuru' ve 'paletSayisi' eklendi
+        private void SevkiyatArsivle(string belgeNo, string musteri, string sevkMusteri, string sevkTuru, string paletSayisi)
         {
             try
             {
                 string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar", DateTime.Now.ToString("yyyy-MM-dd"));
                 if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
-                string dosyaAdi = $"{belgeNo}_Teslimat.csv";
+                // Windows'un dosya isminde sevmediği (\, /, *, ?) gibi karakterleri temizle ki çökmesin
+                string temizMusteri = string.Join("_", musteri.Split(Path.GetInvalidFileNameChars()));
+                if (string.IsNullOrWhiteSpace(temizMusteri)) temizMusteri = "BilinmeyenFirma";
+
+                // 🌟 SİHİRLİ DOKUNUŞ: Dosya Adı -> FirmaAdi_5Palet_TAM-SEVK_13.07.2026_1430.csv
+                string dosyaAdi = $"{temizMusteri}_{paletSayisi}Palet_{sevkTuru}_{DateTime.Now:dd.MM.yyyy_HHmm}.csv";
+
                 string tamYol = Path.Combine(anaYol, dosyaAdi);
 
                 using (StreamWriter sw = new StreamWriter(tamYol, false, System.Text.Encoding.UTF8))
                 {
-                    sw.WriteLine("Müşteri;SevkMüşteri;BelgeNo;Tarih");
-                    sw.WriteLine($"{musteri};{sevkMusteri};{belgeNo};{DateTime.Now:HH:mm}");
+                    sw.WriteLine("Müşteri;SevkMüşteri;BelgeNo;Tarih;Sevk Türü");
+                    sw.WriteLine($"{musteri};{sevkMusteri};{belgeNo};{DateTime.Now:HH:mm};{sevkTuru}");
                     sw.WriteLine("--- DETAYLAR ---");
                     sw.WriteLine("Palet No;İçerik");
 
