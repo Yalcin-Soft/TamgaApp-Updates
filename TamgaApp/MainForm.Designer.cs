@@ -52,6 +52,9 @@ namespace TamgaApp
             this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.splitContainer5 = new System.Windows.Forms.SplitContainer();
             this.panel7 = new System.Windows.Forms.Panel();
+            this.btnSevkTemizle = new System.Windows.Forms.Button();
+            this.btnPalettenSil = new System.Windows.Forms.Button();
+            this.btnManuelEkle = new System.Windows.Forms.Button();
             this.btnUzerineEkle = new System.Windows.Forms.Button();
             this.cmbBelgeNo = new System.Windows.Forms.ComboBox();
             this.label49 = new System.Windows.Forms.Label();
@@ -307,9 +310,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnManuelEkle = new System.Windows.Forms.Button();
-            this.btnPalettenSil = new System.Windows.Forms.Button();
-            this.btnSevkTemizle = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -587,6 +587,39 @@ namespace TamgaApp
             this.panel7.Name = "panel7";
             this.panel7.Size = new System.Drawing.Size(401, 522);
             this.panel7.TabIndex = 54;
+            // 
+            // btnSevkTemizle
+            // 
+            this.btnSevkTemizle.BackColor = System.Drawing.Color.Red;
+            this.btnSevkTemizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkTemizle.Location = new System.Drawing.Point(6, 361);
+            this.btnSevkTemizle.Name = "btnSevkTemizle";
+            this.btnSevkTemizle.Size = new System.Drawing.Size(393, 45);
+            this.btnSevkTemizle.TabIndex = 47;
+            this.btnSevkTemizle.Text = "TEMİZLE";
+            this.btnSevkTemizle.UseVisualStyleBackColor = false;
+            // 
+            // btnPalettenSil
+            // 
+            this.btnPalettenSil.BackColor = System.Drawing.Color.OrangeRed;
+            this.btnPalettenSil.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnPalettenSil.Location = new System.Drawing.Point(5, 314);
+            this.btnPalettenSil.Name = "btnPalettenSil";
+            this.btnPalettenSil.Size = new System.Drawing.Size(393, 41);
+            this.btnPalettenSil.TabIndex = 46;
+            this.btnPalettenSil.Text = "Kalem Sil";
+            this.btnPalettenSil.UseVisualStyleBackColor = false;
+            // 
+            // btnManuelEkle
+            // 
+            this.btnManuelEkle.BackColor = System.Drawing.Color.Coral;
+            this.btnManuelEkle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnManuelEkle.Location = new System.Drawing.Point(209, 235);
+            this.btnManuelEkle.Name = "btnManuelEkle";
+            this.btnManuelEkle.Size = new System.Drawing.Size(189, 73);
+            this.btnManuelEkle.TabIndex = 42;
+            this.btnManuelEkle.Text = "Manuel Ekle";
+            this.btnManuelEkle.UseVisualStyleBackColor = false;
             // 
             // btnUzerineEkle
             // 
@@ -3369,39 +3402,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Name = "cmbPaletSayisi";
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
-            // 
-            // btnManuelEkle
-            // 
-            this.btnManuelEkle.BackColor = System.Drawing.Color.Coral;
-            this.btnManuelEkle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelEkle.Location = new System.Drawing.Point(209, 235);
-            this.btnManuelEkle.Name = "btnManuelEkle";
-            this.btnManuelEkle.Size = new System.Drawing.Size(189, 73);
-            this.btnManuelEkle.TabIndex = 42;
-            this.btnManuelEkle.Text = "Manuel Ekle";
-            this.btnManuelEkle.UseVisualStyleBackColor = false;
-            // 
-            // btnPalettenSil
-            // 
-            this.btnPalettenSil.BackColor = System.Drawing.Color.OrangeRed;
-            this.btnPalettenSil.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnPalettenSil.Location = new System.Drawing.Point(5, 314);
-            this.btnPalettenSil.Name = "btnPalettenSil";
-            this.btnPalettenSil.Size = new System.Drawing.Size(393, 41);
-            this.btnPalettenSil.TabIndex = 46;
-            this.btnPalettenSil.Text = "Kalem Sil";
-            this.btnPalettenSil.UseVisualStyleBackColor = false;
-            // 
-            // btnSevkTemizle
-            // 
-            this.btnSevkTemizle.BackColor = System.Drawing.Color.Red;
-            this.btnSevkTemizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkTemizle.Location = new System.Drawing.Point(6, 361);
-            this.btnSevkTemizle.Name = "btnSevkTemizle";
-            this.btnSevkTemizle.Size = new System.Drawing.Size(393, 45);
-            this.btnSevkTemizle.TabIndex = 47;
-            this.btnSevkTemizle.Text = "TEMİZLE";
-            this.btnSevkTemizle.UseVisualStyleBackColor = false;
             // 
             // MainForm
             // 
