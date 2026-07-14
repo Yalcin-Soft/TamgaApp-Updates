@@ -17,6 +17,8 @@ namespace TamgaApp
 {
     public partial class MainForm : Form
     {
+        #region 🌐 00.TamgaApp
+
         #region 🌐 01. GLOBAL HAFIZA VE ÇEKİRDEK DEĞİŞKENLER
 
         #region 🏠 01.1 EV MODU (GELİŞTİRİCİ ALANI)
@@ -66,8 +68,6 @@ namespace TamgaApp
         private const string PrinterSettingsFile = "printer_settings.json";                    // Yazıcı eşleştirmelerinin diske kaydedildiği JSON dosyasının adı
         private PrintDocument pdUretim;                                // Üretim listesini (A4 kağıda) döken yazdırma motoru
 
-        // 🌟 YENİ: WebView2 Hayalet Baskı Motoru (Arka planda Chrome çalıştırır)
-        private Microsoft.Web.WebView2.WinForms.WebView2 htmlPrintEngine;
         #endregion
 
         #region 📦 01.5 SEVKİYAT SİSTEMİ VE KALICI HAFIZA (GHOST MODU)
@@ -147,9 +147,8 @@ namespace TamgaApp
         }
 
         #region 🚀 02.1 FORM LOAD (AÇILIŞ MOTORU)
-        private async void MainForm_Load(object sender, EventArgs e)
+        private void MainForm_Load(object sender, EventArgs e)
         {
-
             // 🛡️ SÜRÜM GÜNCELLEME ZIRHI: Eski sürümdeki SQL ve Yazıcı ayarlarını yeni sürüme göç ettirir!
             if (!Properties.Settings.Default.AyarlarTasindi)
             {
@@ -359,6 +358,7 @@ namespace TamgaApp
             dgvUretim.Columns["ÜrünAdeti"].ReadOnly = false;
             dgvUretim.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             dgvBarkodVerileri.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
             // Saat ve Takvim Başlatıcı
             lblKarsilama.Text = $"Hoş Geldin {AktifKullaniciAdi}";
             timerSaat.Tick += timerSaat_Tick;
@@ -372,21 +372,6 @@ namespace TamgaApp
             this.Size = new Size(950, 600);
             this.CenterToScreen();
 
-            // Görsel Temayı (Renkler ve Yazı Tipleri) Uygula
-            ElitTasarimiUygula();
-
-            // 🌟 YENİ: Hayalet Yazdırma Motorunu (WebView2) Ayağa Kaldır
-            htmlPrintEngine = new Microsoft.Web.WebView2.WinForms.WebView2();
-            // 🌟 SİHİRLİ DOKUNUŞ: Motoru gizlemiyoruz, onu ekranın 5000 piksel sol dışına atıyoruz!
-            htmlPrintEngine.Size = new Size(800, 600);
-            htmlPrintEngine.Location = new Point(-5000, -5000);
-            htmlPrintEngine.Visible = true; // Chrome motoru kendini ekranda sanıp çizimi yapsın
-
-            this.Controls.Add(htmlPrintEngine);
-            await htmlPrintEngine.EnsureCoreWebView2Async(null);
-
-            // Görsel Temayı (Renkler ve Yazı Tipleri) Uygula
-            ElitTasarimiUygula();
         }
         #endregion
 
@@ -515,44 +500,70 @@ namespace TamgaApp
         }
         #endregion
 
-        #region 🎨 02.5 GÖRSEL TEMA (ELİT TASARIM)
+        #region 🎨 02.5 GÖRSEL TEMA (ELİT TASARIM - V2)
+
         // Ana sayfadaki karşılama yazıları ve çıkış butonlarının elit (şık) renk paletine geçirilmesi
         private void ElitTasarimiUygula()
         {
             try
             {
-                lblKarsilama.Font = new Font("Segoe UI Semibold", 22, FontStyle.Italic);
-                lblKarsilama.ForeColor = Color.FromArgb(15, 76, 58); // Koyu elit yeşil
+                // 1. ANA PANEL ARKA PLANI: Göz yoran çiğ beyaz yerine, modern ve elit bir "Bulut Grisi / Kirli Beyaz"
+                TabPage anaPanel = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "Ana Panel");
+                if (anaPanel != null)
+                {
+                    anaPanel.BackColor = Color.FromArgb(245, 247, 250);
+                }
 
-                lblSaat.Font = new Font("Segoe UI", 36, FontStyle.Bold);
-                lblSaat.ForeColor = Color.FromArgb(45, 52, 54); // Soft antrasit siyah
+                // 2. HOŞ GELDİN YAZISI: İtalik ve eski tip font yerine, kalın ve modern antrasit
+                lblKarsilama.Font = new Font("Segoe UI", 28, FontStyle.Bold);
+                lblKarsilama.ForeColor = Color.FromArgb(33, 37, 41); // Koyu antrasit siyah
 
-                lblTakvim.Font = new Font("Segoe UI", 14, FontStyle.Regular);
-                lblTakvim.ForeColor = Color.DimGray;
+                // 3. SAAT VE TAKVİM: Dev gibi ince (Light) fontla modern dijital ekran hissi
+                lblSaat.Font = new Font("Segoe UI Semilight", 48, FontStyle.Regular);
+                lblSaat.ForeColor = Color.FromArgb(15, 76, 58); // Logonun elit koyu yeşili
 
-                // Programdan Çıkış Butonu Stili
+                lblTakvim.Font = new Font("Segoe UI Semibold", 14, FontStyle.Bold);
+                lblTakvim.ForeColor = Color.FromArgb(108, 117, 125); // Şık, soluk gri
+
+                // 4. ÇIKIŞ BUTONU: O kaba parlak kırmızı yerine, modern ve pürüzsüz "Bootstrap Kırmızısı"
                 Control[] butonlar = this.Controls.Find("btnCikisYap", true);
                 if (butonlar.Length > 0 && butonlar[0] is Button btnCikis)
                 {
-                    btnCikis.FlatStyle = FlatStyle.Flat;
+                    btnCikis.FlatStyle = FlatStyle.Flat; // 3D Çerçeveyi yokedip düzleştirir
                     btnCikis.FlatAppearance.BorderSize = 0;
-                    btnCikis.BackColor = Color.FromArgb(15, 76, 58);
+                    btnCikis.BackColor = Color.FromArgb(220, 53, 69); // Tok kırmızı
                     btnCikis.ForeColor = Color.White;
-                    btnCikis.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+                    btnCikis.Font = new Font("Segoe UI Semibold", 12, FontStyle.Bold);
                     btnCikis.Cursor = Cursors.Hand;
+                    btnCikis.Size = new Size(180, 60); // Butonu dikdörtgen ve şık boyuta getirir
+
+                    // Fare üzerine gelince (Hover) rengi hafif koyulaşsın (Canlılık hissi)
+                    btnCikis.MouseEnter += (s, e) => { btnCikis.BackColor = Color.FromArgb(200, 35, 51); };
+                    btnCikis.MouseLeave += (s, e) => { btnCikis.BackColor = Color.FromArgb(220, 53, 69); };
                 }
 
-                // Oturumu Kapat (Giriş Ekranına Dön) Butonu Stili
+                // 5. GİRİŞ EKRANINA DÖN BUTONU: İçi boş, sadece çerçevesi olan "Outline" modern tasarım
                 Control[] btnOturumKapat = this.Controls.Find("btnLoginDon", true);
                 if (btnOturumKapat.Length > 0 && btnOturumKapat[0] is Button btnKapat)
                 {
                     btnKapat.FlatStyle = FlatStyle.Flat;
-                    btnKapat.FlatAppearance.BorderSize = 2;
-                    btnKapat.FlatAppearance.BorderColor = Color.FromArgb(15, 76, 58);
-                    btnKapat.BackColor = Color.White;
-                    btnKapat.ForeColor = Color.FromArgb(15, 76, 58);
-                    btnKapat.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+                    btnKapat.FlatAppearance.BorderSize = 2; // 2 piksellik şık bir çerçeve
+                    btnKapat.FlatAppearance.BorderColor = Color.FromArgb(15, 76, 58); // Çerçeve rengi logonun yeşili
+                    btnKapat.BackColor = Color.FromArgb(245, 247, 250); // Arkaplanla aynı renk (İçi boş görünür)
+                    btnKapat.ForeColor = Color.FromArgb(15, 76, 58); // Yazı rengi yeşil
+                    btnKapat.Font = new Font("Segoe UI Semibold", 12, FontStyle.Bold);
                     btnKapat.Cursor = Cursors.Hand;
+                    btnKapat.Size = new Size(180, 60);
+
+                    // Fare üzerine gelince içi yeşil dolsun, yazısı beyaz olsun (Harika efekt!)
+                    btnKapat.MouseEnter += (s, e) => {
+                        btnKapat.BackColor = Color.FromArgb(15, 76, 58);
+                        btnKapat.ForeColor = Color.White;
+                    };
+                    btnKapat.MouseLeave += (s, e) => {
+                        btnKapat.BackColor = Color.FromArgb(245, 247, 250);
+                        btnKapat.ForeColor = Color.FromArgb(15, 76, 58);
+                    };
                 }
             }
             catch { }
@@ -570,8 +581,8 @@ namespace TamgaApp
                 Application.Restart(); // Programı yeniden başlatarak LoginForm'a döndürür
             }
         }
-        #endregion
 
+        #endregion
         #endregion
 
         // =========================================================================================
@@ -1409,119 +1420,165 @@ namespace TamgaApp
         }
         #endregion
 
-        #region 📄 06.2 TEKLİ YAZDIRMA VE ÖNİZLEME (SINGLE PRINT)
-        // Ekranda tasarlanan zarfın/etiketin kağıt üzerinde nasıl duracağını gösteren önizleme penceresini açar
-        private void BtnPreview_Click(object sender, EventArgs e)
+        #region 📄 06.2 TEKLİ YAZDIRMA VE ÖNİZLEME (NORMAL ZARF) - EDGE MOTORU
+
+        // Tasarım ekranındaki nesneleri anında HTML'e çeviren motor (NORMAL ZARF İÇİN)
+        private string TasarimiHtmlCevir(List<DesignItem> items, Firma firma, string wMm, string hMm)
         {
-            batchFirms = null; // Tekli yazdırma olduğu için çoklu listeyi sıfırla
-            if (printDocument1 != null) { printDocument1.Dispose(); }
-            printDocument1 = new PrintDocument();
+            System.Text.StringBuilder html = new System.Text.StringBuilder();
+            html.AppendLine("<!DOCTYPE html><html><head><meta charset='utf-8'><style>");
 
-            // 🌟 YENİ EKLENEN: Windows'un gizli 2.5 cm'lik kenar boşluklarını SIFIRLIYORUZ!
-            printDocument1.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-            printDocument1.OriginAtMargins = false;
+            // 🌟 KAĞIT BOYUTU VİRGÜL/NOKTA ZIRHI
+            string pWidth = wMm.Replace(",", ".");
+            string pHeight = hMm.Replace(",", ".");
 
-            // Kağıt boyutlarını (Milimetre) al
-            if (!float.TryParse(txtPageWidthMm.Text, out float pageW)) pageW = 220f;
-            if (!float.TryParse(txtPageHeightMm.Text, out float pageH)) pageH = 110f;
+            // Kağıt boyutunu CSS ile zorla
+            html.AppendLine($"@page {{ size: {pWidth}mm {pHeight}mm; margin: 0; }}");
+            html.AppendLine("body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }");
+            html.AppendLine($".zarf {{ position: relative; width: {pWidth}mm; height: {pHeight}mm; overflow: hidden; background-color: white; }}");
+            html.AppendLine(".nesne { position: absolute; box-sizing: border-box; word-wrap: break-word; overflow: hidden; }");
+            html.AppendLine("</style></head><body><div class='zarf'>");
 
-            // YAZICI MATEMATİĞİ: Windows yazdırma sistemi inç'in yüzde biri (1/100 inch) ile çalışır.
-            // Milimetreyi inçe çevirmek için 25.4'e bölüyoruz, sonra yazıcı için 100 ile çarpıyoruz.
-            int printW = (int)(pageW * 100f / 25.4f);
-            int printH = (int)(pageH * 100f / 25.4f);
-
-            // Kağıt yatay mı dikey mi ayarla
-            if (rbLandscape != null && rbLandscape.Checked)
+            foreach (var item in items)
             {
-                // Yatayda yazıcıya her zaman Kısa Kenar x Uzun Kenar verilir, Landscape=true yapılarak kağıt sanal olarak döndürülür
-                printDocument1.DefaultPageSettings.PaperSize = new PaperSize("OzelBoyut", Math.Min(printW, printH), Math.Max(printW, printH));
-                printDocument1.DefaultPageSettings.Landscape = true;
+                // 🌟 KOORDİNAT VE PUNTO VİRGÜL/NOKTA ZIRHI
+                string x = item.Xmm.ToString().Replace(",", ".");
+                string y = item.Ymm.ToString().Replace(",", ".");
+                string w = item.Wmm.ToString().Replace(",", ".");
+                string h = item.Hmm.ToString().Replace(",", ".");
+                string pSize = item.FontSizePt.ToString().Replace(",", ".");
+
+                if (item.Type == "Text" || item.Type == "Label" || item.Type == "Field")
+                {
+                    string icerik = "";
+                    if (item.Type == "Field" && firma != null)
+                    {
+                        if (item.PlaceholderKey == "FirmaAdi") icerik = firma.FirmaAdi;
+                        else if (item.PlaceholderKey == "Adres") icerik = firma.Adres;
+                        else if (item.PlaceholderKey == "Il") icerik = firma.Il;
+                        else if (item.PlaceholderKey == "Telefon1") icerik = firma.Telefon1;
+                        else if (item.PlaceholderKey == "Telefon2") icerik = firma.Telefon2;
+                    }
+                    else { icerik = item.Text; }
+
+                    if (icerik == null) icerik = "";
+                    icerik = icerik.Replace("\n", "<br>");
+
+                    string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm; " +
+                                  $"font-family: '{item.FontName ?? "Arial"}'; font-size: {pSize}pt; color: {item.ColorName};";
+
+                    if (item.FontStyle == FontStyle.Bold || item.FontStyle == (FontStyle.Bold | FontStyle.Italic)) stil += " font-weight: bold;";
+                    if (item.FontStyle == FontStyle.Italic || item.FontStyle == (FontStyle.Bold | FontStyle.Italic)) stil += " font-style: italic;";
+                    if (item.Alignment == "Center") stil += " text-align: center;";
+                    else if (item.Alignment == "Right") stil += " text-align: right;";
+                    if (item.Rotation != 0) stil += $" transform: rotate({item.Rotation}deg); transform-origin: left top;";
+
+                    html.AppendLine($"<div class='nesne' style=\"{stil}\">{icerik}</div>");
+                }
+                else if (item.Type == "Image")
+                {
+                    if (File.Exists(item.Text))
+                    {
+                        try
+                        {
+                            byte[] imageBytes = File.ReadAllBytes(item.Text);
+                            string base64String = Convert.ToBase64String(imageBytes);
+                            string ext = Path.GetExtension(item.Text).ToLower().Replace(".", "");
+                            if (ext == "jpg") ext = "jpeg";
+
+                            string imgData = $"data:image/{ext};base64,{base64String}";
+                            string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm;";
+                            html.AppendLine($"<img class='nesne' style=\"{stil}\" src='{imgData}' />");
+                        }
+                        catch { }
+                    }
+                }
+                else if (item.Type == "Frame")
+                {
+                    string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm; border: 1.5px solid black;";
+                    html.AppendLine($"<div class='nesne' style=\"{stil}\"></div>");
+                }
             }
-            else
-            {
-                printDocument1.DefaultPageSettings.PaperSize = new PaperSize("OzelBoyut", printW, printH);
-                printDocument1.DefaultPageSettings.Landscape = false;
-            }
-
-            // Yazdırma olaylarını bağla
-            printDocument1.PrintPage += PrintDocument1_PrintPage;
-            printDocument1.BeginPrint += PrintDocument1_BeginPrint;
-
-            // Arkaplandaki beyaz kağıdın görünümünü de güncelle
-            ApplyDesignSurfaceSize(pageW, pageH, rbLandscape != null && rbLandscape.Checked);
-
-            // Nesneleri milimetrik koordinatlarına göre kağıda yerleştir
-            foreach (var item in designItems)
-            {
-                Control ctrl = pnlDesignSurface.Controls.Cast<Control>().FirstOrDefault(c => object.ReferenceEquals(c.Tag, item));
-                if (ctrl != null) PlaceControlOnDesignSurface(ctrl, item);
-            }
-
-            // Windows'un standart önizleme penceresini aç
-            printPreviewDialog1.Document = printDocument1;
-            try { printPreviewDialog1.ShowDialog(); } catch { }
+            html.AppendLine("</div></body></html>");
+            return html.ToString();
         }
 
-        // Tasarlanan tek zarfı/etiketi, seçilen veya varsayılan yazıcıya direkt gönderir
-        private void BtnPrint_Click(object sender, EventArgs e)
+        // Önizleme Butonu (Artık ikisi de aynı mükemmel Edge penceresini açacak)
+        private void BtnPreview_Click(object sender, EventArgs e) { RunEdgePrint(); }
+
+        // Yazdır Butonu
+        private void BtnPrint_Click(object sender, EventArgs e) { RunEdgePrint(); }
+
+        // Edge Motoru ile Dinamik Yazdırma Penceresi (İstediğin O Ekran)
+        private async void RunEdgePrint()
         {
-            batchFirms = null; // Tekli yazdırma
+            var firma = currentPreviewFirma ?? GetSelectedFirmaForPreview();
+            if (firma == null) { MessageBox.Show("Lütfen deneme yapmak için veritabanında en az 1 firma bulundurun veya seçin."); return; }
 
-            // Tasarımda dinamik veri alanı ({FirmaAdi}) varsa, örnek olarak kullanılacak firmayı seç
-            var firma = GetSelectedFirmaForPreview();
-            if (firma == null) { MessageBox.Show("Yazdırılacak firma seçin."); return; }
-            currentPreviewFirma = firma;
+            // Kağıt ölçülerini arayüzden al
+            string wMm = txtPageWidthMm.Text;
+            string hMm = txtPageHeightMm.Text;
 
-            if (printDocument1 != null) { printDocument1.Dispose(); }
-            printDocument1 = new PrintDocument();
-
-            // 🌟 YENİ EKLENEN: Windows'un gizli 2.5 cm'lik kenar boşluklarını SIFIRLIYORUZ!
-            printDocument1.DefaultPageSettings.Margins = new Margins(0, 0, 0, 0);
-            printDocument1.OriginAtMargins = false;
-
-            // Bu sekme için JSON'dan kaydedilmiş bir yazıcı varsa otomatik onu seç
-            ApplyPrinterMapping(printDocument1, "Tekli Zarf Yazdırma");
-
-            // Kağıt boyutlandırma işlemleri (Yukarıdaki önizleme metoduyla aynı mantık)
-            if (!float.TryParse(txtPageWidthMm.Text, out float pageW)) pageW = 220f;
-            if (!float.TryParse(txtPageHeightMm.Text, out float pageH)) pageH = 110f;
-
-            int printW = (int)(pageW * 100f / 25.4f);
-            int printH = (int)(pageH * 100f / 25.4f);
-
+            // Eğer kağıt yataysa ölçüleri ters çevir ki motor anlasın
             if (rbLandscape != null && rbLandscape.Checked)
             {
-                printDocument1.DefaultPageSettings.PaperSize = new PaperSize("OzelBoyut", Math.Min(printW, printH), Math.Max(printW, printH));
-                printDocument1.DefaultPageSettings.Landscape = true;
+                wMm = txtPageHeightMm.Text;
+                hMm = txtPageWidthMm.Text;
             }
-            else
+
+            // Tasarımı HTML Koduna Çevir
+            string htmlIcerik = TasarimiHtmlCevir(designItems, firma, wMm, hMm);
+
+            // Tıpkı Ambar Sayfasındaki Gibi Geçici Bir Form Oluştur
+            Form modernOnizleme = new Form();
+            modernOnizleme.Text = "Normal Zarf Yazdırma (Edge Motoru)";
+            modernOnizleme.ShowIcon = false;
+            modernOnizleme.Width = 1000;
+            modernOnizleme.Height = 600;
+            modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
+
+            Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
+            webCizici.Dock = DockStyle.Fill;
+            modernOnizleme.Controls.Add(webCizici);
+
+            // Form kapanınca belleği temizle (Çökmeyi engelleyen zırh)
+            modernOnizleme.FormClosed += (s, ev) => { webCizici.Dispose(); };
+            modernOnizleme.Show();
+
+            // Klasör yetki hatasını önlemek için AppData içinde geçici bir profil yarat
+            string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_TekliZarf");
+            var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
+
+            await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+
+            // Kodları motora bas
+            webCizici.NavigateToString(htmlIcerik);
+
+            webCizici.NavigationCompleted += (s, args) =>
             {
-                printDocument1.DefaultPageSettings.PaperSize = new PaperSize("OzelBoyut", printW, printH);
-                printDocument1.DefaultPageSettings.Landscape = false;
-            }
-
-            printDocument1.PrintPage += PrintDocument1_PrintPage;
-            printDocument1.BeginPrint += PrintDocument1_BeginPrint;
-
-            // İşlemi yazıcıya yolla!
-            printDocument1.Print();
+                // İŞTE İSTEDİĞİN O EKRANI GETİREN SİHİRLİ KOMUT!
+                webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            };
         }
         #endregion
 
         #region 📂 06.3 ÇOKLU YAZDIRMA (BATCH PRINTING) VE HTML ÇEVİRİ MOTORU
 
-        // Şablonu HTML ve CSS'e çeviren jilet gibi motor
+        // Şablonu HTML ve CSS'e çeviren jilet gibi motor (Sadece Çoklu Zarf İçin Çalışır)
         private string SablonuHtmlCevir(TemplateFile template, List<Firma> firmalar)
         {
             System.Text.StringBuilder html = new System.Text.StringBuilder();
             html.AppendLine("<!DOCTYPE html><html><head><meta charset='utf-8'><style>");
 
-            // 🌟 Windows inatlaşmasını tamamen ezen, kağıdı %100 kaplayan özel CSS!
-            html.AppendLine($"@page {{ size: {template.PageWidthMm}mm {template.PageHeightMm}mm; margin: 0; }}");
-            html.AppendLine("body { margin: 0; padding: 0; }");
-            html.AppendLine(".zarf { position: relative; width: 100vw; height: 100vh; page-break-after: always; overflow: hidden; }");
+            // 🌟 VİRGÜL/NOKTA ZIRHI: Kağıt boyutlarını CSS formatına (noktalı) uygun hale getir
+            string pWidth = template.PageWidthMm.ToString().Replace(",", ".");
+            string pHeight = template.PageHeightMm.ToString().Replace(",", ".");
 
-            // Sınırından taşan kelimeyi otomatik alt satıra kaydıran 'word-wrap' zırhı
+            // Kağıt boyutunu CSS ile zorla
+            html.AppendLine($"@page {{ size: {pWidth}mm {pHeight}mm; margin: 0; }}");
+            html.AppendLine("body { margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; }");
+            html.AppendLine($".zarf {{ position: relative; width: {pWidth}mm; height: {pHeight}mm; page-break-after: always; overflow: hidden; background-color: white; }}");
             html.AppendLine(".nesne { position: absolute; box-sizing: border-box; word-wrap: break-word; overflow: hidden; }");
             html.AppendLine("</style></head><body>");
 
@@ -1530,29 +1587,62 @@ namespace TamgaApp
                 html.AppendLine("<div class='zarf'>");
                 foreach (var item in template.DesignItems)
                 {
+                    // 🌟 VİRGÜL/NOKTA ZIRHI: Bütün koordinatları ve boyutları HTML'in anlayacağı formata çeviriyoruz
+                    string x = item.Xmm.ToString().Replace(",", ".");
+                    string y = item.Ymm.ToString().Replace(",", ".");
+                    string w = item.Wmm.ToString().Replace(",", ".");
+                    string h = item.Hmm.ToString().Replace(",", ".");
+                    string pSize = item.FontSizePt.ToString().Replace(",", ".");
+
                     if (item.Type == "Text" || item.Type == "Label" || item.Type == "Field")
                     {
-                        string icerik = item.Type == "Field"
-                            ? item.PlaceholderKey == "FirmaAdi" ? firma.FirmaAdi :
-                              item.PlaceholderKey == "Adres" ? firma.Adres :
-                              item.PlaceholderKey == "Il" ? firma.Il :
-                              item.PlaceholderKey == "Telefon1" ? firma.Telefon1 :
-                              item.PlaceholderKey == "Telefon2" ? firma.Telefon2 : ""
-                            : item.Text;
+                        string icerik = "";
+                        if (item.Type == "Field" && firma != null)
+                        {
+                            if (item.PlaceholderKey == "FirmaAdi") icerik = firma.FirmaAdi;
+                            else if (item.PlaceholderKey == "Adres") icerik = firma.Adres;
+                            else if (item.PlaceholderKey == "Il") icerik = firma.Il;
+                            else if (item.PlaceholderKey == "Telefon1") icerik = firma.Telefon1;
+                            else if (item.PlaceholderKey == "Telefon2") icerik = firma.Telefon2;
+                        }
+                        else { icerik = item.Text; }
 
                         if (icerik == null) icerik = "";
                         icerik = icerik.Replace("\n", "<br>");
 
-                        // CSS Koordinatları
-                        string stil = $"left: {item.Xmm}mm; top: {item.Ymm}mm; width: {item.Wmm}mm; height: {item.Hmm}mm; " +
-                                      $"font-family: '{item.FontName ?? "Arial"}'; font-size: {item.FontSizePt}pt; color: {item.ColorName};";
+                        string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm; " +
+                                      $"font-family: '{item.FontName ?? "Arial"}'; font-size: {pSize}pt; color: {item.ColorName};";
 
                         if (item.FontStyle == FontStyle.Bold || item.FontStyle == (FontStyle.Bold | FontStyle.Italic)) stil += " font-weight: bold;";
                         if (item.FontStyle == FontStyle.Italic || item.FontStyle == (FontStyle.Bold | FontStyle.Italic)) stil += " font-style: italic;";
                         if (item.Alignment == "Center") stil += " text-align: center;";
                         else if (item.Alignment == "Right") stil += " text-align: right;";
+                        if (item.Rotation != 0) stil += $" transform: rotate({item.Rotation}deg); transform-origin: left top;";
 
                         html.AppendLine($"<div class='nesne' style=\"{stil}\">{icerik}</div>");
+                    }
+                    else if (item.Type == "Image")
+                    {
+                        if (File.Exists(item.Text))
+                        {
+                            try
+                            {
+                                byte[] imageBytes = File.ReadAllBytes(item.Text);
+                                string base64String = Convert.ToBase64String(imageBytes);
+                                string ext = Path.GetExtension(item.Text).ToLower().Replace(".", "");
+                                if (ext == "jpg") ext = "jpeg";
+
+                                string imgData = $"data:image/{ext};base64,{base64String}";
+                                string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm;";
+                                html.AppendLine($"<img class='nesne' style=\"{stil}\" src='{imgData}' />");
+                            }
+                            catch { }
+                        }
+                    }
+                    else if (item.Type == "Frame")
+                    {
+                        string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm; border: 1.5px solid black;";
+                        html.AppendLine($"<div class='nesne' style=\"{stil}\"></div>");
                     }
                 }
                 html.AppendLine("</div>");
@@ -1562,8 +1652,8 @@ namespace TamgaApp
             return html.ToString();
         }
 
-        // Yeni Nesil WebView2 Çoklu Yazdırma Komutu
-        private void btnCokluZarfYazdir_Click(object sender, EventArgs e)
+        // Tıpkı Ambar Sayfasındaki Gibi Dinamik Arayüz Açan Motor
+        private async void btnCokluZarfYazdir_Click(object sender, EventArgs e)
         {
             if (lstSecilenFirmalar.CheckedItems.Count == 0) { MessageBox.Show("Lütfen firmaları işaretleyin."); return; }
             if (cmbPrintStyle.SelectedItem == null) { MessageBox.Show("Şablon seçin."); return; }
@@ -1574,67 +1664,63 @@ namespace TamgaApp
             var loadedTemplate = JsonConvert.DeserializeObject<TemplateFile>(File.ReadAllText(path));
             if (loadedTemplate == null) return;
 
-            // Firmaları Listeye Al
+            // İşaretlenen firmaları listede topla
             List<Firma> batchFirmsList = new List<Firma>();
             foreach (var item in lstSecilenFirmalar.CheckedItems)
             {
-                if (item.ToString().Contains("MANUEL"))
+                string satirMetni = item.ToString();
+
+                // Manuel Eklenen Adres Kontrolü
+                if (satirMetni.Contains("MANUEL"))
                 {
-                    // Manuel eklenenleri direkt obje olarak parçala
-                    string[] parcalar = item.ToString().Split('-');
-                    if (parcalar.Length >= 2)
-                    {
-                        batchFirmsList.Add(new Firma { FirmaAdi = parcalar[1].Trim() });
-                        // İpucu: Tam adres bilgisi için ListBox yerine DataGridView (dgvAmbarSecilenFirmalar) kullanman manuel eklemelerde daha güvenlidir.
-                    }
+                    string[] parcalar = satirMetni.Split('-');
+                    if (parcalar.Length >= 2) batchFirmsList.Add(new Firma { FirmaAdi = parcalar[1].Trim() });
                 }
                 else
                 {
-                    int id = int.Parse(item.ToString().Split('-')[0].Trim());
-                    var f = DataAccess.GetFirmaById(id);
-                    if (f != null) batchFirmsList.Add(f);
+                    if (int.TryParse(satirMetni.Split('-')[0].Trim(), out int id))
+                    {
+                        var f = DataAccess.GetFirmaById(id);
+                        if (f != null) batchFirmsList.Add(f);
+                    }
                 }
             }
 
-            // 1. ZARFLARI HTML KODUNA ÇEVİR
+            // HTML Koduna Çevir (Döngü her firmayı alt alta 'page-break' ile ekleyecek)
             string htmlIcerik = SablonuHtmlCevir(loadedTemplate, batchFirmsList);
 
-            // 2. HAYALET MOTORUN İÇİNE YÜKLE
-            htmlPrintEngine.NavigateToString(htmlIcerik);
+            // 3. YAZDIRMA ALANI PENCERESİNİ DÜZENLE
+            Form modernOnizleme = new Form();
+            modernOnizleme.Text = "Çoklu Zarf Yazdırma (Edge Motoru)";
+            modernOnizleme.ShowIcon = false;
+            modernOnizleme.Width = 1000;
+            modernOnizleme.Height = 600;
+            modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
 
-            // 3. YÜKLEME BİTİNCE TETİKLENECEK SESSİZ YAZDIRMA KOMUTU
-            EventHandler<Microsoft.Web.WebView2.Core.CoreWebView2NavigationCompletedEventArgs> onHtmlLoaded = null;
-            onHtmlLoaded = async (s, args) =>
+            // 4. WEB MOTORUNU BAĞLA VE YAZDIR
+            Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
+            webCizici.Dock = DockStyle.Fill;
+            modernOnizleme.Controls.Add(webCizici);
+
+            // Formu kapattığında arkada açık kalarak sistemi çökertmemesi için temizlik zırhı
+            modernOnizleme.FormClosed += (s, ev) => { webCizici.Dispose(); };
+            modernOnizleme.Show();
+
+            // Çökmeyi engelleyen, geçici profil klasörü mantığı!
+            string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_TopluZarf");
+            var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
+
+            await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+
+            // Ürettiğimiz HTML'i motora yüklüyoruz
+            webCizici.NavigateToString(htmlIcerik);
+
+            // Yükleme bitince İSTEDİĞİN O YAZDIRMA PENCERESİNİ AÇ!
+            webCizici.NavigationCompleted += (s, args) =>
             {
-                htmlPrintEngine.NavigationCompleted -= onHtmlLoaded; // Sadece bir kere çalışmasını sağla
-
-                // Yazdırma Ayarları (Chrome API)
-                var printSettings = htmlPrintEngine.CoreWebView2.Environment.CreatePrintSettings();
-                printSettings.ShouldPrintBackgrounds = false; // Sadece siyah yazılar gitsin
-                printSettings.ShouldPrintHeaderAndFooter = false; // Tarih, sayfa no vs. istemiyoruz
-                printSettings.MarginBottom = 0; printSettings.MarginTop = 0; printSettings.MarginLeft = 0; printSettings.MarginRight = 0;
-
-                // ComboBox'tan yazıcı seçilmişse onu kullan
-                if (cmbCokluPrinter != null && cmbCokluPrinter.SelectedItem != null)
-                {
-                    printSettings.PrinterName = cmbCokluPrinter.SelectedItem.ToString();
-                }
-
-                // Önizleme penceresi GÖSTERMEDEN direkt makineye FİŞEKLE!
-                var printStatus = await htmlPrintEngine.CoreWebView2.PrintAsync(printSettings);
-
-                if (printStatus == Microsoft.Web.WebView2.Core.CoreWebView2PrintStatus.Succeeded)
-                {
-                    MessageBox.Show("Tüm zarflar kusursuz şekilde yazıcıya gönderildi!", "Elit Baskı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                else
-                {
-                    // 🌟 DEDEKTİF: Hata olursa Windows'un arka planda verdiği orijinal arıza kodunu ekrana bas
-                    MessageBox.Show($"Yazdırma başarısız oldu.\n\nSistem Hata Kodu: {printStatus.ToString()}\n\nLütfen yazıcının açık ve bağlı olduğundan emin olun.", "Yazıcı Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
             };
-
-            htmlPrintEngine.NavigationCompleted += onHtmlLoaded;
         }
         #endregion
 
@@ -1686,7 +1772,13 @@ namespace TamgaApp
                     float w = item.Wmm * printerMmToPx;
                     float h = item.Hmm * printerMmToPx;
 
-                    RectangleF rect = new RectangleF(x, y, w, h);
+                    // YENİ KOD BU: Koordinatları içeriden başlatıp kutuyu 10 piksel daraltıyoruz.
+                    Rectangle rect = new Rectangle(
+                        (int)x + 5,   // 5 piksel sağdan başlat
+                        (int)y + 5,   // 5 piksel aşağıdan başlat
+                        (int)w - 10,  // Kutuyu 10 piksel daralt ki taşmasın
+                        (int)h - 10
+                    );
 
                     // Çerçeve (Kare) Çizimi
                     if (item.Type == "Frame") { e.Graphics.DrawRectangle(Pens.Black, Rectangle.Round(rect)); continue; }
@@ -5246,5 +5338,105 @@ namespace TamgaApp
 
         #endregion
 
+        // =========================================================================================
+
+        #region 🏷️ 18. SERİ ETİKET YAZDIRMA (EXCEL MAKROSU YERİNE)
+
+        // 1. Excel Makrosunun HTML & CSS Karşılığı (Devasa Fontlar ve Kalınlık Ayarları)
+        private string SeriEtiketHtmlOlustur(string firma, string urun, string arac, int baslangic, int kacarli, int toplamPalet)
+        {
+            System.Text.StringBuilder html = new System.Text.StringBuilder();
+            html.AppendLine("<!DOCTYPE html><html><head><meta charset='utf-8'><style>");
+
+            // A4 Yatay (Landscape) kağıt ayarı. Devasa etiketler genelde yatay A4'e basılır.
+            html.AppendLine("@page { size: A4 landscape; margin: 0; }");
+            html.AppendLine("body { margin: 0; padding: 0; font-family: 'Times New Roman', serif; text-align: center; }");
+
+            // Her bir etiketi ekranın tam ortasına hizalar ve her etiketten sonra yeni kağıda geçer
+            html.AppendLine(".sayfa { width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; page-break-after: always; overflow: hidden; background-color: white; }");
+
+            // VBA kodundaki '.Font.Size = 72' ve '.Bold = True' ayarlarının birebir CSS karşılığı
+            html.AppendLine(".firma { font-size: 72pt; font-weight: bold; margin-bottom: 30px; }");
+            html.AppendLine(".urun { font-size: 72pt; font-weight: normal; margin-bottom: 30px; }");
+            html.AppendLine(".palet { font-size: 72pt; font-weight: bold; }");
+            html.AppendLine("</style></head><body>");
+
+            // Excel'deki For i ve For j döngülerinin aynısı
+            for (int i = baslangic; i < baslangic + toplamPalet; i++)
+            {
+                for (int j = 0; j < kacarli; j++)
+                {
+                    html.AppendLine("<div class='sayfa'>");
+                    html.AppendLine($"<div class='firma'>{firma}</div>");
+                    html.AppendLine($"<div class='urun'>{urun}</div>");
+                    html.AppendLine($"<div class='palet'>{arac} {i}.PALET</div>");
+                    html.AppendLine("</div>");
+                }
+            }
+
+            html.AppendLine("</body></html>");
+            return html.ToString();
+        }
+
+        // 2. Butona basılınca çalışacak Ana Motor (O Şık Edge Ekranı)
+        private async void RunSeriEtiketPrint()
+        {
+            // Arayüzdeki (Resmini attığın formdaki) kutuların verilerini al
+            // NOT: Arayüzdeki nesnelerinin adını bu isimlerle değiştir (veya burayı kendine göre uyarla)
+            string firma = txtSeriFirma.Text.Trim();
+            string urun = txtSeriUrun.Text.Trim();
+            string arac = txtSeriArac.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(firma))
+            {
+                MessageBox.Show("Lütfen en azından bir Firma adı giriniz!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Kullanıcı harf falan girdiyse çökmeyi önleyen, varsayılan değer atayan zırh (TryParse)
+            int baslangic = int.TryParse(txtSeriBaslangic.Text, out int b) ? b : 1;
+            int kacarli = int.TryParse(txtSeriKacarli.Text, out int k) ? k : 1;
+            int toplamPalet = int.TryParse(txtSeriToplamPalet.Text, out int t) ? t : 1;
+
+            // HTML İçeriğini Oluştur
+            string htmlIcerik = SeriEtiketHtmlOlustur(firma, urun, arac, baslangic, kacarli, toplamPalet);
+
+            // Modern Önizleme Penceresini Yarat
+            Form modernOnizleme = new Form();
+            modernOnizleme.Text = "Seri Etiket Yazdırma";
+            modernOnizleme.ShowIcon = false;
+            modernOnizleme.Width = 1000;
+            modernOnizleme.Height = 600;
+            modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
+
+            Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
+            webCizici.Dock = DockStyle.Fill;
+            modernOnizleme.Controls.Add(webCizici);
+
+            modernOnizleme.FormClosed += (s, ev) => { webCizici.Dispose(); };
+            modernOnizleme.Show();
+
+            string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_SeriEtiket");
+            var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
+
+            await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+            webCizici.NavigateToString(htmlIcerik);
+
+            webCizici.NavigationCompleted += (s, args) =>
+            {
+                // Yükleme bitince otomatik yazdırma penceresini çıkart
+                webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            };
+        }
+
+        // 3. Resmini Attığın Formdaki Önizle ve Yazdır Butonlarının Olayları
+        // İstersen doğrudan arayüzdeki butonlarına çift tıklayıp içlerine "RunSeriEtiketPrint();" yazabilirsin.
+        private void btnSeriOnizle_Click(object sender, EventArgs e) { RunSeriEtiketPrint(); }
+        private void btnSeriYazdir_Click(object sender, EventArgs e) { RunSeriEtiketPrint(); }
+
+        #endregion
+
+        #endregion
     }
 }   

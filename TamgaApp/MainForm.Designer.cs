@@ -262,7 +262,6 @@ namespace TamgaApp
             this.labell = new System.Windows.Forms.Label();
             this.btnTemizle = new System.Windows.Forms.Button();
             this.cmbCokluPrinter = new System.Windows.Forms.ComboBox();
-            this.cmbPrintStyle = new System.Windows.Forms.ComboBox();
             this.lstSecilenFirmalar = new System.Windows.Forms.CheckedListBox();
             this.btnAra = new System.Windows.Forms.Button();
             this.btnCokluZarfYazdir = new System.Windows.Forms.Button();
@@ -310,6 +309,23 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
+            this.cmbPrintStyle = new System.Windows.Forms.ComboBox();
+            this.label61 = new System.Windows.Forms.Label();
+            this.label62 = new System.Windows.Forms.Label();
+            this.txtSeriArac = new System.Windows.Forms.TextBox();
+            this.txtSeriBaslangic = new System.Windows.Forms.TextBox();
+            this.txtSeriKacarli = new System.Windows.Forms.TextBox();
+            this.txtSeriToplamPalet = new System.Windows.Forms.TextBox();
+            this.btnSeriOnizle = new System.Windows.Forms.Button();
+            this.btnSeriYazdir = new System.Windows.Forms.Button();
+            this.label63 = new System.Windows.Forms.Label();
+            this.label64 = new System.Windows.Forms.Label();
+            this.label65 = new System.Windows.Forms.Label();
+            this.label66 = new System.Windows.Forms.Label();
+            this.txtSeriUrun = new System.Windows.Forms.TextBox();
+            this.txtSeriFirma = new System.Windows.Forms.TextBox();
+            this.label67 = new System.Windows.Forms.Label();
+            this.label68 = new System.Windows.Forms.Label();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -1042,6 +1058,22 @@ namespace TamgaApp
             // 
             // panel12
             // 
+            this.panel12.Controls.Add(this.label68);
+            this.panel12.Controls.Add(this.label67);
+            this.panel12.Controls.Add(this.txtSeriFirma);
+            this.panel12.Controls.Add(this.txtSeriUrun);
+            this.panel12.Controls.Add(this.label66);
+            this.panel12.Controls.Add(this.label65);
+            this.panel12.Controls.Add(this.label64);
+            this.panel12.Controls.Add(this.label63);
+            this.panel12.Controls.Add(this.label61);
+            this.panel12.Controls.Add(this.label62);
+            this.panel12.Controls.Add(this.txtSeriArac);
+            this.panel12.Controls.Add(this.txtSeriBaslangic);
+            this.panel12.Controls.Add(this.txtSeriKacarli);
+            this.panel12.Controls.Add(this.txtSeriToplamPalet);
+            this.panel12.Controls.Add(this.btnSeriOnizle);
+            this.panel12.Controls.Add(this.btnSeriYazdir);
             this.panel12.Controls.Add(this.label14);
             this.panel12.Controls.Add(this.label34);
             this.panel12.Controls.Add(this.cmbManualTemplate);
@@ -1068,7 +1100,7 @@ namespace TamgaApp
             // 
             this.label14.AutoSize = true;
             this.label14.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label14.Location = new System.Drawing.Point(97, 103);
+            this.label14.Location = new System.Drawing.Point(97, 148);
             this.label14.Name = "label14";
             this.label14.Size = new System.Drawing.Size(91, 15);
             this.label14.TabIndex = 8;
@@ -1078,7 +1110,7 @@ namespace TamgaApp
             // 
             this.label34.AutoSize = true;
             this.label34.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label34.Location = new System.Drawing.Point(97, 157);
+            this.label34.Location = new System.Drawing.Point(97, 175);
             this.label34.Name = "label34";
             this.label34.Size = new System.Drawing.Size(85, 15);
             this.label34.TabIndex = 15;
@@ -1087,7 +1119,7 @@ namespace TamgaApp
             // cmbManualTemplate
             // 
             this.cmbManualTemplate.FormattingEnabled = true;
-            this.cmbManualTemplate.Location = new System.Drawing.Point(252, 100);
+            this.cmbManualTemplate.Location = new System.Drawing.Point(252, 146);
             this.cmbManualTemplate.Name = "cmbManualTemplate";
             this.cmbManualTemplate.Size = new System.Drawing.Size(201, 21);
             this.cmbManualTemplate.TabIndex = 1;
@@ -1095,7 +1127,7 @@ namespace TamgaApp
             // cmbManuelPrinter
             // 
             this.cmbManuelPrinter.FormattingEnabled = true;
-            this.cmbManuelPrinter.Location = new System.Drawing.Point(252, 154);
+            this.cmbManuelPrinter.Location = new System.Drawing.Point(252, 173);
             this.cmbManuelPrinter.Name = "cmbManuelPrinter";
             this.cmbManuelPrinter.Size = new System.Drawing.Size(201, 21);
             this.cmbManuelPrinter.TabIndex = 2;
@@ -2887,15 +2919,6 @@ namespace TamgaApp
             this.cmbCokluPrinter.Size = new System.Drawing.Size(180, 21);
             this.cmbCokluPrinter.TabIndex = 5;
             // 
-            // cmbPrintStyle
-            // 
-            this.cmbPrintStyle.FormattingEnabled = true;
-            this.cmbPrintStyle.Location = new System.Drawing.Point(4, 207);
-            this.cmbPrintStyle.Margin = new System.Windows.Forms.Padding(2);
-            this.cmbPrintStyle.Name = "cmbPrintStyle";
-            this.cmbPrintStyle.Size = new System.Drawing.Size(180, 21);
-            this.cmbPrintStyle.TabIndex = 4;
-            // 
             // lstSecilenFirmalar
             // 
             this.lstSecilenFirmalar.FormattingEnabled = true;
@@ -3403,6 +3426,157 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
+            // cmbPrintStyle
+            // 
+            this.cmbPrintStyle.FormattingEnabled = true;
+            this.cmbPrintStyle.Location = new System.Drawing.Point(4, 207);
+            this.cmbPrintStyle.Margin = new System.Windows.Forms.Padding(2);
+            this.cmbPrintStyle.Name = "cmbPrintStyle";
+            this.cmbPrintStyle.Size = new System.Drawing.Size(180, 21);
+            this.cmbPrintStyle.TabIndex = 4;
+            // 
+            // label61
+            // 
+            this.label61.AutoSize = true;
+            this.label61.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label61.Location = new System.Drawing.Point(684, 148);
+            this.label61.Name = "label61";
+            this.label61.Size = new System.Drawing.Size(44, 15);
+            this.label61.TabIndex = 23;
+            this.label61.Text = "Firma:";
+            // 
+            // label62
+            // 
+            this.label62.AutoSize = true;
+            this.label62.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label62.Location = new System.Drawing.Point(684, 174);
+            this.label62.Name = "label62";
+            this.label62.Size = new System.Drawing.Size(39, 15);
+            this.label62.TabIndex = 31;
+            this.label62.Text = "Ürün:";
+            // 
+            // txtSeriArac
+            // 
+            this.txtSeriArac.Location = new System.Drawing.Point(816, 198);
+            this.txtSeriArac.Name = "txtSeriArac";
+            this.txtSeriArac.Size = new System.Drawing.Size(201, 20);
+            this.txtSeriArac.TabIndex = 18;
+            // 
+            // txtSeriBaslangic
+            // 
+            this.txtSeriBaslangic.Location = new System.Drawing.Point(816, 224);
+            this.txtSeriBaslangic.Name = "txtSeriBaslangic";
+            this.txtSeriBaslangic.Size = new System.Drawing.Size(201, 20);
+            this.txtSeriBaslangic.TabIndex = 19;
+            // 
+            // txtSeriKacarli
+            // 
+            this.txtSeriKacarli.Location = new System.Drawing.Point(816, 250);
+            this.txtSeriKacarli.Name = "txtSeriKacarli";
+            this.txtSeriKacarli.Size = new System.Drawing.Size(201, 20);
+            this.txtSeriKacarli.TabIndex = 20;
+            // 
+            // txtSeriToplamPalet
+            // 
+            this.txtSeriToplamPalet.Location = new System.Drawing.Point(816, 276);
+            this.txtSeriToplamPalet.Name = "txtSeriToplamPalet";
+            this.txtSeriToplamPalet.Size = new System.Drawing.Size(201, 20);
+            this.txtSeriToplamPalet.TabIndex = 21;
+            // 
+            // btnSeriOnizle
+            // 
+            this.btnSeriOnizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSeriOnizle.Location = new System.Drawing.Point(687, 348);
+            this.btnSeriOnizle.Name = "btnSeriOnizle";
+            this.btnSeriOnizle.Size = new System.Drawing.Size(148, 79);
+            this.btnSeriOnizle.TabIndex = 24;
+            this.btnSeriOnizle.Text = "Önizle";
+            this.btnSeriOnizle.UseVisualStyleBackColor = true;
+            // 
+            // btnSeriYazdir
+            // 
+            this.btnSeriYazdir.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSeriYazdir.Location = new System.Drawing.Point(849, 348);
+            this.btnSeriYazdir.Name = "btnSeriYazdir";
+            this.btnSeriYazdir.Size = new System.Drawing.Size(168, 79);
+            this.btnSeriYazdir.TabIndex = 26;
+            this.btnSeriYazdir.Text = "Yazdır";
+            this.btnSeriYazdir.UseVisualStyleBackColor = true;
+            // 
+            // label63
+            // 
+            this.label63.AutoSize = true;
+            this.label63.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label63.Location = new System.Drawing.Point(684, 200);
+            this.label63.Name = "label63";
+            this.label63.Size = new System.Drawing.Size(38, 15);
+            this.label63.TabIndex = 32;
+            this.label63.Text = "Araç:";
+            // 
+            // label64
+            // 
+            this.label64.AutoSize = true;
+            this.label64.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label64.Location = new System.Drawing.Point(684, 226);
+            this.label64.Name = "label64";
+            this.label64.Size = new System.Drawing.Size(66, 15);
+            this.label64.TabIndex = 33;
+            this.label64.Text = "Başlangıç:";
+            // 
+            // label65
+            // 
+            this.label65.AutoSize = true;
+            this.label65.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label65.Location = new System.Drawing.Point(684, 252);
+            this.label65.Name = "label65";
+            this.label65.Size = new System.Drawing.Size(95, 15);
+            this.label65.TabIndex = 34;
+            this.label65.Text = "Kaçarlı Olacak:";
+            // 
+            // label66
+            // 
+            this.label66.AutoSize = true;
+            this.label66.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label66.Location = new System.Drawing.Point(684, 278);
+            this.label66.Name = "label66";
+            this.label66.Size = new System.Drawing.Size(81, 15);
+            this.label66.TabIndex = 35;
+            this.label66.Text = "Toplam Palet:";
+            // 
+            // txtSeriUrun
+            // 
+            this.txtSeriUrun.Location = new System.Drawing.Point(816, 172);
+            this.txtSeriUrun.Name = "txtSeriUrun";
+            this.txtSeriUrun.Size = new System.Drawing.Size(201, 20);
+            this.txtSeriUrun.TabIndex = 36;
+            // 
+            // txtSeriFirma
+            // 
+            this.txtSeriFirma.Location = new System.Drawing.Point(816, 146);
+            this.txtSeriFirma.Name = "txtSeriFirma";
+            this.txtSeriFirma.Size = new System.Drawing.Size(201, 20);
+            this.txtSeriFirma.TabIndex = 37;
+            // 
+            // label67
+            // 
+            this.label67.AutoSize = true;
+            this.label67.Font = new System.Drawing.Font("Times New Roman", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label67.Location = new System.Drawing.Point(181, 78);
+            this.label67.Name = "label67";
+            this.label67.Size = new System.Drawing.Size(212, 36);
+            this.label67.TabIndex = 39;
+            this.label67.Text = "Manuel Etiket";
+            // 
+            // label68
+            // 
+            this.label68.AutoSize = true;
+            this.label68.Font = new System.Drawing.Font("Times New Roman", 24F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label68.Location = new System.Drawing.Point(769, 78);
+            this.label68.Name = "label68";
+            this.label68.Size = new System.Drawing.Size(161, 36);
+            this.label68.TabIndex = 40;
+            this.label68.Text = "Seri Etiket";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -3684,7 +3858,6 @@ namespace TamgaApp
         private Label labell;
         private Button btnTemizle;
         private ComboBox cmbCokluPrinter;
-        private ComboBox cmbPrintStyle;
         private CheckedListBox lstSecilenFirmalar;
         private Button btnAra;
         private Button btnCokluZarfYazdir;
@@ -3792,6 +3965,23 @@ namespace TamgaApp
         private Button btnManuelEkle;
         private Button btnSevkTemizle;
         private Button btnPalettenSil;
+        private ComboBox cmbPrintStyle;
+        private Label label65;
+        private Label label64;
+        private Label label63;
+        private Label label61;
+        private Label label62;
+        private TextBox txtSeriArac;
+        private TextBox txtSeriBaslangic;
+        private TextBox txtSeriKacarli;
+        private TextBox txtSeriToplamPalet;
+        private Button btnSeriOnizle;
+        private Button btnSeriYazdir;
+        private Label label68;
+        private Label label67;
+        private TextBox txtSeriFirma;
+        private TextBox txtSeriUrun;
+        private Label label66;
     }
 }
 
