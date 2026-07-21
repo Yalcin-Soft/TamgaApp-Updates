@@ -4129,29 +4129,31 @@ namespace TamgaApp
                 html.AppendLine("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">");
                 html.AppendLine("<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">");
                 html.AppendLine("<style>");
-                html.AppendLine("table { border-collapse: collapse; font-family: 'Calibri', sans-serif; font-size: 11pt; }");
-                html.AppendLine("th { background-color: #D9D9D9; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle; height: 80px; }");
-                html.AppendLine("td { border: 1px solid #000000; vertical-align: middle; padding: 5px; }");
-                html.AppendLine(".dikey-yazi { mso-rotate: 90; white-space: nowrap; }");
+                html.AppendLine("table { border-collapse: collapse; font-family: 'Calibri', sans-serif; font-size: 10pt; }");
+                html.AppendLine("th { background-color: #D9D9D9; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle; height: 90px; }");
+                html.AppendLine("td { border: 1px solid #000000; vertical-align: middle; padding: 6px; }");
+                html.AppendLine(".aciklama-hucre { vertical-align: top; white-space: normal; }");
+                html.AppendLine(".dikey-yazi { mso-rotate: 90; white-space: nowrap; text-align: center; }");
                 html.AppendLine(".kalin { font-weight: bold; }");
                 html.AppendLine(".ortala { text-align: center; }");
                 html.AppendLine("</style></head><body>");
 
                 html.AppendLine("<table>");
 
-                // --- SÜTUN BAŞLIKLARI (İstediğin Sıralama: Belge No, Adet, Malzeme Kodu ve Adı ve Paletler Sütun Olarak) ---
+                // --- SÜTUN BAŞLIKLARI (Müşteri Adı başa eklendi) ---
                 html.AppendLine("<tr>");
-                html.AppendLine("<th style='width: 90px;'>Belge No</th>");
+                html.AppendLine("<th style='width: 140px;'>Müşteri Adı</th>");
+                html.AppendLine("<th style='width: 85px;'>Belge No</th>");
                 html.AppendLine("<th class='dikey-yazi' style='width: 45px;'>Adet</th>");
-                html.AppendLine("<th style='width: 120px;'>Malzeme Kodu</th>");
-                html.AppendLine("<th style='width: 350px;'>Malzeme Adı</th>");
-                html.AppendLine("<th style='width: 120px;'>Açıklaması</th>");
+                html.AppendLine("<th style='width: 110px;'>Malzeme Kodu</th>");
+                html.AppendLine("<th style='width: 280px;'>Malzeme Adı</th>");
+                html.AppendLine("<th style='width: 180px;'>Açıklaması</th>");
 
-                // Palet Numaraları Satır Değil, Sütun Olarak Sağ tarafa diziliyor
+                // Palet Numaraları (90 Derece Dikey Başlıklar)
                 foreach (DataGridViewColumn col in dgvPaletMatrisi.Columns)
                 {
-                    string paletAdi = col.HeaderText.Replace(". Palet", "").Replace("Palet_", "PALET ");
-                    html.AppendLine($"<th class='dikey-yazi' style='width: 40px;'>{paletAdi}</th>");
+                    string paletAdi = col.HeaderText.Replace(". Palet", "").Replace("Palet_", "P ");
+                    html.AppendLine($"<th class='dikey-yazi' style='width: 35px;'>{paletAdi}</th>");
                 }
                 html.AppendLine("</tr>");
 
@@ -4164,6 +4166,7 @@ namespace TamgaApp
                 {
                     html.AppendLine("<tr>");
 
+                    string musteriAdi = txtMusteriAdi.Text.Trim();
                     string belgeNo = urunSatiri.Cells["Belge No"].Value?.ToString().Trim() ?? "";
                     string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
                     string malzemeAdi = urunSatiri.Cells["Malzeme Adı"].Value?.ToString().Trim() ?? "";
@@ -4172,14 +4175,14 @@ namespace TamgaApp
                     int siparisAdeti = 0;
                     int.TryParse(urunSatiri.Cells["Sipariş Adedi"].Value?.ToString(), out siparisAdeti);
 
-                    // İstediğin sıra: Belge No, Adet, Malzeme Kodu, Malzeme Adı, Açıklama
+                    html.AppendLine($"<td class='kalin'>{musteriAdi}</td>");
                     html.AppendLine($"<td class='kalin ortala'>{belgeNo}</td>");
                     html.AppendLine($"<td class='kalin ortala'>{siparisAdeti}</td>");
                     html.AppendLine($"<td class='ortala'>{malzemeKodu}</td>");
                     html.AppendLine($"<td>{malzemeAdi}</td>");
-                    html.AppendLine($"<td>{aciklama}</td>");
+                    html.AppendLine($"<td class='aciklama-hucre'>{aciklama}</td>");
 
-                    // Her palet sütunu için bu malzemenin o paletteki adedini bul ve hücreye yaz
+                    // 🌟 PALET DAĞILIMI HÜCRE EŞLEŞTİRME DÜZELTMESİ
                     for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
                     {
                         int palettekiMiktar = 0;
@@ -4188,7 +4191,9 @@ namespace TamgaApp
                             if (paletSatiri.Cells[j].Value != null)
                             {
                                 string hucre = paletSatiri.Cells[j].Value.ToString();
-                                if (hucre.Contains(malzemeKodu) && hucre.Contains(belgeNo))
+                                // Matris hücresindeki format: "MalzemeKodu (BelgeNo) | Adet: X"
+                                // Bu yüzden hem malzeme kodunu hem belgeyi tam olarak arıyoruz.
+                                if (hucre.StartsWith(malzemeKodu) && hucre.Contains($"({belgeNo})"))
                                 {
                                     string[] parcalar = hucre.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
                                     if (parcalar.Length == 2)
@@ -4201,7 +4206,7 @@ namespace TamgaApp
                         }
 
                         if (palettekiMiktar > 0)
-                            html.AppendLine($"<td class='ortala'>{palettekiMiktar}</td>");
+                            html.AppendLine($"<td class='kalin ortala'>{palettekiMiktar}</td>");
                         else
                             html.AppendLine("<td></td>");
                     }
@@ -4213,7 +4218,7 @@ namespace TamgaApp
 
                 File.WriteAllText(tamYol, html.ToString(), new System.Text.UTF8Encoding(true));
 
-                MessageBox.Show($"Sevkiyat Matris Raporu mükemmel Excel formatında başarıyla oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Sevkiyat Matris Raporu başarıyla güncellendi!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
             }
