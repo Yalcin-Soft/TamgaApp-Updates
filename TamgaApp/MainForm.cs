@@ -503,6 +503,9 @@ namespace TamgaApp
             if (btnPalettenSil != null) { btnPalettenSil.Click -= btnPalettenSil_Click; btnPalettenSil.Click += btnPalettenSil_Click; }
             if (btnSevkTemizle != null) { btnSevkTemizle.Click -= btnSevkTemizle_Click; btnSevkTemizle.Click += btnSevkTemizle_Click; }
 
+            if (btnTumBelgeleriSec != null) { btnTumBelgeleriSec.Click -= btnTumBelgeleriSec_Click; btnTumBelgeleriSec.Click += btnTumBelgeleriSec_Click; }
+            if (btnSevkRaporla != null) { btnSevkRaporla.Click -= btnSevkRaporla_Click; btnSevkRaporla.Click += btnSevkRaporla_Click; }
+
             dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
         }
         #endregion
@@ -4096,7 +4099,6 @@ namespace TamgaApp
 
         private void btnSevkRaporla_Click(object sender, EventArgs e)
         {
-            // 1. Kontroller
             if (dgvMalzemeler.Rows.Count == 0)
             {
                 MessageBox.Show("Raporlanacak aktif sevkiyat malzemesi bulunamadı!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -4111,7 +4113,6 @@ namespace TamgaApp
 
             try
             {
-                // 2. Klasör ve Dosya Yolu Hazırlığı (Masaüstü)
                 string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                 string klasor = Path.Combine(masaustu, "TamgaApp Sevkiyat Raporları");
                 if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
@@ -4119,77 +4120,100 @@ namespace TamgaApp
                 string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
                 if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "Musteri";
 
-                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:yyyyMMdd_HHmm}.csv";
+                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:yyyyMMdd_HHmm}.xls";
                 string tamYol = Path.Combine(klasor, dosyaAdi);
 
-                // 3. Matris Yapısını İnşa Etme (CSV / Excel formatı)
-                using (StreamWriter sw = new StreamWriter(tamYol, false, System.Text.Encoding.UTF8))
+                System.Text.StringBuilder html = new System.Text.StringBuilder();
+
+                html.AppendLine("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">");
+                html.AppendLine("<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">");
+                html.AppendLine("<style>");
+                html.AppendLine("table { border-collapse: collapse; font-family: 'Calibri', sans-serif; font-size: 11pt; }");
+                html.AppendLine("th { background-color: #D9D9D9; font-weight: bold; border: 1px solid #000000; text-align: center; vertical-align: middle; height: 80px; }");
+                html.AppendLine("td { border: 1px solid #000000; vertical-align: middle; padding: 5px; }");
+                html.AppendLine(".dikey-yazi { mso-rotate: 90; white-space: nowrap; }");
+                html.AppendLine(".kalin { font-weight: bold; }");
+                html.AppendLine(".ortala { text-align: center; }");
+                html.AppendLine("</style></head><body>");
+
+                html.AppendLine("<table>");
+
+                // --- SÜTUN BAŞLIKLARI (İstediğin Sıralama: Belge No, Adet, Malzeme Kodu ve Adı ve Paletler Sütun Olarak) ---
+                html.AppendLine("<tr>");
+                html.AppendLine("<th style='width: 90px;'>Belge No</th>");
+                html.AppendLine("<th class='dikey-yazi' style='width: 45px;'>Adet</th>");
+                html.AppendLine("<th style='width: 120px;'>Malzeme Kodu</th>");
+                html.AppendLine("<th style='width: 350px;'>Malzeme Adı</th>");
+                html.AppendLine("<th style='width: 120px;'>Açıklaması</th>");
+
+                // Palet Numaraları Satır Değil, Sütun Olarak Sağ tarafa diziliyor
+                foreach (DataGridViewColumn col in dgvPaletMatrisi.Columns)
                 {
-                    // --- BAŞLIK SATIRI (Görseldeki sütunların aynısı) ---
-                    // Belge No | Müşteri Adı | Malzeme | Malzeme Adı | Açıklaması | TOPLAM | Palet 1 | Palet 2 ...
-                    System.Text.StringBuilder basliklar = new System.Text.StringBuilder("Belge No;Musteri Adi;Malzeme;MalzemeAdi;Aciklamasi;TOPLAM");
+                    string paletAdi = col.HeaderText.Replace(". Palet", "").Replace("Palet_", "PALET ");
+                    html.AppendLine($"<th class='dikey-yazi' style='width: 40px;'>{paletAdi}</th>");
+                }
+                html.AppendLine("</tr>");
 
-                    foreach (DataGridViewColumn col in dgvPaletMatrisi.Columns)
+                // --- VERİ SATIRLARI ---
+                var gecerliSatirlar = dgvMalzemeler.Rows.Cast<DataGridViewRow>()
+                    .Where(r => !r.IsNewRow && r.Cells["Malzeme Kodu"].Value != null && !string.IsNullOrWhiteSpace(r.Cells["Malzeme Kodu"].Value.ToString()))
+                    .ToList();
+
+                foreach (DataGridViewRow urunSatiri in gecerliSatirlar)
+                {
+                    html.AppendLine("<tr>");
+
+                    string belgeNo = urunSatiri.Cells["Belge No"].Value?.ToString().Trim() ?? "";
+                    string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
+                    string malzemeAdi = urunSatiri.Cells["Malzeme Adı"].Value?.ToString().Trim() ?? "";
+                    string aciklama = urunSatiri.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
+
+                    int siparisAdeti = 0;
+                    int.TryParse(urunSatiri.Cells["Sipariş Adedi"].Value?.ToString(), out siparisAdeti);
+
+                    // İstediğin sıra: Belge No, Adet, Malzeme Kodu, Malzeme Adı, Açıklama
+                    html.AppendLine($"<td class='kalin ortala'>{belgeNo}</td>");
+                    html.AppendLine($"<td class='kalin ortala'>{siparisAdeti}</td>");
+                    html.AppendLine($"<td class='ortala'>{malzemeKodu}</td>");
+                    html.AppendLine($"<td>{malzemeAdi}</td>");
+                    html.AppendLine($"<td>{aciklama}</td>");
+
+                    // Her palet sütunu için bu malzemenin o paletteki adedini bul ve hücreye yaz
+                    for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
                     {
-                        basliklar.Append($";{col.HeaderText}");
-                    }
-                    sw.WriteLine(basliklar.ToString());
-
-                    // --- MALZEME SATIRLARI ---
-                    foreach (DataGridViewRow urunSatiri in dgvMalzemeler.Rows)
-                    {
-                        if (urunSatiri.IsNewRow || urunSatiri.Cells["Malzeme Kodu"].Value == null) continue;
-
-                        string belgeNo = urunSatiri.Cells["Belge No"].Value?.ToString().Trim() ?? "";
-                        string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
-                        string malzemeAdi = urunSatiri.Cells["Malzeme Adı"].Value?.ToString().Trim() ?? "";
-                        string aciklama = urunSatiri.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
-
-                        // Sipariş edilen toplam miktar (veya okutulan)
-                        int toplamAdet = 0;
-                        int.TryParse(urunSatiri.Cells["Okutulan"].Value?.ToString(), out toplamAdet);
-                        if (toplamAdet == 0) int.TryParse(urunSatiri.Cells["Sipariş Adedi"].Value?.ToString(), out toplamAdet);
-
-                        System.Text.StringBuilder satirVerisi = new System.Text.StringBuilder($"{belgeNo};{txtMusteriAdi.Text};{malzemeKodu};{malzemeAdi};{aciklama};{toplamAdet}");
-
-                        // --- HER BİR PALET İÇİN DAĞILIM HESABI ---
-                        // Sağdaki dgvPaletMatrisi'ni tarayarak bu malzemenin hangi palette kaç adet olduğunu buluyoruz
-                        for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+                        int palettekiMiktar = 0;
+                        foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
                         {
-                            int palettekiMiktar = 0;
-
-                            foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                            if (paletSatiri.Cells[j].Value != null)
                             {
-                                if (paletSatiri.Cells[j].Value != null)
+                                string hucre = paletSatiri.Cells[j].Value.ToString();
+                                if (hucre.Contains(malzemeKodu) && hucre.Contains(belgeNo))
                                 {
-                                    string hucre = paletSatiri.Cells[j].Value.ToString();
-                                    // Hücre içeriği örneği: "2000123 (SE-2026-001) | Adet: 5"
-                                    if (hucre.Contains(malzemeKodu) && hucre.Contains(belgeNo))
+                                    string[] parcalar = hucre.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
+                                    if (parcalar.Length == 2)
                                     {
-                                        string[] parcalar = hucre.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
-                                        if (parcalar.Length == 2)
-                                        {
-                                            int.TryParse(parcalar[1], out int adetParca);
-                                            palettekiMiktar += adetParca;
-                                        }
+                                        int.TryParse(parcalar[1], out int adetParca);
+                                        palettekiMiktar += adetParca;
                                     }
                                 }
                             }
-
-                            // Eğer bu palette bu malzeme varsa adedini yaz, yoksa boş bırak (Görseldeki gibi)
-                            if (palettekiMiktar > 0)
-                                satirVerisi.Append($";{palettekiMiktar}");
-                            else
-                                satirVerisi.Append(";"); // Boş hücre
                         }
 
-                        sw.WriteLine(satirVerisi.ToString());
+                        if (palettekiMiktar > 0)
+                            html.AppendLine($"<td class='ortala'>{palettekiMiktar}</td>");
+                        else
+                            html.AppendLine("<td></td>");
                     }
+
+                    html.AppendLine("</tr>");
                 }
 
-                MessageBox.Show($"Sevkiyat Matris Raporu başarıyla oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                html.AppendLine("</table></body></html>");
 
-                // Dosyayı otomatik olarak Excel ile aç
+                File.WriteAllText(tamYol, html.ToString(), new System.Text.UTF8Encoding(true));
+
+                MessageBox.Show($"Sevkiyat Matris Raporu mükemmel Excel formatında başarıyla oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
             }
             catch (Exception ex)
@@ -4377,7 +4401,7 @@ namespace TamgaApp
             }
 
             // Kullanıcının tablodan tıkladığı satırı yakala
-            DataGridViewRow hedefSatir = dgvMalzemeler?.SelectedRows[0] ?? dgvMalzemeler.SelectedRows[0];
+            DataGridViewRow hedefSatir = dgvMalzemeler.SelectedRows[0];
 
             if (hedefSatir.IsNewRow || hedefSatir.Cells["Malzeme Kodu"].Value == null) return;
 
