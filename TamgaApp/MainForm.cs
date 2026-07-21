@@ -61,6 +61,7 @@ namespace TamgaApp
         private List<Firma> batchFirms;                                // Çoklu zarf yazdırma işlemine sokulan firmaların toplu sırası
         private int batchIndex;                                        // Çoklu yazdırmada anlık olarak kaçıncı kağıdın/firmanın yazdırıldığını tutar
                                                                        // Sadece Ambar yazdırma sekmesine hizmet eden, kendi hafızası olan özel motor
+
         // Yazıcı Hafızası
         private Dictionary<string, string> printerMappings = new Dictionary<string, string>(); // Hangi ekranın hangi yazıcıyı varsayılan kullanacağını tutar
         private const string PrinterSettingsFile = "printer_settings.json";                    // Yazıcı eşleştirmelerinin diske kaydedildiği JSON dosyasının adı
