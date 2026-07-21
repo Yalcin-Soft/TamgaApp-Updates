@@ -331,6 +331,7 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
+            this.btnSevkRaporla = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -585,6 +586,7 @@ namespace TamgaApp
             // 
             // panel7
             // 
+            this.panel7.Controls.Add(this.btnSevkRaporla);
             this.panel7.Controls.Add(this.numManuelAdet);
             this.panel7.Controls.Add(this.btnTumBelgeleriSec);
             this.panel7.Controls.Add(this.clbBelgeNo);
@@ -700,7 +702,7 @@ namespace TamgaApp
             // 
             // txtBarkod
             // 
-            this.txtBarkod.Location = new System.Drawing.Point(132, 494);
+            this.txtBarkod.Location = new System.Drawing.Point(103, 494);
             this.txtBarkod.Name = "txtBarkod";
             this.txtBarkod.Size = new System.Drawing.Size(201, 20);
             this.txtBarkod.TabIndex = 7;
@@ -709,7 +711,7 @@ namespace TamgaApp
             // 
             this.label56.AutoSize = true;
             this.label56.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label56.Location = new System.Drawing.Point(36, 496);
+            this.label56.Location = new System.Drawing.Point(7, 496);
             this.label56.Name = "label56";
             this.label56.Size = new System.Drawing.Size(90, 15);
             this.label56.TabIndex = 35;
@@ -792,7 +794,7 @@ namespace TamgaApp
             "40",
             "41",
             "42"});
-            this.cmbSevkPaletSayisi.Location = new System.Drawing.Point(132, 439);
+            this.cmbSevkPaletSayisi.Location = new System.Drawing.Point(103, 439);
             this.cmbSevkPaletSayisi.Name = "cmbSevkPaletSayisi";
             this.cmbSevkPaletSayisi.Size = new System.Drawing.Size(201, 21);
             this.cmbSevkPaletSayisi.TabIndex = 5;
@@ -811,7 +813,7 @@ namespace TamgaApp
             // 
             this.label59.AutoSize = true;
             this.label59.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label59.Location = new System.Drawing.Point(51, 441);
+            this.label59.Location = new System.Drawing.Point(22, 441);
             this.label59.Name = "label59";
             this.label59.Size = new System.Drawing.Size(76, 15);
             this.label59.TabIndex = 39;
@@ -821,7 +823,7 @@ namespace TamgaApp
             // 
             this.label60.AutoSize = true;
             this.label60.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label60.Location = new System.Drawing.Point(55, 469);
+            this.label60.Location = new System.Drawing.Point(26, 469);
             this.label60.Name = "label60";
             this.label60.Size = new System.Drawing.Size(71, 15);
             this.label60.TabIndex = 40;
@@ -868,7 +870,7 @@ namespace TamgaApp
             // 
             this.cmbAktifPalet.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbAktifPalet.FormattingEnabled = true;
-            this.cmbAktifPalet.Location = new System.Drawing.Point(132, 467);
+            this.cmbAktifPalet.Location = new System.Drawing.Point(103, 467);
             this.cmbAktifPalet.Name = "cmbAktifPalet";
             this.cmbAktifPalet.Size = new System.Drawing.Size(201, 21);
             this.cmbAktifPalet.TabIndex = 6;
@@ -3660,6 +3662,17 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
+            // btnSevkRaporla
+            // 
+            this.btnSevkRaporla.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkRaporla.Location = new System.Drawing.Point(310, 439);
+            this.btnSevkRaporla.Name = "btnSevkRaporla";
+            this.btnSevkRaporla.Size = new System.Drawing.Size(87, 80);
+            this.btnSevkRaporla.TabIndex = 51;
+            this.btnSevkRaporla.Text = "Raporla";
+            this.btnSevkRaporla.UseVisualStyleBackColor = true;
+            this.btnSevkRaporla.Click += new System.EventHandler(this.btnSevkRaporla_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -4073,6 +4086,7 @@ namespace TamgaApp
         private CheckedListBox clbBelgeNo;
         private Button btnTumBelgeleriSec;
         private NumericUpDown numManuelAdet;
+        private Button btnSevkRaporla;
     }
 }
 
