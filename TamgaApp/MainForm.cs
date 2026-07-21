@@ -3857,7 +3857,7 @@ namespace TamgaApp
                 dtTumSiparisler.AcceptChanges();
 
                 cmbMusteri.Items.Clear();
-                cmbBelgeNo.Items.Clear();
+
                 var testMusterileri = dtTumSiparisler.AsEnumerable().Select(r => r.Field<string>("MusteriAdi")).Where(m => !string.IsNullOrEmpty(m)).Distinct().OrderBy(m => m).ToArray();
                 cmbMusteri.Items.AddRange(testMusterileri);
                 MessageBox.Show("Ev Modu Aktif: Sisteme bağlanılmadı, sahte test verileri yüklendi!", "Geliştirici Modu");
@@ -3990,7 +3990,9 @@ namespace TamgaApp
             if (cmbMusteri.SelectedItem == null) return;
 
             string secilenMusteri = cmbMusteri.SelectedItem.ToString().Trim();
-            cmbBelgeNo.Items.Clear();
+
+            // Eski ComboBox yerine artık yeni Tikli Liste (CheckedListBox) kullanıyoruz
+            clbBelgeNo.Items.Clear();
             List<string> belgeler = new List<string>();
 
             foreach (DataRow row in dtTumSiparisler.Rows)
@@ -4011,33 +4013,49 @@ namespace TamgaApp
 
             if (belgeler.Count > 0)
             {
-                cmbBelgeNo.Items.AddRange(belgeler.ToArray());
-                cmbBelgeNo.SelectedIndex = 0;
+                clbBelgeNo.Items.AddRange(belgeler.ToArray());
+
+                // İstersen ilk gelen belgeye otomatik olarak tik atmasını sağlayabilirsin:
+                // clbBelgeNo.SetItemChecked(0, true);
             }
         }
 
-        // Belge No kutusunun yanındaki "Ara" butonuna basıldığında tabloyu SIFIRLAR ve ürünleri getirir.
+        // Belge No kutusundaki TİKLİ BELGELERİ arar ve tabloyu ürünlerle doldurur.
         private void btnSevkAra_Click(object sender, EventArgs e)
         {
-            string secilenBelge = cmbBelgeNo.Text.Trim();
-            if (string.IsNullOrEmpty(secilenBelge)) { MessageBox.Show("Lütfen bir Belge No seçin.", "Uyarı"); return; }
-
-            DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
-
-            if (filtrelenmisSatirlar.Length > 0)
+            // Hiçbir şeye tik atılmadıysa uyar
+            if (clbBelgeNo.CheckedItems.Count == 0)
             {
-                txtMusteriAdi.Text = filtrelenmisSatirlar[0]["MusteriAdi"].ToString().Trim();
-                txtSevkMusteri.Text = filtrelenmisSatirlar[0]["SevkMusteri"].ToString().Trim();
+                MessageBox.Show("Lütfen listelemek için en az bir Belge No işaretleyin (Kutuya tik atın).", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
-                var yerelUrunler = DataAccess.GetAllUrunler();
-                DataTable dtEkran = new DataTable();
-                dtEkran.Columns.Add("Belge No", typeof(string)); // 🌟 YENİ SÜTUN: BELGE NO
-                dtEkran.Columns.Add("Malzeme Kodu", typeof(string));
-                dtEkran.Columns.Add("Barkod", typeof(string));
-                dtEkran.Columns.Add("Malzeme Adı", typeof(string));
-                dtEkran.Columns.Add("Açıklama", typeof(string));
-                dtEkran.Columns.Add("Sipariş Adedi", typeof(int));
-                dtEkran.Columns.Add("Okutulan", typeof(int));
+            // Tabloyu sıfırdan kur
+            DataTable dtEkran = new DataTable();
+            dtEkran.Columns.Add("Belge No", typeof(string));
+            dtEkran.Columns.Add("Malzeme Kodu", typeof(string));
+            dtEkran.Columns.Add("Barkod", typeof(string));
+            dtEkran.Columns.Add("Malzeme Adı", typeof(string));
+            dtEkran.Columns.Add("Açıklama", typeof(string));
+            dtEkran.Columns.Add("Sipariş Adedi", typeof(int));
+            dtEkran.Columns.Add("Okutulan", typeof(int));
+
+            var yerelUrunler = DataAccess.GetAllUrunler();
+
+            // Müşteri bilgisini ilk tikli belgeden al (Hepsi aynı müşteri zaten)
+            string ilkBelge = clbBelgeNo.CheckedItems[0].ToString();
+            DataRow[] ilkBelgeSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{ilkBelge}%'");
+            if (ilkBelgeSatirlari.Length > 0)
+            {
+                txtMusteriAdi.Text = ilkBelgeSatirlari[0]["MusteriAdi"].ToString().Trim();
+                txtSevkMusteri.Text = ilkBelgeSatirlari[0]["SevkMusteri"].ToString().Trim();
+            }
+
+            // 🌟 SİHİRLİ DÖNGÜ: Tiklenen TÜM belgeleri sırayla tabloya ekle (Otomatik Konsolidasyon)
+            foreach (var isaretliBelge in clbBelgeNo.CheckedItems)
+            {
+                string secilenBelge = isaretliBelge.ToString();
+                DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
 
                 foreach (DataRow satir in filtrelenmisSatirlar)
                 {
@@ -4047,65 +4065,14 @@ namespace TamgaApp
 
                     dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
                 }
-
-                dgvMalzemeler.DataSource = dtEkran;
-                dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             }
-            else MessageBox.Show("Sipariş bulunamadı!", "Bulunamadı");
+
+            dgvMalzemeler.DataSource = dtEkran;
+            dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+            MessageBox.Show($"{clbBelgeNo.CheckedItems.Count} adet sipariş fişi birleştirilerek listeye eklendi!\nArtık barkod okutmaya başlayabilirsiniz.", "Siparişler Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        // YENİ BUTON: Mevcut listeyi silmeden, yeni siparişi listenin altına ekler (Konsolidasyon).
-        private void btnUzerineEkle_Click(object sender, EventArgs e)
-        {
-            string secilenBelge = cmbBelgeNo.Text.Trim();
-            if (string.IsNullOrEmpty(secilenBelge)) { MessageBox.Show("Lütfen bir Belge No seçin.", "Uyarı"); return; }
-
-            // Eğer tablo boşsa direkt normal "Ara" butonunu tetikle
-            if (dgvMalzemeler.DataSource == null || !(dgvMalzemeler.DataSource is DataTable))
-            {
-                btnSevkAra_Click(null, null); return;
-            }
-
-            DataTable dtEkran = (DataTable)dgvMalzemeler.DataSource;
-            if (dtEkran.Rows.Count == 0)
-            {
-                btnSevkAra_Click(null, null); return;
-            }
-
-            // Bu sipariş zaten eklendiyse uyar
-            foreach (DataRow r in dtEkran.Rows)
-            {
-                if (r["Belge No"].ToString() == secilenBelge) { MessageBox.Show("Bu sipariş listeye zaten eklenmiş!", "Mükerrer Kayıt"); return; }
-            }
-
-            DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
-
-            if (filtrelenmisSatirlar.Length > 0)
-            {
-                // 🛡️ MÜŞTERİ KARIŞTIRMA ZIRHI: Ekrandaki mevcut müşteri ile yeni seçilen belgenin müşterisi aynı mı?
-                string ekrandakiMusteri = txtMusteriAdi.Text.Trim();
-                string yeniBelgeMusterisi = filtrelenmisSatirlar[0]["MusteriAdi"].ToString().Trim();
-
-                if (!ekrandakiMusteri.Equals(yeniBelgeMusterisi, StringComparison.OrdinalIgnoreCase))
-                {
-                    MessageBox.Show($"DUR! Ahmet'in malı Mehmet'e karışamaz.\n\nŞu an ekranda '{ekrandakiMusteri}' müşterisinin siparişleri var, ancak eklemeye çalıştığınız belge '{yeniBelgeMusterisi}' isimli müşteriye ait.\n\nFarklı müşterilerin siparişlerini tek bir sevkiyatta birleştiremezsiniz!", "Kritik Hata: Müşteri Uyuşmazlığı", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return; // İşlemi iptal et
-                }
-
-                // Eğer müşteri aynıysa sorun yok, ekleme işlemine devam et
-                var yerelUrunler = DataAccess.GetAllUrunler();
-                foreach (DataRow satir in filtrelenmisSatirlar)
-                {
-                    string malzemeKodu = satir["Malzeme"].ToString().Trim();
-                    var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
-                    string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
-
-                    dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
-                }
-                MessageBox.Show($"'{secilenBelge}' nolu sipariş başarıyla listeye ilave edildi! Artık ürünleri okutmaya devam edebilirsiniz.", "Siparişler Birleştirildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else MessageBox.Show("Sipariş bulunamadı!", "Bulunamadı");
-        }
         #endregion
 
         #region 🔫 13.5 SEVKİYAT BARKOD OKUTMA VE PALETLEME
@@ -4285,21 +4252,25 @@ namespace TamgaApp
             }
 
             // Kullanıcının tablodan tıkladığı satırı yakala
-            DataGridViewRow hedefSatir = dgvMalzemeler.SelectedRows[0];
+            DataGridViewRow hedefSatir = dgvMalzemeler?.SelectedRows[0] ?? dgvMalzemeler.SelectedRows[0];
 
             if (hedefSatir.IsNewRow || hedefSatir.Cells["Malzeme Kodu"].Value == null) return;
 
             int siparisAdedi = Convert.ToInt32(hedefSatir.Cells["Sipariş Adedi"].Value);
             int okutulanAdet = Convert.ToInt32(hedefSatir.Cells["Okutulan"].Value);
 
-            if (okutulanAdet >= siparisAdedi)
+            // 🌟 KULLANICININ SEÇTİĞİ ADEDİ NUMARATÖRDEN ALIYORUZ (Varsayılan 1)
+            int eklenecekMiktar = (numManuelAdet != null) ? (int)numManuelAdet.Value : 1;
+
+            // Kota aşım kontrolü
+            if (okutulanAdet + eklenecekMiktar > siparisAdedi)
             {
-                MessageBox.Show("Bu ürünün sipariş kotası zaten dolmuş, daha fazla ekleyemezsiniz!", "Kota Dolu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Eklemek istediğiniz miktar sipariş kotasını aşıyor!\nKalan hak: {siparisAdedi - okutulanAdet}", "Kota Aşımı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 3. Adedi 1 arttır ve satırın rengini duruma göre boya
-            okutulanAdet++;
+            // 3. Adedi seçilen miktar kadar arttır ve satırın rengini boya
+            okutulanAdet += eklenecekMiktar;
             hedefSatir.Cells["Okutulan"].Value = okutulanAdet;
 
             if (okutulanAdet == siparisAdedi)
@@ -4312,7 +4283,7 @@ namespace TamgaApp
                 hedefSatir.DefaultCellStyle.BackColor = Color.LightYellow;
             }
 
-            // 4. PALETE EKLEME MANTIĞI (Barkod okutulmuş gibi palet matrisine yaz)
+            // 4. PALETE SEÇİLEN MİKTAR KADAR EKLEME MANTIĞI
             int aktifPaletSutunIndex = cmbAktifPalet.SelectedIndex;
             string urunAdi = hedefSatir.Cells["Malzeme Adı"].Value.ToString();
             string aitOlduguBelge = hedefSatir.Cells["Belge No"].Value.ToString();
@@ -4331,7 +4302,8 @@ namespace TamgaApp
                         if (parcalar.Length == 2)
                         {
                             int mevcutPaletAdeti = int.Parse(parcalar[1]);
-                            paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {mevcutPaletAdeti + 1}";
+                            // Seçilen miktar kadar palet içeriğine toplu ekleme yapıyoruz
+                            paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {mevcutPaletAdeti + eklenecekMiktar}";
                         }
                         paletSutunundaVarMi = true; break;
                     }
@@ -4345,7 +4317,7 @@ namespace TamgaApp
                 {
                     if (paletSatiri.Cells[aktifPaletSutunIndex].Value == null || string.IsNullOrWhiteSpace(paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString()))
                     {
-                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
+                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: {eklenecekMiktar}";
                         bosHucreBulundu = true; break;
                     }
                 }
@@ -4353,11 +4325,13 @@ namespace TamgaApp
                 if (!bosHucreBulundu)
                 {
                     int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
-                    dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
+                    dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: {eklenecekMiktar}";
                 }
             }
 
-            // Son olarak barkod kutusuna geri odaklan ki, adam seri okutmaya devam edebilsin
+            // İşlem bitince numaratörü tekrar güvenli olan 1 değerine sıfırla
+            if (numManuelAdet != null) numManuelAdet.Value = 1;
+
             txtBarkod.Focus();
         }
 
@@ -4459,7 +4433,7 @@ namespace TamgaApp
                 txtMusteriAdi.Clear();
                 txtSevkMusteri.Clear();
                 txtBarkod.Clear();
-                cmbBelgeNo.Text = "";
+                clbBelgeNo.Items.Clear();
 
                 dgvMalzemeler.DataSource = null; // Sol tabloyu uçur
 
@@ -4485,7 +4459,7 @@ namespace TamgaApp
                 Properties.Settings.Default.SqlKullanici = ""; Properties.Settings.Default.SqlSifre = "";
                 Properties.Settings.Default.Save();
 
-                cmbBelgeNo.Text = ""; cmbBelgeNo.Items.Clear();
+                clbBelgeNo.Items.Clear();
                 txtMusteriAdi.Clear(); txtSevkMusteri.Clear(); dgvMalzemeler.DataSource = null;
                 if (dtTumSiparisler != null) dtTumSiparisler.Clear();
 
@@ -4553,8 +4527,7 @@ namespace TamgaApp
                 txtMusteriAdi.Clear();
                 txtSevkMusteri.Clear();
                 txtBarkod.Clear();
-                cmbBelgeNo.Items.Clear();
-                cmbBelgeNo.Text = "";
+                clbBelgeNo.Items.Clear();
                 cmbSevkPaletSayisi.SelectedIndex = -1;
 
                 dgvMalzemeler.DataSource = null; // ZIRH: Tabloyu tam sıfırlar
@@ -4631,8 +4604,8 @@ namespace TamgaApp
                     txtMusteriAdi.Clear();
                     txtSevkMusteri.Clear();
                     txtBarkod.Clear();
-                    cmbBelgeNo.Items.Clear();
-                    cmbBelgeNo.Text = "";
+                    clbBelgeNo.Items.Clear();
+
                     cmbSevkPaletSayisi.SelectedIndex = -1;
 
                     dgvMalzemeler.DataSource = null; // ZIRH: Tabloyu tam sıfırlar
@@ -4923,6 +4896,88 @@ namespace TamgaApp
         }
         #endregion
 
+        #region 📦 13.9 TÜM BELGELERİ SEÇ VE FIFO SIRALA (KONSOLİDASYON)
+
+        private void btnTumBelgeleriSec_Click(object sender, EventArgs e)
+        {
+            // 1. Önce Müşteri seçilmiş mi diye kontrol et
+            if (cmbMusteri.SelectedItem == null)
+            {
+                MessageBox.Show("Lütfen önce bir Müşteri seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (clbBelgeNo.Items.Count == 0)
+            {
+                MessageBox.Show("Seçilen müşteriye ait Belge No bulunamadı.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 2. Yanlışlıkla basılmalara karşı "Emin misin?" diye sor
+            DialogResult onay = MessageBox.Show(
+                "Bu müşteriye ait TÜM SİPARİŞLER seçilecek ve en eskisinden başlanacak şekilde sıralanacaktır.\n\nEmin misiniz?",
+                "Tümünü Seç Onayı",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (onay == DialogResult.Yes)
+            {
+                // 3. Kutudaki tüm belgelere "Tik" at
+                for (int i = 0; i < clbBelgeNo.Items.Count; i++)
+                {
+                    clbBelgeNo.SetItemChecked(i, true);
+                }
+
+                // 4. Tablonun altyapısını hazırla
+                DataTable dtEkran = new DataTable();
+                dtEkran.Columns.Add("Belge No", typeof(string));
+                dtEkran.Columns.Add("Malzeme Kodu", typeof(string));
+                dtEkran.Columns.Add("Barkod", typeof(string));
+                dtEkran.Columns.Add("Malzeme Adı", typeof(string));
+                dtEkran.Columns.Add("Açıklama", typeof(string));
+                dtEkran.Columns.Add("Sipariş Adedi", typeof(int));
+                dtEkran.Columns.Add("Okutulan", typeof(int));
+
+                var yerelUrunler = DataAccess.GetAllUrunler();
+
+                // Müşteri bilgisini ilk belgeden alıp kutulara yaz
+                string ilkBelge = clbBelgeNo.Items[0].ToString();
+                DataRow[] ilkBelgeSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{ilkBelge}%'");
+                if (ilkBelgeSatirlari.Length > 0)
+                {
+                    txtMusteriAdi.Text = ilkBelgeSatirlari[0]["MusteriAdi"].ToString().Trim();
+                    txtSevkMusteri.Text = ilkBelgeSatirlari[0]["SevkMusteri"].ToString().Trim();
+                }
+
+                // 🌟 İŞTE SENİN İSTEDİĞİN MANTIK BURADA: 
+                // Tikli olan belge numaralarını (Örn: 26030001, 26030002) alıp küçükten büyüğe (Yani en eskiden yeniye) doğru sıralıyoruz!
+                var siraliBelgeler = clbBelgeNo.CheckedItems.Cast<string>().OrderBy(b => b.Trim()).ToList();
+
+                // Sıralanmış belgelere göre ürünleri tabloya alt alta ekle
+                foreach (string secilenBelge in siraliBelgeler)
+                {
+                    DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
+
+                    foreach (DataRow satir in filtrelenmisSatirlar)
+                    {
+                        string malzemeKodu = satir["Malzeme"].ToString().Trim();
+                        var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
+                        string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
+
+                        dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
+                    }
+                }
+
+                // Ekrana bas
+                dgvMalzemeler.DataSource = dtEkran;
+                dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+                MessageBox.Show("Tüm belgeler eklendi ve en eski siparişten başlayarak sıralandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        #endregion
+
         #endregion
 
         // =========================================================================================
@@ -5149,7 +5204,7 @@ namespace TamgaApp
         // Sevkiyat esnasında işi yarıda kesilen (Örn: Paydos, mola) sevkiyatları tüm verileriyle diske (JSON) askıya alır.
         private void btnSevkAskayaAl_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(cmbBelgeNo.Text) || dgvMalzemeler.Rows.Count == 0)
+            if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
             {
                 MessageBox.Show("Askıya alınacak açık bir sevkiyat yok!", "Hata"); return;
             }
@@ -5157,7 +5212,7 @@ namespace TamgaApp
             YarimSevkiyatHafizasi hafiza = new YarimSevkiyatHafizasi
             {
                 MusteriAdi = txtMusteriAdi.Text,
-                BelgeNo = cmbBelgeNo.Text,
+                BelgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>()), // Tiklileri virgülle birleştir
                 SevkMusteri = txtSevkMusteri.Text,
                 PaletSayisi = cmbSevkPaletSayisi.SelectedIndex != -1 ? Convert.ToInt32(cmbSevkPaletSayisi.SelectedItem) : 0,
                 KayitTarihi = DateTime.Now
@@ -5165,23 +5220,18 @@ namespace TamgaApp
 
             foreach (DataGridViewRow row in dgvMalzemeler.Rows)
             {
-                if (row.IsNewRow) continue;
+                if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
 
-                if (row.Cells["Malzeme Kodu"].Value != null)
-                {
-                    string barkod = row.Cells["Malzeme Kodu"].Value.ToString();
+                // 🌟 SİHİRLİ DOKUNUŞ: Artık benzersiz anahtarımız (BelgeNo_MalzemeKodu) şeklinde!
+                string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
+                string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
 
-                    int okutulan = 0;
-                    if (row.Cells["Okutulan"].Value != null)
-                    {
-                        int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
-                    }
+                int okutulan = 0;
+                if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
 
-                    if (!hafiza.AnaOkutulanlar.ContainsKey(barkod))
-                    {
-                        hafiza.AnaOkutulanlar.Add(barkod, okutulan);
-                    }
-                }
+                if (!hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
+                    hafiza.AnaOkutulanlar.Add(benzersizAnahtar, okutulan);
             }
 
             for (int i = 0; i < dgvPaletMatrisi.Rows.Count; i++)
@@ -5190,16 +5240,14 @@ namespace TamgaApp
                 for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
                 {
                     if (dgvPaletMatrisi.Rows[i].Cells[j].Value != null)
-                    {
                         hafiza.PaletMatrisiDurumu[i][j] = dgvPaletMatrisi.Rows[i].Cells[j].Value.ToString();
-                    }
                 }
             }
 
             string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
             if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
-            string dosyaAdi = $"{cmbBelgeNo.Text}_{DateTime.Now:yyyyMMdd_HHmm}.json";
+            string dosyaAdi = $"KONSOLIDE_{DateTime.Now:yyyyMMdd_HHmm}.json";
             string tamYol = Path.Combine(anaYol, dosyaAdi);
 
             System.IO.File.WriteAllText(tamYol, JsonConvert.SerializeObject(hafiza, Formatting.Indented));
@@ -5208,7 +5256,7 @@ namespace TamgaApp
 
             // Ekran temizleme ritüeli
             txtMusteriAdi.Clear(); txtSevkMusteri.Clear(); txtBarkod.Clear();
-            cmbBelgeNo.Items.Clear(); cmbBelgeNo.Text = ""; cmbSevkPaletSayisi.SelectedIndex = -1;
+            clbBelgeNo.Items.Clear(); cmbSevkPaletSayisi.SelectedIndex = -1;
             if (dgvMalzemeler.DataSource == null) dgvMalzemeler.Rows.Clear();
             dgvPaletMatrisi.Columns.Clear(); dgvPaletMatrisi.Rows.Clear(); cmbAktifPalet.Items.Clear();
         }
@@ -5240,14 +5288,13 @@ namespace TamgaApp
                 MessageBox.Show("Lütfen devam etmek istediğiniz yarım sevkiyatı listeden seçin!", "Seçim Eksik"); return;
             }
 
-            // 🛡️ AKILLI ZIRH: Eğer program yeni açıldıysa ve sipariş havuzu boşsa çaktırmadan veritabanını yenile
             if (dtTumSiparisler == null || dtTumSiparisler.Columns.Count == 0 || dtTumSiparisler.Rows.Count == 0)
             {
                 btnSiparisYenile_Click(null, null);
 
                 if (dtTumSiparisler == null || dtTumSiparisler.Columns.Count == 0)
                 {
-                    MessageBox.Show("Güncel siparişler veritabanından çekilemediği için askıdaki kayıt açılamaz. Lütfen önce 'Yenile' işleminin çalıştığından emin olun.", "Veri Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Güncel siparişler veritabanından çekilemediği için askıdaki kayıt açılamaz.", "Veri Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
             }
@@ -5261,27 +5308,48 @@ namespace TamgaApp
 
                 if (hafiza == null) return;
 
-                cmbMusteri.Text = hafiza.MusteriAdi;
+                // 🌟 ZIRH 1: Müşteriyi Kutuya "Yazma", Direkt Listeden "Seçtir" ki Tikli Liste Dolsun!
+                int musteriIndex = cmbMusteri.FindStringExact(hafiza.MusteriAdi);
+                if (musteriIndex >= 0) cmbMusteri.SelectedIndex = musteriIndex;
+                else cmbMusteri.Text = hafiza.MusteriAdi;
+
                 txtMusteriAdi.Text = hafiza.MusteriAdi;
                 txtSevkMusteri.Text = hafiza.SevkMusteri;
                 cmbSevkPaletSayisi.SelectedItem = hafiza.PaletSayisi.ToString();
-                cmbBelgeNo.Text = hafiza.BelgeNo;
 
+                // 🌟 ZIRH 2: Tikli Liste artık dolu, şimdi virgülle ayırdığımız belgeleri tikleyelim
+                string[] kaydedilenBelgeler = hafiza.BelgeNo.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < clbBelgeNo.Items.Count; i++)
+                {
+                    if (kaydedilenBelgeler.Contains(clbBelgeNo.Items[i].ToString()))
+                    {
+                        clbBelgeNo.SetItemChecked(i, true);
+                    }
+                }
+
+                // Belgeleri tikledik, şimdi tabloyu doldurmak için Arama motorunu çalıştır
                 btnSevkAra_Click(null, null);
 
-                // 🛡️ ZIRHLI YÜKLEME DÖNGÜSÜ: Eski okutulan miktarları hücrelere basar ve duruma göre yeşil/sarı boyar
+                // 🌟 ZIRH 3: Tablo dolduktan sonra "BelgeNo_MalzemeKodu" anahtarıyla adetleri geri yükle ve boya
                 foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                 {
                     if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
 
-                    string barkod = row.Cells["Malzeme Kodu"].Value.ToString();
-                    if (hafiza.AnaOkutulanlar.ContainsKey(barkod))
+                    string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
+                    string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                    string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+
+                    if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
                     {
-                        int eskiOkutulan = hafiza.AnaOkutulanlar[barkod];
+                        int eskiOkutulan = hafiza.AnaOkutulanlar[benzersizAnahtar];
                         int siparisAdedi = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
 
                         row.Cells["Okutulan"].Value = eskiOkutulan;
-                        row.DefaultCellStyle.BackColor = (eskiOkutulan == siparisAdedi) ? Color.LightGreen : (eskiOkutulan > 0 ? Color.LightYellow : Color.White);
+
+                        // Mükemmel Renk Boyama Motoru
+                        if (eskiOkutulan == siparisAdedi) row.DefaultCellStyle.BackColor = Color.LightGreen;
+                        else if (eskiOkutulan > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
+                        else row.DefaultCellStyle.BackColor = Color.White;
                     }
                 }
 
@@ -5300,11 +5368,10 @@ namespace TamgaApp
                     }
                 }
 
-                // Geri yükleme bittiği için mükerrer açılmaları önlemek adına geçici askı dosyasını diskten uçur
                 File.Delete(secilenDosya.FullName);
                 btnYarimGetir_Click(null, null);
 
-                MessageBox.Show($"'{hafiza.BelgeNo}' nolu sevkiyat başarıyla geri yüklendi. Kaldığınız yerden devam edebilirsiniz!", "Sistem Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Sevkiyat başarıyla geri yüklendi. Kaldığınız yerden devam edebilirsiniz!", "Sistem Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
