@@ -52,6 +52,8 @@ namespace TamgaApp
             this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.splitContainer5 = new System.Windows.Forms.SplitContainer();
             this.panel7 = new System.Windows.Forms.Panel();
+            this.numManuelAdet = new System.Windows.Forms.NumericUpDown();
+            this.btnTumBelgeleriSec = new System.Windows.Forms.Button();
             this.clbBelgeNo = new System.Windows.Forms.CheckedListBox();
             this.btnSevkTemizle = new System.Windows.Forms.Button();
             this.btnPalettenSil = new System.Windows.Forms.Button();
@@ -329,8 +331,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnTumBelgeleriSec = new System.Windows.Forms.Button();
-            this.numManuelAdet = new System.Windows.Forms.NumericUpDown();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -344,6 +344,7 @@ namespace TamgaApp
             this.splitContainer5.Panel2.SuspendLayout();
             this.splitContainer5.SuspendLayout();
             this.panel7.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletMatrisi)).BeginInit();
             this.tabPage7.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer3)).BeginInit();
@@ -407,7 +408,6 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).BeginInit();
             this.panel4.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).BeginInit();
             this.SuspendLayout();
             // 
             // printPreviewDialog1
@@ -611,6 +611,41 @@ namespace TamgaApp
             this.panel7.Name = "panel7";
             this.panel7.Size = new System.Drawing.Size(401, 522);
             this.panel7.TabIndex = 54;
+            // 
+            // numManuelAdet
+            // 
+            this.numManuelAdet.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.numManuelAdet.Location = new System.Drawing.Point(131, 308);
+            this.numManuelAdet.Maximum = new decimal(new int[] {
+            500,
+            0,
+            0,
+            0});
+            this.numManuelAdet.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numManuelAdet.Name = "numManuelAdet";
+            this.numManuelAdet.Size = new System.Drawing.Size(71, 38);
+            this.numManuelAdet.TabIndex = 50;
+            this.numManuelAdet.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.numManuelAdet.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            // 
+            // btnTumBelgeleriSec
+            // 
+            this.btnTumBelgeleriSec.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnTumBelgeleriSec.Location = new System.Drawing.Point(5, 151);
+            this.btnTumBelgeleriSec.Name = "btnTumBelgeleriSec";
+            this.btnTumBelgeleriSec.Size = new System.Drawing.Size(79, 134);
+            this.btnTumBelgeleriSec.TabIndex = 49;
+            this.btnTumBelgeleriSec.Text = "Tüm Belge No Seç";
+            this.btnTumBelgeleriSec.UseVisualStyleBackColor = true;
+            this.btnTumBelgeleriSec.Click += new System.EventHandler(this.btnTumBelgeleriSec_Click);
             // 
             // clbBelgeNo
             // 
@@ -1227,6 +1262,7 @@ namespace TamgaApp
             this.btnSeriOnizle.TabIndex = 24;
             this.btnSeriOnizle.Text = "Önizle";
             this.btnSeriOnizle.UseVisualStyleBackColor = true;
+            this.btnSeriOnizle.Click += new System.EventHandler(this.btnSeriOnizle_Click);
             // 
             // btnSeriYazdir
             // 
@@ -1237,6 +1273,7 @@ namespace TamgaApp
             this.btnSeriYazdir.TabIndex = 26;
             this.btnSeriYazdir.Text = "Yazdır";
             this.btnSeriYazdir.UseVisualStyleBackColor = true;
+            this.btnSeriYazdir.Click += new System.EventHandler(this.btnSeriYazdir_Click);
             // 
             // label14
             // 
@@ -3623,40 +3660,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // btnTumBelgeleriSec
-            // 
-            this.btnTumBelgeleriSec.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnTumBelgeleriSec.Location = new System.Drawing.Point(5, 151);
-            this.btnTumBelgeleriSec.Name = "btnTumBelgeleriSec";
-            this.btnTumBelgeleriSec.Size = new System.Drawing.Size(79, 134);
-            this.btnTumBelgeleriSec.TabIndex = 49;
-            this.btnTumBelgeleriSec.Text = "Tüm Belge No Seç";
-            this.btnTumBelgeleriSec.UseVisualStyleBackColor = true;
-            // 
-            // numManuelAdet
-            // 
-            this.numManuelAdet.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.numManuelAdet.Location = new System.Drawing.Point(131, 308);
-            this.numManuelAdet.Maximum = new decimal(new int[] {
-            500,
-            0,
-            0,
-            0});
-            this.numManuelAdet.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.numManuelAdet.Name = "numManuelAdet";
-            this.numManuelAdet.Size = new System.Drawing.Size(71, 38);
-            this.numManuelAdet.TabIndex = 50;
-            this.numManuelAdet.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.numManuelAdet.Value = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -3684,6 +3687,7 @@ namespace TamgaApp
             this.splitContainer5.ResumeLayout(false);
             this.panel7.ResumeLayout(false);
             this.panel7.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletMatrisi)).EndInit();
             this.tabPage7.ResumeLayout(false);
             this.splitContainer3.Panel1.ResumeLayout(false);
@@ -3765,7 +3769,6 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).EndInit();
             this.panel4.ResumeLayout(false);
             this.panel4.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).EndInit();
             this.ResumeLayout(false);
 
         }
