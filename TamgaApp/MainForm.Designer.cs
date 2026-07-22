@@ -52,6 +52,7 @@ namespace TamgaApp
             this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.splitContainer5 = new System.Windows.Forms.SplitContainer();
             this.panel7 = new System.Windows.Forms.Panel();
+            this.btnSevkRaporla = new System.Windows.Forms.Button();
             this.numManuelAdet = new System.Windows.Forms.NumericUpDown();
             this.btnTumBelgeleriSec = new System.Windows.Forms.Button();
             this.clbBelgeNo = new System.Windows.Forms.CheckedListBox();
@@ -331,7 +332,7 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnSevkRaporla = new System.Windows.Forms.Button();
+            this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -435,7 +436,7 @@ namespace TamgaApp
             this.tabPage13.Padding = new System.Windows.Forms.Padding(3);
             this.tabPage13.Size = new System.Drawing.Size(1769, 872);
             this.tabPage13.TabIndex = 9;
-            this.tabPage13.Text = "Sevkiyat";
+            this.tabPage13.Text = "Sevkiyat Plan";
             this.tabPage13.UseVisualStyleBackColor = true;
             // 
             // splitContainer6
@@ -457,6 +458,7 @@ namespace TamgaApp
             // 
             // panel8
             // 
+            this.panel8.Controls.Add(this.btnAnlikPaletEtiketi);
             this.panel8.Controls.Add(this.lstYarimSevkler);
             this.panel8.Controls.Add(this.btnSevkAskayaAl);
             this.panel8.Controls.Add(this.btnTamSevk);
@@ -613,6 +615,17 @@ namespace TamgaApp
             this.panel7.Name = "panel7";
             this.panel7.Size = new System.Drawing.Size(401, 522);
             this.panel7.TabIndex = 54;
+            // 
+            // btnSevkRaporla
+            // 
+            this.btnSevkRaporla.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkRaporla.Location = new System.Drawing.Point(310, 439);
+            this.btnSevkRaporla.Name = "btnSevkRaporla";
+            this.btnSevkRaporla.Size = new System.Drawing.Size(87, 80);
+            this.btnSevkRaporla.TabIndex = 51;
+            this.btnSevkRaporla.Text = "Raporla";
+            this.btnSevkRaporla.UseVisualStyleBackColor = true;
+            this.btnSevkRaporla.Click += new System.EventHandler(this.btnSevkRaporla_Click);
             // 
             // numManuelAdet
             // 
@@ -3662,16 +3675,17 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // btnSevkRaporla
+            // btnAnlikPaletEtiketi
             // 
-            this.btnSevkRaporla.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkRaporla.Location = new System.Drawing.Point(310, 439);
-            this.btnSevkRaporla.Name = "btnSevkRaporla";
-            this.btnSevkRaporla.Size = new System.Drawing.Size(87, 80);
-            this.btnSevkRaporla.TabIndex = 51;
-            this.btnSevkRaporla.Text = "Raporla";
-            this.btnSevkRaporla.UseVisualStyleBackColor = true;
-            this.btnSevkRaporla.Click += new System.EventHandler(this.btnSevkRaporla_Click);
+            this.btnAnlikPaletEtiketi.BackColor = System.Drawing.Color.Gold;
+            this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(389, 8);
+            this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
+            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 280);
+            this.btnAnlikPaletEtiketi.TabIndex = 46;
+            this.btnAnlikPaletEtiketi.Text = "Seçili Paleti Kapat ve Etiketi Bas";
+            this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
+            this.btnAnlikPaletEtiketi.Click += new System.EventHandler(this.btnAnlikPaletEtiketi_Click);
             // 
             // MainForm
             // 
@@ -4087,6 +4101,7 @@ namespace TamgaApp
         private Button btnTumBelgeleriSec;
         private NumericUpDown numManuelAdet;
         private Button btnSevkRaporla;
+        private Button btnAnlikPaletEtiketi;
     }
 }
 
