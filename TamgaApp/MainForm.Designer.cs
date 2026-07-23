@@ -78,6 +78,7 @@ namespace TamgaApp
             this.tabPage7 = new System.Windows.Forms.TabPage();
             this.splitContainer3 = new System.Windows.Forms.SplitContainer();
             this.panel5 = new System.Windows.Forms.Panel();
+            this.tvRaporlar = new System.Windows.Forms.TreeView();
             this.label52 = new System.Windows.Forms.Label();
             this.btnRaporAc = new System.Windows.Forms.Button();
             this.btnRaporYenile = new System.Windows.Forms.Button();
@@ -300,6 +301,7 @@ namespace TamgaApp
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage14 = new System.Windows.Forms.TabPage();
             this.splitContainer4 = new System.Windows.Forms.SplitContainer();
+            this.tvSayimRaporlari = new System.Windows.Forms.TreeView();
             this.btnSayimBitir = new System.Windows.Forms.Button();
             this.label57 = new System.Windows.Forms.Label();
             this.btnSayimAc = new System.Windows.Forms.Button();
@@ -330,8 +332,7 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.tvSayimRaporlari = new System.Windows.Forms.TreeView();
-            this.tvRaporlar = new System.Windows.Forms.TreeView();
+            this.btnAskidanSil = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -457,6 +458,7 @@ namespace TamgaApp
             // 
             // panel8
             // 
+            this.panel8.Controls.Add(this.btnAskidanSil);
             this.panel8.Controls.Add(this.btnAnlikPaletEtiketi);
             this.panel8.Controls.Add(this.lstYarimSevkler);
             this.panel8.Controls.Add(this.btnSevkAskayaAl);
@@ -477,7 +479,7 @@ namespace TamgaApp
             this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(389, 8);
             this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
-            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 280);
+            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 292);
             this.btnAnlikPaletEtiketi.TabIndex = 46;
             this.btnAnlikPaletEtiketi.Text = "Seçili Paleti Kapat ve Etiketi Bas";
             this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
@@ -496,7 +498,7 @@ namespace TamgaApp
             this.btnSevkAskayaAl.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnSevkAskayaAl.Location = new System.Drawing.Point(265, 52);
             this.btnSevkAskayaAl.Name = "btnSevkAskayaAl";
-            this.btnSevkAskayaAl.Size = new System.Drawing.Size(118, 60);
+            this.btnSevkAskayaAl.Size = new System.Drawing.Size(118, 49);
             this.btnSevkAskayaAl.TabIndex = 10;
             this.btnSevkAskayaAl.Text = "Sevkiyatı Askıya Al / Kaydet";
             this.btnSevkAskayaAl.UseVisualStyleBackColor = true;
@@ -515,9 +517,9 @@ namespace TamgaApp
             // btnYarimGetir
             // 
             this.btnYarimGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnYarimGetir.Location = new System.Drawing.Point(265, 118);
+            this.btnYarimGetir.Location = new System.Drawing.Point(265, 107);
             this.btnYarimGetir.Name = "btnYarimGetir";
-            this.btnYarimGetir.Size = new System.Drawing.Size(118, 60);
+            this.btnYarimGetir.Size = new System.Drawing.Size(118, 47);
             this.btnYarimGetir.TabIndex = 11;
             this.btnYarimGetir.Text = "Askıdakileri Getir";
             this.btnYarimGetir.UseVisualStyleBackColor = true;
@@ -536,9 +538,9 @@ namespace TamgaApp
             // btnYarimAc
             // 
             this.btnYarimAc.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnYarimAc.Location = new System.Drawing.Point(265, 184);
+            this.btnYarimAc.Location = new System.Drawing.Point(265, 160);
             this.btnYarimAc.Name = "btnYarimAc";
-            this.btnYarimAc.Size = new System.Drawing.Size(118, 60);
+            this.btnYarimAc.Size = new System.Drawing.Size(118, 47);
             this.btnYarimAc.TabIndex = 12;
             this.btnYarimAc.Text = "Kaldığım Yerden Devam Et";
             this.btnYarimAc.UseVisualStyleBackColor = true;
@@ -546,7 +548,7 @@ namespace TamgaApp
             // btnGecmisSevkleriListele
             // 
             this.btnGecmisSevkleriListele.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(3, 254);
+            this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(3, 266);
             this.btnGecmisSevkleriListele.Name = "btnGecmisSevkleriListele";
             this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(380, 34);
             this.btnGecmisSevkleriListele.TabIndex = 14;
@@ -948,6 +950,14 @@ namespace TamgaApp
             this.panel5.Name = "panel5";
             this.panel5.Size = new System.Drawing.Size(294, 866);
             this.panel5.TabIndex = 18;
+            // 
+            // tvRaporlar
+            // 
+            this.tvRaporlar.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tvRaporlar.Location = new System.Drawing.Point(3, 264);
+            this.tvRaporlar.Name = "tvRaporlar";
+            this.tvRaporlar.Size = new System.Drawing.Size(282, 339);
+            this.tvRaporlar.TabIndex = 27;
             // 
             // label52
             // 
@@ -3360,6 +3370,14 @@ namespace TamgaApp
             this.splitContainer4.SplitterDistance = 290;
             this.splitContainer4.TabIndex = 0;
             // 
+            // tvSayimRaporlari
+            // 
+            this.tvSayimRaporlari.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tvSayimRaporlari.Location = new System.Drawing.Point(5, 265);
+            this.tvSayimRaporlari.Name = "tvSayimRaporlari";
+            this.tvSayimRaporlari.Size = new System.Drawing.Size(276, 339);
+            this.tvSayimRaporlari.TabIndex = 26;
+            // 
             // btnSayimBitir
             // 
             this.btnSayimBitir.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
@@ -3662,21 +3680,17 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // tvSayimRaporlari
+            // btnAskidanSil
             // 
-            this.tvSayimRaporlari.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.tvSayimRaporlari.Location = new System.Drawing.Point(5, 265);
-            this.tvSayimRaporlari.Name = "tvSayimRaporlari";
-            this.tvSayimRaporlari.Size = new System.Drawing.Size(276, 339);
-            this.tvSayimRaporlari.TabIndex = 26;
-            // 
-            // tvRaporlar
-            // 
-            this.tvRaporlar.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.tvRaporlar.Location = new System.Drawing.Point(3, 264);
-            this.tvRaporlar.Name = "tvRaporlar";
-            this.tvRaporlar.Size = new System.Drawing.Size(282, 339);
-            this.tvRaporlar.TabIndex = 27;
+            this.btnAskidanSil.BackColor = System.Drawing.Color.Red;
+            this.btnAskidanSil.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAskidanSil.Location = new System.Drawing.Point(265, 213);
+            this.btnAskidanSil.Name = "btnAskidanSil";
+            this.btnAskidanSil.Size = new System.Drawing.Size(118, 47);
+            this.btnAskidanSil.TabIndex = 47;
+            this.btnAskidanSil.Text = "SİL";
+            this.btnAskidanSil.UseVisualStyleBackColor = false;
+            this.btnAskidanSil.Click += new System.EventHandler(this.btnAskidanSil_Click);
             // 
             // MainForm
             // 
@@ -4092,6 +4106,7 @@ namespace TamgaApp
         private Button btnAnlikPaletEtiketi;
         private TreeView tvSayimRaporlari;
         private TreeView tvRaporlar;
+        private Button btnAskidanSil;
     }
 }
 
