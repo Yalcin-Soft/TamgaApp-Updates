@@ -40,6 +40,7 @@ namespace TamgaApp
             this.tabPage13 = new System.Windows.Forms.TabPage();
             this.splitContainer6 = new System.Windows.Forms.SplitContainer();
             this.panel8 = new System.Windows.Forms.Panel();
+            this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
             this.lstYarimSevkler = new System.Windows.Forms.ListBox();
             this.btnSevkAskayaAl = new System.Windows.Forms.Button();
             this.btnTamSevk = new System.Windows.Forms.Button();
@@ -47,7 +48,6 @@ namespace TamgaApp
             this.btnKismiSevk = new System.Windows.Forms.Button();
             this.btnYarimAc = new System.Windows.Forms.Button();
             this.btnGecmisSevkleriListele = new System.Windows.Forms.Button();
-            this.dtpSevkGecmisTarih = new System.Windows.Forms.DateTimePicker();
             this.panel6 = new System.Windows.Forms.Panel();
             this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.splitContainer5 = new System.Windows.Forms.SplitContainer();
@@ -81,7 +81,6 @@ namespace TamgaApp
             this.label52 = new System.Windows.Forms.Label();
             this.btnRaporAc = new System.Windows.Forms.Button();
             this.btnRaporYenile = new System.Windows.Forms.Button();
-            this.lstRaporlar = new System.Windows.Forms.ListBox();
             this.btnUretimKaydet = new System.Windows.Forms.Button();
             this.txtBarkodOkut = new System.Windows.Forms.TextBox();
             this.label36 = new System.Windows.Forms.Label();
@@ -305,7 +304,6 @@ namespace TamgaApp
             this.label57 = new System.Windows.Forms.Label();
             this.btnSayimAc = new System.Windows.Forms.Button();
             this.btnSayimYenile = new System.Windows.Forms.Button();
-            this.lstSayimRaporlari = new System.Windows.Forms.ListBox();
             this.txtSayimRaporAdi = new System.Windows.Forms.TextBox();
             this.label55 = new System.Windows.Forms.Label();
             this.txtSayimBarkod = new System.Windows.Forms.TextBox();
@@ -332,7 +330,8 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
+            this.tvSayimRaporlari = new System.Windows.Forms.TreeView();
+            this.tvRaporlar = new System.Windows.Forms.TreeView();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -466,12 +465,23 @@ namespace TamgaApp
             this.panel8.Controls.Add(this.btnKismiSevk);
             this.panel8.Controls.Add(this.btnYarimAc);
             this.panel8.Controls.Add(this.btnGecmisSevkleriListele);
-            this.panel8.Controls.Add(this.dtpSevkGecmisTarih);
             this.panel8.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel8.Location = new System.Drawing.Point(0, 0);
             this.panel8.Name = "panel8";
             this.panel8.Size = new System.Drawing.Size(519, 333);
             this.panel8.TabIndex = 53;
+            // 
+            // btnAnlikPaletEtiketi
+            // 
+            this.btnAnlikPaletEtiketi.BackColor = System.Drawing.Color.Gold;
+            this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(389, 8);
+            this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
+            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 280);
+            this.btnAnlikPaletEtiketi.TabIndex = 46;
+            this.btnAnlikPaletEtiketi.Text = "Seçili Paleti Kapat ve Etiketi Bas";
+            this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
+            this.btnAnlikPaletEtiketi.Click += new System.EventHandler(this.btnAnlikPaletEtiketi_Click);
             // 
             // lstYarimSevkler
             // 
@@ -536,19 +546,12 @@ namespace TamgaApp
             // btnGecmisSevkleriListele
             // 
             this.btnGecmisSevkleriListele.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(209, 254);
+            this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(3, 254);
             this.btnGecmisSevkleriListele.Name = "btnGecmisSevkleriListele";
-            this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(174, 34);
+            this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(380, 34);
             this.btnGecmisSevkleriListele.TabIndex = 14;
             this.btnGecmisSevkleriListele.Text = "Geçmiş Sevkler Listele";
             this.btnGecmisSevkleriListele.UseVisualStyleBackColor = true;
-            // 
-            // dtpSevkGecmisTarih
-            // 
-            this.dtpSevkGecmisTarih.Location = new System.Drawing.Point(3, 257);
-            this.dtpSevkGecmisTarih.Name = "dtpSevkGecmisTarih";
-            this.dtpSevkGecmisTarih.Size = new System.Drawing.Size(200, 20);
-            this.dtpSevkGecmisTarih.TabIndex = 13;
             // 
             // panel6
             // 
@@ -928,10 +931,10 @@ namespace TamgaApp
             // 
             // panel5
             // 
+            this.panel5.Controls.Add(this.tvRaporlar);
             this.panel5.Controls.Add(this.label52);
             this.panel5.Controls.Add(this.btnRaporAc);
             this.panel5.Controls.Add(this.btnRaporYenile);
-            this.panel5.Controls.Add(this.lstRaporlar);
             this.panel5.Controls.Add(this.btnUretimKaydet);
             this.panel5.Controls.Add(this.txtBarkodOkut);
             this.panel5.Controls.Add(this.label36);
@@ -977,14 +980,6 @@ namespace TamgaApp
             this.btnRaporYenile.Text = "Yenile";
             this.btnRaporYenile.UseVisualStyleBackColor = true;
             this.btnRaporYenile.Click += new System.EventHandler(this.btnRaporYenile_Click);
-            // 
-            // lstRaporlar
-            // 
-            this.lstRaporlar.FormattingEnabled = true;
-            this.lstRaporlar.Location = new System.Drawing.Point(0, 264);
-            this.lstRaporlar.Name = "lstRaporlar";
-            this.lstRaporlar.Size = new System.Drawing.Size(288, 316);
-            this.lstRaporlar.TabIndex = 18;
             // 
             // btnUretimKaydet
             // 
@@ -3348,11 +3343,11 @@ namespace TamgaApp
             // 
             // splitContainer4.Panel1
             // 
+            this.splitContainer4.Panel1.Controls.Add(this.tvSayimRaporlari);
             this.splitContainer4.Panel1.Controls.Add(this.btnSayimBitir);
             this.splitContainer4.Panel1.Controls.Add(this.label57);
             this.splitContainer4.Panel1.Controls.Add(this.btnSayimAc);
             this.splitContainer4.Panel1.Controls.Add(this.btnSayimYenile);
-            this.splitContainer4.Panel1.Controls.Add(this.lstSayimRaporlari);
             this.splitContainer4.Panel1.Controls.Add(this.txtSayimRaporAdi);
             this.splitContainer4.Panel1.Controls.Add(this.label55);
             this.splitContainer4.Panel1.Controls.Add(this.txtSayimBarkod);
@@ -3404,14 +3399,6 @@ namespace TamgaApp
             this.btnSayimYenile.TabIndex = 4;
             this.btnSayimYenile.Text = "Yenile";
             this.btnSayimYenile.UseVisualStyleBackColor = true;
-            // 
-            // lstSayimRaporlari
-            // 
-            this.lstSayimRaporlari.FormattingEnabled = true;
-            this.lstSayimRaporlari.Location = new System.Drawing.Point(8, 268);
-            this.lstSayimRaporlari.Name = "lstSayimRaporlari";
-            this.lstSayimRaporlari.Size = new System.Drawing.Size(273, 316);
-            this.lstSayimRaporlari.TabIndex = 22;
             // 
             // txtSayimRaporAdi
             // 
@@ -3675,17 +3662,21 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // btnAnlikPaletEtiketi
+            // tvSayimRaporlari
             // 
-            this.btnAnlikPaletEtiketi.BackColor = System.Drawing.Color.Gold;
-            this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(389, 8);
-            this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
-            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 280);
-            this.btnAnlikPaletEtiketi.TabIndex = 46;
-            this.btnAnlikPaletEtiketi.Text = "Seçili Paleti Kapat ve Etiketi Bas";
-            this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
-            this.btnAnlikPaletEtiketi.Click += new System.EventHandler(this.btnAnlikPaletEtiketi_Click);
+            this.tvSayimRaporlari.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tvSayimRaporlari.Location = new System.Drawing.Point(5, 265);
+            this.tvSayimRaporlari.Name = "tvSayimRaporlari";
+            this.tvSayimRaporlari.Size = new System.Drawing.Size(276, 339);
+            this.tvSayimRaporlari.TabIndex = 26;
+            // 
+            // tvRaporlar
+            // 
+            this.tvRaporlar.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tvRaporlar.Location = new System.Drawing.Point(3, 264);
+            this.tvRaporlar.Name = "tvRaporlar";
+            this.tvRaporlar.Size = new System.Drawing.Size(282, 339);
+            this.tvRaporlar.TabIndex = 27;
             // 
             // MainForm
             // 
@@ -4026,14 +4017,12 @@ namespace TamgaApp
         private Label label52;
         private Button btnRaporAc;
         private Button btnRaporYenile;
-        private ListBox lstRaporlar;
         private Button btnLoginDon;
         private TabPage tabPage14;
         private SplitContainer splitContainer4;
         private Label label57;
         private Button btnSayimAc;
         private Button btnSayimYenile;
-        private ListBox lstSayimRaporlari;
         private TextBox txtSayimRaporAdi;
         private Label label55;
         private TextBox txtSayimBarkod;
@@ -4052,7 +4041,6 @@ namespace TamgaApp
         private Button btnKismiSevk;
         private Button btnYarimAc;
         private Button btnGecmisSevkleriListele;
-        private DateTimePicker dtpSevkGecmisTarih;
         private SplitContainer splitContainer6;
         private Panel panel7;
         private Label label49;
@@ -4102,6 +4090,8 @@ namespace TamgaApp
         private NumericUpDown numManuelAdet;
         private Button btnSevkRaporla;
         private Button btnAnlikPaletEtiketi;
+        private TreeView tvSayimRaporlari;
+        private TreeView tvRaporlar;
     }
 }
 
