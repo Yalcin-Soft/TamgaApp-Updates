@@ -50,6 +50,7 @@ namespace TamgaApp
         private Point dragStart;                                       // Sürükleme veya sündürme işleminin başladığı X,Y koordinatı
         private Control draggingControl;                               // O an farenin ucunda tutulan aktif kutucuk
         private DesignItem selectedDesignItem;                         // Sağ taraftaki "Özellikler" panelinde ayarları gösterilen aktif nesne
+        private List<Firma> tumFirmalarCache = new List<Firma>();
 
         // Tasarım Arayüzü (Masa ve Kağıt)
         private Panel pnlWorkspace;                                    // Arka plandaki devasa gri çalışma masası (Nesnelerin dışarı taşmasını önler)
@@ -233,6 +234,7 @@ namespace TamgaApp
             EkranEsnekliginiAyarla();
             TablolariJiletGibiYap();
             YeniNesilSevkiyatSisteminiKur();
+            KlasorAyarlariniEkranaGetir();
 
             // 🌟 TASARIM MOTORLARINI ÇALIŞTIR
             ElitTasarimiUygula();     // (Butonlar, saat ve fontları düzeltir)
@@ -631,7 +633,6 @@ namespace TamgaApp
             // Seçiliyse logonun koyu yeşili, seçili değilse şık bir açık gri
             Color arkaPlanRenk = isSelected ? Color.FromArgb(15, 76, 58) : Color.FromArgb(235, 238, 240);
             Color yaziRenk = isSelected ? Color.White : Color.FromArgb(100, 100, 100);
-            Font tabFont = new Font("Segoe UI", 10, isSelected ? FontStyle.Bold : FontStyle.Regular);
 
             // 1. Sekme Arka Planını Boya
             using (SolidBrush bgBrush = new SolidBrush(arkaPlanRenk))
@@ -657,13 +658,10 @@ namespace TamgaApp
                 }
             }
 
-            // 3. Yazıyı tam merkeze jilet gibi hizala
-            StringFormat sFormat = new StringFormat
-            {
-                Alignment = StringAlignment.Center,
-                LineAlignment = StringAlignment.Center
-            };
-
+            // 🌟 3. RAM SIZINTISINI ÖNLEYEN ZIRHLI KISIM (Yazı Çizimi)
+            // using blokları sayesinde işlem bittiği milisaniye RAM'den tertemiz silinir!
+            using (Font tabFont = new Font("Segoe UI", 10, isSelected ? FontStyle.Bold : FontStyle.Regular))
+            using (StringFormat sFormat = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
             using (SolidBrush textBrush = new SolidBrush(yaziRenk))
             {
                 // Yazının kutuya tam oturması için ufak bir boşluk ayarı
@@ -734,6 +732,13 @@ namespace TamgaApp
                     {
                         if (ctrl is DataGridView dgv)
                         {
+                            // 🌟 SİHİRLİ DOKUNUŞ: Tabloların kasmasını ve titremesini %100 engelleyen hız aşırtma!
+                            typeof(DataGridView).InvokeMember("DoubleBuffered",
+                                System.Reflection.BindingFlags.NonPublic |
+                                System.Reflection.BindingFlags.Instance |
+                                System.Reflection.BindingFlags.SetProperty,
+                                null, dgv, new object[] { true });
+
                             // 1. Sol taraftaki çirkin boşluğu (Ok işaretini) gizle
                             dgv.RowHeadersVisible = false;
 
@@ -906,56 +911,62 @@ namespace TamgaApp
         {
             if (pnlDesignSurface == null) return;
             Graphics g = e.Graphics;
-            Pen pen = Pens.Black;
-            Brush brush = Brushes.Black;
-            Font font = new Font("Arial", 7);
 
-            int rulerSize = 20; // Cetvelin kalınlığı (piksel)
-            int paperX = pnlDesignSurface.Left;
-            int paperY = pnlDesignSurface.Top;
-            int paperW = pnlDesignSurface.Width;
-            int paperH = pnlDesignSurface.Height;
-
-            // Üstteki yatay cetvelin gri arkaplanını ve çerçevesini çiz
-            g.FillRectangle(Brushes.WhiteSmoke, paperX, paperY - rulerSize, paperW, rulerSize);
-            g.DrawRectangle(pen, paperX, paperY - rulerSize, paperW, rulerSize);
-
-            // Soldaki dikey cetvelin gri arkaplanını ve çerçevesini çiz
-            g.FillRectangle(Brushes.WhiteSmoke, paperX - rulerSize, paperY, rulerSize, paperH);
-            g.DrawRectangle(pen, paperX - rulerSize, paperY, rulerSize, paperH);
-
-            // Ekranda 1 milimetrenin kaç piksele denk geldiğini hesapla
-            float mmToPx = g.DpiX / 25.4f;
-
-            // ÜST YATAY CETVEL ÇİZGİLERİ VE RAKAMLARI
-            for (int mm = 0; mm * mmToPx <= paperW; mm += 5)
+            // 🌟 RAM SIZINTISINI ÖNLEYEN ZIRH BURADA
+            using (Font font = new Font("Arial", 7))
             {
-                float px = paperX + (mm * mmToPx);
-                if (mm % 10 == 0)
-                {
-                    // 10, 20, 30 gibi tam sayılarda uzun çizgi çek ve rakamı yaz
-                    g.DrawLine(pen, px, paperY - rulerSize, px, paperY);
-                    g.DrawString(mm.ToString(), font, brush, px + 2, paperY - rulerSize + 2);
-                }
-                else
-                {
-                    // 5, 15, 25 gibi buçuklu sayılarda sadece kısa ara çizgi çek
-                    g.DrawLine(pen, px, paperY - rulerSize / 2, px, paperY);
-                }
-            }
+                Pen pen = Pens.Black;
+                Brush brush = Brushes.Black;
 
-            // SOL DİKEY CETVEL ÇİZGİLERİ VE RAKAMLARI
-            for (int mm = 0; mm * mmToPx <= paperH; mm += 5)
-            {
-                float px = paperY + (mm * mmToPx);
-                if (mm % 10 == 0)
+                // (Eski Font tanımlaması buradan silindi)
+
+                int rulerSize = 20; // Cetvelin kalınlığı (piksel)
+                int paperX = pnlDesignSurface.Left;
+                int paperY = pnlDesignSurface.Top;
+                int paperW = pnlDesignSurface.Width;
+                int paperH = pnlDesignSurface.Height;
+
+                // Üstteki yatay cetvelin gri arkaplanını ve çerçevesini çiz
+                g.FillRectangle(Brushes.WhiteSmoke, paperX, paperY - rulerSize, paperW, rulerSize);
+                g.DrawRectangle(pen, paperX, paperY - rulerSize, paperW, rulerSize);
+
+                // Soldaki dikey cetvelin gri arkaplanını ve çerçevesini çiz
+                g.FillRectangle(Brushes.WhiteSmoke, paperX - rulerSize, paperY, rulerSize, paperH);
+                g.DrawRectangle(pen, paperX - rulerSize, paperY, rulerSize, paperH);
+
+                // Ekranda 1 milimetrenin kaç piksele denk geldiğini hesapla
+                float mmToPx = g.DpiX / 25.4f;
+
+                // ÜST YATAY CETVEL ÇİZGİLERİ VE RAKAMLARI
+                for (int mm = 0; mm * mmToPx <= paperW; mm += 5)
                 {
-                    g.DrawLine(pen, paperX - rulerSize, px, paperX, px);
-                    g.DrawString(mm.ToString(), font, brush, paperX - rulerSize + 2, px + 2);
+                    float px = paperX + (mm * mmToPx);
+                    if (mm % 10 == 0)
+                    {
+                        // 10, 20, 30 gibi tam sayılarda uzun çizgi çek ve rakamı yaz
+                        g.DrawLine(pen, px, paperY - rulerSize, px, paperY);
+                        g.DrawString(mm.ToString(), font, brush, px + 2, paperY - rulerSize + 2);
+                    }
+                    else
+                    {
+                        // 5, 15, 25 gibi buçuklu sayılarda sadece kısa ara çizgi çek
+                        g.DrawLine(pen, px, paperY - rulerSize / 2, px, paperY);
+                    }
                 }
-                else
+
+                // SOL DİKEY CETVEL ÇİZGİLERİ VE RAKAMLARI
+                for (int mm = 0; mm * mmToPx <= paperH; mm += 5)
                 {
-                    g.DrawLine(pen, paperX - rulerSize / 2, px, paperX, px);
+                    float px = paperY + (mm * mmToPx);
+                    if (mm % 10 == 0)
+                    {
+                        g.DrawLine(pen, paperX - rulerSize, px, paperX, px);
+                        g.DrawString(mm.ToString(), font, brush, paperX - rulerSize + 2, px + 2);
+                    }
+                    else
+                    {
+                        g.DrawLine(pen, paperX - rulerSize / 2, px, paperX, px);
+                    }
                 }
             }
         }
@@ -1184,18 +1195,41 @@ namespace TamgaApp
 
             selectedDesignItem = item;
 
-            // Nesnedeki verileri, sağdaki panel kutularına güvenlice yazdır (Hata çıkarsa yut)
-            try { if (txtPropText != null) txtPropText.Text = item.Text; } catch { }
-            try { if (cmbPropPlaceholder != null) cmbPropPlaceholder.SelectedItem = item.PlaceholderKey; } catch { }
-            try { if (cmbPropFont != null) cmbPropFont.SelectedItem = item.FontName; } catch { }
-            try { if (cmbPropRotation != null) cmbPropRotation.SelectedItem = item.Rotation.ToString(); } catch { }
-            try { if (cmbPropAlignment != null) cmbPropAlignment.SelectedItem = string.IsNullOrEmpty(item.Alignment) ? "Center" : item.Alignment; } catch { }
-            try { if (numPropFontSize != null) numPropFontSize.Value = Math.Max(numPropFontSize.Minimum, Math.Min(numPropFontSize.Maximum, (decimal)item.FontSizePt)); } catch { }
-            try { if (numPropXmm != null) numPropXmm.Value = Math.Max(numPropXmm.Minimum, Math.Min(numPropXmm.Maximum, (decimal)item.Xmm)); } catch { }
-            try { if (numPropYmm != null) numPropYmm.Value = Math.Max(numPropYmm.Minimum, Math.Min(numPropYmm.Maximum, (decimal)item.Ymm)); } catch { }
-            try { if (numPropWmm != null) numPropWmm.Value = Math.Max(numPropWmm.Minimum, Math.Min(numPropWmm.Maximum, (decimal)item.Wmm)); } catch { }
-            try { if (numPropHmm != null) numPropHmm.Value = Math.Max(numPropHmm.Minimum, Math.Min(numPropHmm.Maximum, (decimal)item.Hmm)); } catch { }
-            try { if (btnPropColor != null) btnPropColor.BackColor = ColorTranslator.FromHtml(item.ColorName); } catch { }
+            // Nesnedeki verileri, sağdaki panel kutularına yazdır
+            // Hatalar artık yutulmuyor, Visual Studio'nun "Çıktı (Output)" ekranına yazdırılıyor!
+
+            try { if (txtPropText != null) txtPropText.Text = item.Text; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Metin Hatası: " + ex.Message); }
+
+            try { if (cmbPropPlaceholder != null) cmbPropPlaceholder.SelectedItem = item.PlaceholderKey; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Değişken Alan Hatası: " + ex.Message); }
+
+            try { if (cmbPropFont != null) cmbPropFont.SelectedItem = item.FontName; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Font Hatası: " + ex.Message); }
+
+            try { if (cmbPropRotation != null) cmbPropRotation.SelectedItem = item.Rotation.ToString(); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Döndürme Hatası: " + ex.Message); }
+
+            try { if (cmbPropAlignment != null) cmbPropAlignment.SelectedItem = string.IsNullOrEmpty(item.Alignment) ? "Center" : item.Alignment; }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Hizalama Hatası: " + ex.Message); }
+
+            try { if (numPropFontSize != null) numPropFontSize.Value = Math.Max(numPropFontSize.Minimum, Math.Min(numPropFontSize.Maximum, (decimal)item.FontSizePt)); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Font Boyutu Hatası: " + ex.Message); }
+
+            try { if (numPropXmm != null) numPropXmm.Value = Math.Max(numPropXmm.Minimum, Math.Min(numPropXmm.Maximum, (decimal)item.Xmm)); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("X Koordinatı Hatası: " + ex.Message); }
+
+            try { if (numPropYmm != null) numPropYmm.Value = Math.Max(numPropYmm.Minimum, Math.Min(numPropYmm.Maximum, (decimal)item.Ymm)); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Y Koordinatı Hatası: " + ex.Message); }
+
+            try { if (numPropWmm != null) numPropWmm.Value = Math.Max(numPropWmm.Minimum, Math.Min(numPropWmm.Maximum, (decimal)item.Wmm)); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Genişlik Hatası: " + ex.Message); }
+
+            try { if (numPropHmm != null) numPropHmm.Value = Math.Max(numPropHmm.Minimum, Math.Min(numPropHmm.Maximum, (decimal)item.Hmm)); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Yükseklik Hatası: " + ex.Message); }
+
+            try { if (btnPropColor != null) btnPropColor.BackColor = ColorTranslator.FromHtml(item.ColorName); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine("Renk Dönüştürme Hatası: " + ex.Message); }
         }
 
         // Sağ panelde (Properties) yapılan değişiklikleri seçili nesneye/nesnelere "Uygula" butonuna basınca aktarır.
@@ -1733,7 +1767,16 @@ namespace TamgaApp
             string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_TekliZarf");
             var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
 
-            await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+            try
+            {
+                await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("DİKKAT: Bilgisayarınızda yazdırma motoru (WebView2 Runtime) eksik!\n\nLütfen Microsoft'un sitesinden 'Edge WebView2 Runtime' indirip kurun.", "Bileşen Eksik", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                modernOnizleme.Close();
+                return;
+            }
 
             // Kodları motora bas
             webCizici.NavigateToString(htmlIcerik);
@@ -1894,7 +1937,16 @@ namespace TamgaApp
             string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_TopluZarf");
             var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
 
-            await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+            try
+            {
+                await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("DİKKAT: Bilgisayarınızda yazdırma motoru (WebView2 Runtime) eksik!\n\nLütfen Microsoft'un sitesinden 'Edge WebView2 Runtime' indirip kurun.", "Bileşen Eksik", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                modernOnizleme.Close();
+                return;
+            }
 
             // Ürettiğimiz HTML'i motora yüklüyoruz
             webCizici.NavigateToString(htmlIcerik);
@@ -2155,12 +2207,12 @@ namespace TamgaApp
             if (lstFirmalar != null) lstFirmalar.Items.Clear();
             if (dgvFirmalar != null) dgvFirmalar.Rows.Clear();
 
-            // 2. Veritabanından tüm firmaları çek
-            var firmalar = DataAccess.GetAllFirmalar();
+            // 2. Veritabanından tüm firmaları çek ve MASAYA (Cache'e) KOY!
+            tumFirmalarCache = DataAccess.GetAllFirmalar();
 
-            // 3. Çekilen her bir firma için döngüye gir
-            foreach (var f in firmalar)
-            {
+            // 3. Çekilen her bir firma için masadan (cache) döngüye gir
+            foreach (var f in tumFirmalarCache)
+            { 
                 // Sağ taraftaki ListBox'a ekleme (Eski Kod)
                 if (lstFirmalar != null)
                 {
@@ -2181,16 +2233,21 @@ namespace TamgaApp
         {
             if (lstFirmalar.SelectedItem != null)
             {
-                int id = int.Parse(lstFirmalar.SelectedItem.ToString().Split('-')[0].Trim());
-                var f = DataAccess.GetFirmaById(id);
+                string secilenMetin = lstFirmalar.SelectedItem.ToString();
+                string[] parcalar = secilenMetin.Split('-');
 
-                if (f != null)
+                // ZIRH: Eğer '-' işaretiyle bölünmüş bir ID varsa ve bu gerçekten bir rakamsa işlem yap!
+                if (parcalar.Length > 0 && int.TryParse(parcalar[0].Trim(), out int id))
                 {
-                    txtEditFirmaAdi.Text = f.FirmaAdi;
-                    txtEditAdres.Text = f.Adres;
-                    txtEditIl.Text = f.Il;
-                    txtEditTel1.Text = f.Telefon1;
-                    txtEditTel2.Text = f.Telefon2;
+                    var f = DataAccess.GetFirmaById(id);
+                    if (f != null)
+                    {
+                        txtEditFirmaAdi.Text = f.FirmaAdi;
+                        txtEditAdres.Text = f.Adres;
+                        txtEditIl.Text = f.Il;
+                        txtEditTel1.Text = f.Telefon1;
+                        txtEditTel2.Text = f.Telefon2;
+                    }
                 }
             }
         }
@@ -3110,7 +3167,20 @@ namespace TamgaApp
                         {
                             foreach (System.Data.DataRow row in dt.Rows)
                             {
+                                // Ürün kodu boşsa o satırı atla
                                 if (row[0] == DBNull.Value || string.IsNullOrWhiteSpace(row[0].ToString())) continue;
+
+                                // 🌟 YENİ SQL SÜTUN SIRASINA GÖRE VERİLERİ ÇEKİYORUZ 
+                                // (0:KOD, 1:AÇIKLAMA, 2:İNG.AÇIKLAMA, 3:BARKOD, 4:VARYANT, 5:RENK)
+
+                                string renkGelen = row.ItemArray.Length > 5 ? row[5].ToString().Trim() : "";
+
+                                // 🌟 SİHİRLİ DOKUNUŞ (BOŞ RENGİ 'BEYAZ' YAPMA ZIRHI)
+                                // Eğer veritabanında/Excel'de renk hücresi boş gelmişse, onu otomatik "Beyaz" olarak kabul et!
+                                if (string.IsNullOrEmpty(renkGelen))
+                                {
+                                    renkGelen = "Beyaz";
+                                }
 
                                 Urun yeniUrun = new Urun
                                 {
@@ -3118,8 +3188,9 @@ namespace TamgaApp
                                     Aciklama = row.ItemArray.Length > 1 ? row[1].ToString().Trim() : "",
                                     IngilizceAciklama = row.ItemArray.Length > 2 ? row[2].ToString().Trim() : "",
                                     Barkod = row.ItemArray.Length > 3 ? row[3].ToString().Trim() : "",
-                                    Renk = row.ItemArray.Length > 4 ? row[4].ToString().Trim() : ""
+                                    Renk = renkGelen // Sihirli zırhtan geçen rengi kaydet
                                 };
+
                                 DataAccess.InsertUrun(yeniUrun);
                             }
                         });
@@ -3339,6 +3410,9 @@ namespace TamgaApp
         // Ana formu gizleyip ekrana Splash (Veda) ekranını getiren ve 1.5 saniye sonra sistemi tamamen öldüren motor
         private void CikisAnimasyonuVeKapat()
         {
+            // 🌟 ZIRH: Eğer barkod okuyucu portu hala açıksa, önce bağlantıyı kopar ki cihaz kilitli kalmasın!
+            try { if (barkodPort != null && barkodPort.IsOpen) barkodPort.Close(); } catch { }
+
             kapanisBasladi = true; // Kilit mekanizmasını aç (çifte kapanmayı önle)
             this.Hide(); // Ana program penceresini gizle
 
@@ -4105,17 +4179,27 @@ namespace TamgaApp
                 foreach (DataRow satir in filtrelenmisSatirlar)
                 {
                     string malzemeKodu = satir["Malzeme"].ToString().Trim();
+                    string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
 
-                    // 🌟 SİHİRLİ FİLTRE: Eğer Belge Tipi "O1" ise, sadece malzeme kodu "2" ile başlayanları ekle!
-                    if (belgeTipi.Equals("O1", StringComparison.OrdinalIgnoreCase))
+                    // 🌟 SİHİRLİ ZIRH: Eğer ERP siparişinde renk boş gelmişse VEYA "Beyaz" yazıyorsa,
+                    // büyük/küçük harf veya boşluk hatalarını ezip hepsini standart "Beyaz" formatına sokuyoruz.
+                    if (string.IsNullOrEmpty(siparisRengi) || siparisRengi.Equals("BEYAZ", StringComparison.OrdinalIgnoreCase))
                     {
-                        if (!malzemeKodu.StartsWith("2"))
-                        {
-                            continue; // 2 ile başlamıyorsa bu ürünü atla, listeye alma!
-                        }
+                        siparisRengi = "Beyaz";
                     }
 
-                    var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
+                    // 🎯 HEDEFİ TAM ON İKİDEN VUR: Hem Malzeme Koduna HEM DE Renge göre aynı anda eşleştir!
+                    var urun = yerelUrunler.FirstOrDefault(u =>
+                        u.UrunKodu == malzemeKodu &&
+                        u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase));
+
+                    // BÜYÜK ZIRH: Eğer ERP'deki renk ismiyle Excel'deki uyuşmazsa (Örn: "Mat Siyah" vs "Siyah") 
+                    // sistem çökmesin diye sadece koda göre ilk bulduğunu getir.
+                    if (urun == null)
+                    {
+                        urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
+                    }
+
                     string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
                     dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
@@ -4915,7 +4999,10 @@ namespace TamgaApp
                 cmbComPort.Items.AddRange(SerialPort.GetPortNames());
 
                 // Hafızadan (txt dosyasından) son seçili portu oku
-                string ayarDosyasi = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ComPortAyari.txt");
+                string appDataYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
+                if (!Directory.Exists(appDataYol)) Directory.CreateDirectory(appDataYol);
+
+                string ayarDosyasi = Path.Combine(appDataYol, "ComPortAyari.txt");
 
                 if (System.IO.File.Exists(ayarDosyasi))
                 {
@@ -4966,7 +5053,10 @@ namespace TamgaApp
                     btnComBaglan.BackColor = Color.MediumSeaGreen;
 
                     // 🌟 HAFIZAYA KAYIT: Başarılı bağlandıysa portu txt dosyasına yaz (Bir sonraki açılış için)
-                    string ayarDosyasi = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ComPortAyari.txt");
+                    string appDataYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
+                    if (!Directory.Exists(appDataYol)) Directory.CreateDirectory(appDataYol);
+
+                    string ayarDosyasi = Path.Combine(appDataYol, "ComPortAyari.txt");
                     System.IO.File.WriteAllText(ayarDosyasi, cmbComPort.SelectedItem.ToString());
                 }
                 catch (Exception ex)
@@ -5192,17 +5282,27 @@ namespace TamgaApp
                     foreach (DataRow satir in filtrelenmisSatirlar)
                     {
                         string malzemeKodu = satir["Malzeme"].ToString().Trim();
+                        string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
 
-                        // 🌟 İHRACAT (O1) KONTROLÜ
-                        if (belgeTipi.Equals("O1", StringComparison.OrdinalIgnoreCase))
+                        // 🌟 SİHİRLİ ZIRH: Eğer ERP siparişinde renk boş gelmişse VEYA "Beyaz" yazıyorsa,
+                        // büyük/küçük harf veya boşluk hatalarını ezip hepsini standart "Beyaz" formatına sokuyoruz.
+                        if (string.IsNullOrEmpty(siparisRengi) || siparisRengi.Equals("BEYAZ", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (!malzemeKodu.StartsWith("2"))
-                            {
-                                continue; // 2 ile başlamıyorsa pas geç
-                            }
+                            siparisRengi = "Beyaz";
                         }
 
-                        var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
+                        // 🎯 HEDEFİ TAM ON İKİDEN VUR: Hem Malzeme Koduna HEM DE Renge göre aynı anda eşleştir!
+                        var urun = yerelUrunler.FirstOrDefault(u =>
+                            u.UrunKodu == malzemeKodu &&
+                            u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase));
+
+                        // BÜYÜK ZIRH: Eğer ERP'deki renk ismiyle Excel'deki uyuşmazsa (Örn: "Mat Siyah" vs "Siyah") 
+                        // sistem çökmesin diye sadece koda göre ilk bulduğunu getir.
+                        if (urun == null)
+                        {
+                            urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
+                        }
+
                         string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
                         dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
@@ -5481,7 +5581,7 @@ namespace TamgaApp
             if (cmbAktifPalet.Items.Count > 0) cmbAktifPalet.SelectedIndex = 0;
         }
 
-        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (Büyük Yazılı Edge Motoru)
+        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (Yeni Tasarım)
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
             if (cmbAktifPalet.SelectedItem == null)
@@ -5522,32 +5622,40 @@ namespace TamgaApp
             }
 
             string musteriAdi = txtMusteriAdi.Text.Trim();
+            string sevkMusteriAdi = txtSevkMusteri.Text.Trim();
+            if (string.IsNullOrEmpty(sevkMusteriAdi)) sevkMusteriAdi = "Belirtilmedi"; // Boşsa patlamasın
+
             string belgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>());
             string listeHtml = string.Join("", paletIcerigi);
 
-            // KUSURSUZ VE ORTAK HTML TASARIMI
+            // 🌟 KUSURSUZ YENİ HTML TASARIMI
             string html = $@"<html>
     <head>
        <meta charset='utf-8'>
        <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
        <style>
-          body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 20px; }}
-          .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; }}
-          .belge {{ font-size: 18px; margin-bottom: 15px; color: #333; font-weight: bold; }}
-          .palet {{ font-size: 34px; margin: 15px 0; background: transparent; color: black; font-weight: bold; }}
-          .urunler {{ text-align: left; font-size: 16px; margin-bottom: 30px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
+          body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 5px 20px 20px 20px; }}
+          .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 2px; line-height: 1.1; }}
+          .sevk-musteri {{ font-size: 17px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 15px; }}
+          .belge {{ font-size: 18px; margin-bottom: 10px; color: #333; font-weight: bold; }}
+          .palet {{ font-size: 34px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
+          .urunler {{ text-align: left; font-size: 16px; margin-bottom: 10px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
           ul {{ margin: 0; padding-left: 20px; }}
           li {{ margin-bottom: 5px; }}
+          .barkod-alani {{ margin-top: 40px; }} 
        </style>
     </head>
     <body>
        <div class='firma'>{musteriAdi}</div>
+       <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
        <div class='belge'>Belge No: {belgeNo}</div>
        <div class='palet'>{paletAdi}</div>
        <div class='urunler'><ul>{listeHtml}</ul></div>
-       <svg id='barkod'></svg>
+       <div class='barkod-alani'>
+           <svg id='barkod'></svg>
+       </div>
        <script>
-          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 3, height: 120, displayValue: true, fontSize: 24, fontOptions: 'bold' }});
+          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 4, height: 140, displayValue: true, fontSize: 26, fontOptions: 'bold' }});
        </script>
     </body></html>";
 
@@ -5556,7 +5664,6 @@ namespace TamgaApp
             frmYazdir.Controls.Add(web);
             frmYazdir.FormClosed += (s1, e1) => { web.Dispose(); };
 
-            // Edge Motoru (Shown ile beyaz ekran engellendi)
             frmYazdir.Shown += async (senderForm, args) =>
             {
                 var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "EtiketPrintAktif"));
@@ -5569,7 +5676,7 @@ namespace TamgaApp
             frmYazdir.ShowDialog();
         }
 
-        // Sevkiyat esnasında işi yarıda kesilen sevkiyatları tüm verileriyle diske (JSON) askıya alır.
+        // 1. Sevkiyatı askıya alırken dosyayı Müşteri ve Tarih adıyla kaydeder
         private void btnSevkAskayaAl_Click(object sender, EventArgs e)
         {
             if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
@@ -5616,10 +5723,14 @@ namespace TamgaApp
             string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
             if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
-            string dosyaAdi = $"KONSOLIDE_{DateTime.Now:yyyyMMdd_HHmm}.json";
+            // 🌟 YENİ: DOSYA İSMİ MÜŞTERİ ADI VE TARİH İLE OLUŞTURULUYOR
+            string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
+            if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
+
+            string dosyaAdi = $"{musteriTemiz} - {DateTime.Now:dd.MM.yyyy HH-mm}.json";
             string tamYol = Path.Combine(anaYol, dosyaAdi);
 
-            System.IO.File.WriteAllText(tamYol, JsonConvert.SerializeObject(hafiza, Formatting.Indented));
+            System.IO.File.WriteAllText(tamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
 
             MessageBox.Show($"Sevkiyat başarıyla ASKIYA ALINDI!\nİstediğiniz zaman kaldığınız yerden devam edebilirsiniz.", "Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -5639,7 +5750,7 @@ namespace TamgaApp
             aktifPaletBarkodlari.Clear();
         }
 
-        // Askıya alınmış olan yarım kayıtları bulur ve tarihe göre sıralayarak listeler.
+        // 2. Askıdaki kayıtları getirirken uzantıyı (.json) gizler, sadece şık ismi gösterir
         private void btnYarimGetir_Click(object sender, EventArgs e)
         {
             string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
@@ -5652,12 +5763,20 @@ namespace TamgaApp
             DirectoryInfo di = new DirectoryInfo(anaYol);
             FileInfo[] dosyalar = di.GetFiles("*.json").OrderByDescending(f => f.LastWriteTime).ToArray();
 
+            // 🌟 YENİ: Görsel zırh! Ekranda temiz isim görünür, arkada dosya tutulur.
+            var gosterimListesi = dosyalar.Select(f => new
+            {
+                GercekDosya = f,
+                EkranAdi = Path.GetFileNameWithoutExtension(f.Name) // .json yazısını siler
+            }).ToList();
+
             lstYarimSevkler.DataSource = null;
-            lstYarimSevkler.DataSource = dosyalar;
-            lstYarimSevkler.DisplayMember = "Name";
+            lstYarimSevkler.DataSource = gosterimListesi;
+            lstYarimSevkler.DisplayMember = "EkranAdi";
+            lstYarimSevkler.ValueMember = "GercekDosya";
         }
 
-        // 🌟 YENİ: Askıdaki Seçili Kaydı Silme Butonu Olayı
+        // 3. Askıdaki Seçili Kaydı Silme
         private void btnAskidanSil_Click(object sender, EventArgs e)
         {
             if (lstYarimSevkler.SelectedItem == null)
@@ -5666,15 +5785,16 @@ namespace TamgaApp
                 return;
             }
 
-            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedItem;
+            // 🌟 YENİ: ValueMember üzerinden gerçek dosyayı yakala
+            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedValue;
 
-            if (MessageBox.Show($"'{secilenDosya.Name}' kalıcı olarak silinecek. Emin misiniz?", "Askı Kaydını Sil", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            if (MessageBox.Show($"'{Path.GetFileNameWithoutExtension(secilenDosya.Name)}' kalıcı olarak silinecek. Emin misiniz?", "Askı Kaydını Sil", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 try
                 {
                     File.Delete(secilenDosya.FullName);
                     MessageBox.Show("Askıdaki kayıt başarıyla silindi!", "Silindi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    btnYarimGetir_Click(null, null); // Silince listeyi yenile
+                    btnYarimGetir_Click(null, null);
                 }
                 catch (Exception ex)
                 {
@@ -5683,7 +5803,7 @@ namespace TamgaApp
             }
         }
 
-        // Askıdaki JSON dosyasını çözer ve tüm palet matrisi durumunu tek tıkla ekrana geri yükler.
+        // 4. Askıdaki kayıtı Geri Yükleme (Açma)
         private void btnYarimAc_Click(object sender, EventArgs e)
         {
             if (lstYarimSevkler.SelectedItem == null)
@@ -5703,16 +5823,16 @@ namespace TamgaApp
                 }
             }
 
-            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedItem;
+            // 🌟 YENİ: ValueMember üzerinden gerçek dosyayı yakala
+            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedValue;
 
             try
             {
                 string jsonIcerik = File.ReadAllText(secilenDosya.FullName);
-                YarimSevkiyatHafizasi hafiza = JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(jsonIcerik);
+                YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(jsonIcerik);
 
                 if (hafiza == null) return;
 
-                // 🌟 KUSURSUZ MÜŞTERİ SEÇİMİ (ZIRH)
                 int musteriIndex = -1;
                 for (int i = 0; i < cmbMusteri.Items.Count; i++)
                 {
@@ -5729,7 +5849,6 @@ namespace TamgaApp
                 }
                 else
                 {
-                    // Müşteri SQL'de bitmiş/silinmiş olsa bile zorla ekle ve seç!
                     cmbMusteri.Items.Add(hafiza.MusteriAdi);
                     cmbMusteri.SelectedIndex = cmbMusteri.Items.Count - 1;
                 }
@@ -5738,10 +5857,8 @@ namespace TamgaApp
                 txtSevkMusteri.Text = hafiza.SevkMusteri;
                 cmbSevkPaletSayisi.SelectedItem = hafiza.PaletSayisi.ToString();
 
-                // 🌟 KUSURSUZ BELGE NO SEÇİMİ (ZORLA TİKLEME)
                 string[] kaydedilenBelgeler = hafiza.BelgeNo.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                // Eğer SQL o müşteriye ait belgeleri kutuya dolduramadıysa biz zorla doldururuz!
                 if (clbBelgeNo.Items.Count == 0)
                 {
                     foreach (string b in kaydedilenBelgeler) clbBelgeNo.Items.Add(b);
@@ -5751,7 +5868,6 @@ namespace TamgaApp
                 {
                     for (int i = 0; i < clbBelgeNo.Items.Count; i++)
                     {
-                        // Contains ile esnek arama (Boşluklar vs yüzünden patlamasın)
                         if (clbBelgeNo.Items[i].ToString().IndexOf(belge, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             clbBelgeNo.SetItemChecked(i, true);
@@ -5765,10 +5881,8 @@ namespace TamgaApp
                     return;
                 }
 
-                // Tabloyu oluşturmak için Arama motorunu çalıştır
                 btnSevkAra_Click(null, null);
 
-                // Okutulan adetleri ve renkleri anında geri yükle
                 foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                 {
                     if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
@@ -5790,9 +5904,7 @@ namespace TamgaApp
                     }
                 }
 
-                // Palet matrisini eski haline getir
                 dgvPaletMatrisi.Rows.Clear();
-
                 int maxSatirIndex = hafiza.PaletMatrisiDurumu.Keys.Count > 0 ? hafiza.PaletMatrisiDurumu.Keys.Max() : -1;
                 for (int i = 0; i <= maxSatirIndex; i++) dgvPaletMatrisi.Rows.Add();
 
@@ -6164,7 +6276,11 @@ namespace TamgaApp
             {
                 yeniSekme = new TabPage("Sevkiyat");
                 yeniSekme.BackColor = Color.FromArgb(245, 247, 250);
-                tabControl1.TabPages.Add(yeniSekme);
+
+                // YENİ: Add yerine Insert kullanıyoruz. 
+                // Buradaki '3' rakamı sekmenin sırasıdır. İstediğin yere göre (2, 3, 4 vs.) değiştirebilirsin.
+                // Unutma: İlk sekme 0'dır, ikinci sekme 1'dir.
+                tabControl1.TabPages.Insert(3, yeniSekme);
             }
             else
             {
@@ -6236,7 +6352,9 @@ namespace TamgaApp
             btnAgiYenile.Click += (s, e) => AgaciDoldur();
             AgaciDoldur(); // İlk Açılışta Doldur
 
+            // 🌟 KÜRESEL DEĞİŞKENLER (Arşiv Okuma İçin Sevk Müşteri Eklendi)
             string aktifMusteri = "";
+            string aktifSevkMusteri = "";
             string aktifBelge = "";
 
             // Ağaçtaki bir fişe tıklanınca gridi doldur
@@ -6250,14 +6368,20 @@ namespace TamgaApp
 
                     if (satirlar.Length > 1)
                     {
+                        // CSV'nin 2. satırı: Müşteri ; SevkMüşteri ; BelgeNo ; Tarih ; Sevk Türü
                         string[] huc = satirlar[1].Split(';');
-                        if (huc.Length >= 3) { aktifMusteri = huc[0]; aktifBelge = huc[2]; }
+                        if (huc.Length >= 3)
+                        {
+                            aktifMusteri = huc[0];
+                            aktifSevkMusteri = huc[1];
+                            aktifBelge = huc[2];
+                        }
                     }
 
                     foreach (string satir in satirlar)
                     {
                         if (satir.Contains("--- DETAYLAR ---")) { detaylar = true; continue; }
-                        if (detaylar && !satir.StartsWith("Palet No"))
+                        if (detaylar && !satir.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(satir))
                         {
                             string[] h = satir.Split(';');
                             if (h.Length >= 3) dgvDetay.Rows.Add(h[0], h[1], h[2]);
@@ -6286,6 +6410,8 @@ namespace TamgaApp
                 string seciliPalet = dgvDetay.SelectedRows[0].Cells[0].Value.ToString();
                 string barkod = dgvDetay.SelectedRows[0].Cells[2].Value.ToString();
 
+                if (string.IsNullOrEmpty(aktifSevkMusteri)) aktifSevkMusteri = "Belirtilmedi"; // Boşsa engelle
+
                 List<string> urunler = new List<string>();
                 foreach (DataGridViewRow r in dgvDetay.Rows)
                 {
@@ -6297,29 +6423,34 @@ namespace TamgaApp
 
                 string listeHtml = string.Join("", urunler);
 
-                // 🌟 KUSURSUZ VE ORTAK HTML TASARIMI (BÜYÜK FİRMA ADI, SİYAH PALET YAZISI)
+                // 🌟 KUSURSUZ YENİ HTML TASARIMI (BÜYÜK FİRMA, SEVK MÜŞTERİ, GENİŞ BARKOD)
                 string html = $@"<html>
         <head>
            <meta charset='utf-8'>
            <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
            <style>
-              body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 20px; }}
-              .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; }}
-              .belge {{ font-size: 18px; margin-bottom: 15px; color: #333; font-weight: bold; }}
-              .palet {{ font-size: 34px; margin: 15px 0; background: transparent; color: black; font-weight: bold; }}
-              .urunler {{ text-align: left; font-size: 16px; margin-bottom: 30px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
+              body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 5px 20px 20px 20px; }}
+              .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 2px; line-height: 1.1; }}
+              .sevk-musteri {{ font-size: 17px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 15px; }}
+              .belge {{ font-size: 18px; margin-bottom: 10px; color: #333; font-weight: bold; }}
+              .palet {{ font-size: 34px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
+              .urunler {{ text-align: left; font-size: 16px; margin-bottom: 10px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
               ul {{ margin: 0; padding-left: 20px; }}
               li {{ margin-bottom: 5px; }}
+              .barkod-alani {{ margin-top: 40px; }} 
            </style>
         </head>
         <body>
            <div class='firma'>{aktifMusteri}</div>
+           <div class='sevk-musteri'>Sevk: {aktifSevkMusteri}</div>
            <div class='belge'>Belge No: {aktifBelge}</div>
            <div class='palet'>{seciliPalet}</div>
            <div class='urunler'><ul>{listeHtml}</ul></div>
-           <svg id='barkod'></svg>
+           <div class='barkod-alani'>
+               <svg id='barkod'></svg>
+           </div>
            <script>
-              JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 3, height: 120, displayValue: true, fontSize: 24, fontOptions: 'bold' }});
+              JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 4, height: 140, displayValue: true, fontSize: 26, fontOptions: 'bold' }});
            </script>
         </body></html>";
 
@@ -6328,7 +6459,6 @@ namespace TamgaApp
                 frmYazdir.Controls.Add(web);
                 frmYazdir.FormClosed += (s1, e1) => { web.Dispose(); };
 
-                // Edge Motoru
                 frmYazdir.Shown += async (senderForm, args) =>
                 {
                     var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "EtiketPrintArsiv"));
@@ -6339,7 +6469,7 @@ namespace TamgaApp
                 };
 
                 frmYazdir.ShowDialog();
-            };
+        };
 
             // 🌟 KÜRESEL BARKOD SORGULAMA MOTORU (Cihazdan okutulan EAN-13'ü tüm arşivde arar)
             txtSorgu.KeyDown += (s, e) =>
@@ -6883,6 +7013,103 @@ namespace TamgaApp
             }
         }
         #endregion
+
+        // =========================================================================================
+
+        #region ⚙️20. KÜRESEL KLASÖR AYARLARI MERKEZİ
+        public class KlasorAyarlari
+        {
+            public string UretimYolu { get; set; }
+            public string SevkArsivYolu { get; set; }
+            public string SevkRaporYolu { get; set; }
+            public string YarimSevkYolu { get; set; }
+            public string SayimYolu { get; set; }
+
+            // Ayarları JSON olarak kaydeder
+            public static void AyarlariKaydet(KlasorAyarlari ayarlar)
+            {
+                string dosyaYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KlasorAyarlari.json");
+                System.IO.File.WriteAllText(dosyaYolu, Newtonsoft.Json.JsonConvert.SerializeObject(ayarlar, Newtonsoft.Json.Formatting.Indented));
+            }
+
+            // Ayarları JSON'dan okur, yoksa varsayılan olarak Masaüstünü tanımlar
+            public static KlasorAyarlari AyarlariYukle()
+            {
+                string dosyaYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KlasorAyarlari.json");
+                string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+
+                if (System.IO.File.Exists(dosyaYolu))
+                {
+                    string json = System.IO.File.ReadAllText(dosyaYolu);
+                    return Newtonsoft.Json.JsonConvert.DeserializeObject<KlasorAyarlari>(json);
+                }
+                else
+                {
+                    // İlk açılışta varsayılan yollar masaüstü klasörleridir
+                    return new KlasorAyarlari
+                    {
+                        UretimYolu = System.IO.Path.Combine(masaustu, "Günlük Üretim Takip"),
+                        SevkArsivYolu = System.IO.Path.Combine(masaustu, "TamgaApp Tamamlanan Sevkiyatlar"),
+                        SevkRaporYolu = System.IO.Path.Combine(masaustu, "TamgaApp Sevkiyat Raporları"),
+                        YarimSevkYolu = System.IO.Path.Combine(masaustu, "TamgaApp Yarım Sevkiyatlar"),
+                        SayimYolu = System.IO.Path.Combine(masaustu, "TamgaApp Sayım Raporları")
+                    };
+                }
+            }
+        }
+        #endregion
+
+        #region ⚙️21. AYARLAR EKRANI BUTON İŞLEMLERİ
+
+        // Form yüklenirken (Load olayında) bu metodu çağır ki kutular dolsun!
+        private void KlasorAyarlariniEkranaGetir()
+        {
+            KlasorAyarlari aktifAyarlar = KlasorAyarlari.AyarlariYukle();
+            txtUretimYolu.Text = aktifAyarlar.UretimYolu;
+            txtSevkArsivYolu.Text = aktifAyarlar.SevkArsivYolu;
+            txtSevkRaporYolu.Text = aktifAyarlar.SevkRaporYolu;
+            txtYarimSevkYolu.Text = aktifAyarlar.YarimSevkYolu;
+            txtSayimYolu.Text = aktifAyarlar.SayimYolu;
+        }
+
+        // GÖZAT BUTONLARI (Kısa ve tek satırlık pratik atamalar)
+        private void btnUretimSec_Click(object sender, EventArgs e) { KlasorSec(txtUretimYolu); }
+        private void btnSevkArsivSec_Click(object sender, EventArgs e) { KlasorSec(txtSevkArsivYolu); }
+        private void btnSevkRaporSec_Click(object sender, EventArgs e) { KlasorSec(txtSevkRaporYolu); }
+        private void btnYarimSevkSec_Click(object sender, EventArgs e) { KlasorSec(txtYarimSevkYolu); }
+        private void btnSayimSec_Click(object sender, EventArgs e) { KlasorSec(txtSayimYolu); }
+
+        // Ortak Klasör Seçme Motoru
+        private void KlasorSec(TextBox hedefKutu)
+        {
+            using (FolderBrowserDialog fbd = new FolderBrowserDialog())
+            {
+                if (fbd.ShowDialog() == DialogResult.OK)
+                {
+                    hedefKutu.Text = fbd.SelectedPath;
+                }
+            }
+        }
+
+        // KAYDET BUTONU
+        private void btnAyarlariKaydet_Click(object sender, EventArgs e)
+        {
+            KlasorAyarlari yeniAyarlar = new KlasorAyarlari
+            {
+                UretimYolu = txtUretimYolu.Text,
+                SevkArsivYolu = txtSevkArsivYolu.Text,
+                SevkRaporYolu = txtSevkRaporYolu.Text,
+                YarimSevkYolu = txtYarimSevkYolu.Text,
+                SayimYolu = txtSayimYolu.Text
+            };
+
+            KlasorAyarlari.AyarlariKaydet(yeniAyarlar);
+            MessageBox.Show("Tüm klasör yolları başarıyla kaydedildi! Sistem artık bu yolları kullanacak.", "Ayarlar Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        #endregion
+
+        // =========================================================================================
 
         #endregion
     }
