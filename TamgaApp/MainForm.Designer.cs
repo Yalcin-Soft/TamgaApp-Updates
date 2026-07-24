@@ -2626,15 +2626,15 @@ namespace TamgaApp
             this.panel13.Controls.Add(this.txtSevkArsivYolu);
             this.panel13.Controls.Add(this.btnUretimSec);
             this.panel13.Controls.Add(this.txtUretimYolu);
-            this.panel13.Location = new System.Drawing.Point(329, 55);
+            this.panel13.Location = new System.Drawing.Point(125, 55);
             this.panel13.Name = "panel13";
-            this.panel13.Size = new System.Drawing.Size(440, 369);
+            this.panel13.Size = new System.Drawing.Size(644, 369);
             this.panel13.TabIndex = 0;
             // 
             // btnAyarlariKaydet
             // 
             this.btnAyarlariKaydet.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAyarlariKaydet.Location = new System.Drawing.Point(88, 266);
+            this.btnAyarlariKaydet.Location = new System.Drawing.Point(190, 268);
             this.btnAyarlariKaydet.Name = "btnAyarlariKaydet";
             this.btnAyarlariKaydet.Size = new System.Drawing.Size(254, 72);
             this.btnAyarlariKaydet.TabIndex = 29;
@@ -2646,7 +2646,7 @@ namespace TamgaApp
             // 
             this.label70.AutoSize = true;
             this.label70.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label70.Location = new System.Drawing.Point(147, 29);
+            this.label70.Location = new System.Drawing.Point(229, 29);
             this.label70.Name = "label70";
             this.label70.Size = new System.Drawing.Size(171, 24);
             this.label70.TabIndex = 28;
@@ -2655,7 +2655,7 @@ namespace TamgaApp
             // btnSayimSec
             // 
             this.btnSayimSec.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSayimSec.Location = new System.Drawing.Point(227, 222);
+            this.btnSayimSec.Location = new System.Drawing.Point(432, 222);
             this.btnSayimSec.Name = "btnSayimSec";
             this.btnSayimSec.Size = new System.Drawing.Size(191, 29);
             this.btnSayimSec.TabIndex = 27;
@@ -2667,13 +2667,13 @@ namespace TamgaApp
             // 
             this.txtSayimYolu.Location = new System.Drawing.Point(22, 227);
             this.txtSayimYolu.Name = "txtSayimYolu";
-            this.txtSayimYolu.Size = new System.Drawing.Size(182, 20);
+            this.txtSayimYolu.Size = new System.Drawing.Size(404, 20);
             this.txtSayimYolu.TabIndex = 26;
             // 
             // btnYarimSevkSec
             // 
             this.btnYarimSevkSec.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnYarimSevkSec.Location = new System.Drawing.Point(227, 187);
+            this.btnYarimSevkSec.Location = new System.Drawing.Point(432, 187);
             this.btnYarimSevkSec.Name = "btnYarimSevkSec";
             this.btnYarimSevkSec.Size = new System.Drawing.Size(191, 29);
             this.btnYarimSevkSec.TabIndex = 25;
@@ -2685,13 +2685,13 @@ namespace TamgaApp
             // 
             this.txtYarimSevkYolu.Location = new System.Drawing.Point(22, 192);
             this.txtYarimSevkYolu.Name = "txtYarimSevkYolu";
-            this.txtYarimSevkYolu.Size = new System.Drawing.Size(182, 20);
+            this.txtYarimSevkYolu.Size = new System.Drawing.Size(404, 20);
             this.txtYarimSevkYolu.TabIndex = 24;
             // 
             // btnSevkRaporSec
             // 
             this.btnSevkRaporSec.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkRaporSec.Location = new System.Drawing.Point(227, 152);
+            this.btnSevkRaporSec.Location = new System.Drawing.Point(432, 152);
             this.btnSevkRaporSec.Name = "btnSevkRaporSec";
             this.btnSevkRaporSec.Size = new System.Drawing.Size(191, 29);
             this.btnSevkRaporSec.TabIndex = 23;
@@ -2703,13 +2703,13 @@ namespace TamgaApp
             // 
             this.txtSevkRaporYolu.Location = new System.Drawing.Point(22, 157);
             this.txtSevkRaporYolu.Name = "txtSevkRaporYolu";
-            this.txtSevkRaporYolu.Size = new System.Drawing.Size(182, 20);
+            this.txtSevkRaporYolu.Size = new System.Drawing.Size(404, 20);
             this.txtSevkRaporYolu.TabIndex = 22;
             // 
             // btnSevkArsivSec
             // 
             this.btnSevkArsivSec.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkArsivSec.Location = new System.Drawing.Point(227, 117);
+            this.btnSevkArsivSec.Location = new System.Drawing.Point(432, 117);
             this.btnSevkArsivSec.Name = "btnSevkArsivSec";
             this.btnSevkArsivSec.Size = new System.Drawing.Size(191, 29);
             this.btnSevkArsivSec.TabIndex = 21;
@@ -2721,13 +2721,13 @@ namespace TamgaApp
             // 
             this.txtSevkArsivYolu.Location = new System.Drawing.Point(22, 122);
             this.txtSevkArsivYolu.Name = "txtSevkArsivYolu";
-            this.txtSevkArsivYolu.Size = new System.Drawing.Size(182, 20);
+            this.txtSevkArsivYolu.Size = new System.Drawing.Size(404, 20);
             this.txtSevkArsivYolu.TabIndex = 20;
             // 
             // btnUretimSec
             // 
             this.btnUretimSec.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnUretimSec.Location = new System.Drawing.Point(227, 82);
+            this.btnUretimSec.Location = new System.Drawing.Point(432, 82);
             this.btnUretimSec.Name = "btnUretimSec";
             this.btnUretimSec.Size = new System.Drawing.Size(191, 29);
             this.btnUretimSec.TabIndex = 19;
@@ -2739,7 +2739,7 @@ namespace TamgaApp
             // 
             this.txtUretimYolu.Location = new System.Drawing.Point(22, 87);
             this.txtUretimYolu.Name = "txtUretimYolu";
-            this.txtUretimYolu.Size = new System.Drawing.Size(182, 20);
+            this.txtUretimYolu.Size = new System.Drawing.Size(404, 20);
             this.txtUretimYolu.TabIndex = 18;
             // 
             // tabPage5

@@ -1,5 +1,4 @@
-﻿using AutoUpdaterDotNET;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -7,12 +6,11 @@ using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
+using System.IO.Ports;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static TamgaApp.DataAccess;
-using System.IO.Ports;
 
 namespace TamgaApp
 {
@@ -239,6 +237,8 @@ namespace TamgaApp
             // 🌟 TASARIM MOTORLARINI ÇALIŞTIR
             ElitTasarimiUygula();     // (Butonlar, saat ve fontları düzeltir)
             SekmeleriModernlestir();  // (Sekmeleri jilet gibi yapar)
+
+            YardimSekmesiniKur();     // 👈 İŞTE SADECE BU SATIRI EKLİYORSUN
 
             // Tasarım Ekranı Özellikler Paneli (Properties) Varsayılan Ayarları
             numPropFontSize.Minimum = 6;
@@ -572,11 +572,13 @@ namespace TamgaApp
                     btnKapat.Size = new Size(180, 60);
 
                     // Fare üzerine gelince içi yeşil dolsun, yazısı beyaz olsun (Harika efekt!)
-                    btnKapat.MouseEnter += (s, e) => {
+                    btnKapat.MouseEnter += (s, e) =>
+                    {
                         btnKapat.BackColor = Color.FromArgb(15, 76, 58);
                         btnKapat.ForeColor = Color.White;
                     };
-                    btnKapat.MouseLeave += (s, e) => {
+                    btnKapat.MouseLeave += (s, e) =>
+                    {
                         btnKapat.BackColor = Color.FromArgb(245, 247, 250);
                         btnKapat.ForeColor = Color.FromArgb(15, 76, 58);
                     };
@@ -771,6 +773,7 @@ namespace TamgaApp
         }
 
         #endregion
+
         #endregion
 
         // =========================================================================================
@@ -2212,7 +2215,7 @@ namespace TamgaApp
 
             // 3. Çekilen her bir firma için masadan (cache) döngüye gir
             foreach (var f in tumFirmalarCache)
-            { 
+            {
                 // Sağ taraftaki ListBox'a ekleme (Eski Kod)
                 if (lstFirmalar != null)
                 {
@@ -3027,14 +3030,17 @@ namespace TamgaApp
 
             TextBox txtFiltre = new TextBox { Width = 300, Location = new Point(60, 10), Font = new Font("Segoe UI", 10), Text = "Buraya yazarak filtrele...", ForeColor = Color.Gray };
 
-            txtFiltre.Enter += (s, ev) => {
+            txtFiltre.Enter += (s, ev) =>
+            {
                 if (txtFiltre.Text == "Buraya yazarak filtrele...") { txtFiltre.Text = ""; txtFiltre.ForeColor = Color.Black; }
             };
-            txtFiltre.Leave += (s, ev) => {
+            txtFiltre.Leave += (s, ev) =>
+            {
                 if (string.IsNullOrWhiteSpace(txtFiltre.Text)) { txtFiltre.Text = "Buraya yazarak filtrele..."; txtFiltre.ForeColor = Color.Gray; }
             };
 
-            txtFiltre.TextChanged += (s, ev) => {
+            txtFiltre.TextChanged += (s, ev) =>
+            {
                 if (txtFiltre.Text == "Buraya yazarak filtrele...") return;
                 string aranan = txtFiltre.Text.Replace("'", "''");
                 bs.Filter = string.Join(" OR ", dt.Columns.Cast<DataColumn>().Select(c => $"[{c.ColumnName}] LIKE '%{aranan}%'"));
@@ -3457,7 +3463,8 @@ namespace TamgaApp
                     // Standart çubuk yerine modern metin animasyonu (Noktalar hareket eder)
                     System.Windows.Forms.Timer animTimer = new System.Windows.Forms.Timer { Interval = 400 };
                     int noktaCount = 0;
-                    animTimer.Tick += (s, ev) => {
+                    animTimer.Tick += (s, ev) =>
+                    {
                         noktaCount = (noktaCount + 1) % 4;
                         lblAnimasyon.Text = "Excel işleniyor, lütfen bekleyiniz" + new string('.', noktaCount);
                     };
@@ -3664,7 +3671,8 @@ namespace TamgaApp
             var kullanicilar = DataAccess.GetAllKullanicilar();
 
             // Veritabanı isimleri yerine UI için Türkçe ve anlaşılır sütun başlıkları oluştur (LINQ)
-            var tabloVerisi = kullanicilar.Select(k => new {
+            var tabloVerisi = kullanicilar.Select(k => new
+            {
                 Kullanıcı_Adı = k.KullaniciAdi,
                 Yetkileri = k.Yetkiler,
                 Bitiş_Tarihi = k.BitisTarihi.HasValue ? k.BitisTarihi.Value.ToString("dd.MM.yyyy HH:mm") : "Süresiz",
@@ -4887,7 +4895,8 @@ namespace TamgaApp
 
                 // 🌟 4. ADIM: İMLECİ ZORLA GERİ ÇAK
                 // Tüm işlemler bittikten sonra odak kaybını %100 önler.
-                this.BeginInvoke(new Action(() => {
+                this.BeginInvoke(new Action(() =>
+                {
                     txtBarkod.Focus();
                 }));
             }
@@ -5429,7 +5438,16 @@ namespace TamgaApp
                 // UI Thread'e (Arayüze) geçiş yap
                 this.BeginInvoke(new Action(() =>
                 {
-                    // 🌟 TRAFİK POLİSİ MANTIĞI: O an hangi sekme açıksa barkodu ona fırlat!
+                    // 🌟 ÖNCELİK 1: EĞER KAMYON KIOSK EKRANI AÇIKSA, BARKODU ORAYA GÖNDER!
+                    // Bu sayede COM Port okuyucu Kiosk ekranında "dını dını" etmeden şıkır şıkır çalışır.
+                    FrmKamyonKiosk acikKiosk = Application.OpenForms.OfType<FrmKamyonKiosk>().FirstOrDefault();
+                    if (acikKiosk != null)
+                    {
+                        acikKiosk.DisaridanBarkodGeldi(islenecekHamVeri);
+                        return; // Kiosk açıkken ana formdaki işlemleri durdur
+                    }
+
+                    // Kiosk açık değilse normal sekmelere bak
                     string aktifSekme = tabControl1.SelectedTab.Text;
 
                     if (aktifSekme == "Sevkiyat")
@@ -5438,8 +5456,7 @@ namespace TamgaApp
                     }
                     else if (aktifSekme == "Depo Sayım")
                     {
-                        // Sayım işlemleri için daha önce yazdığımız kodu buraya bağlayabilirsin
-                        // Ornek: SayimIcinBarkodIsle(islenecekHamVeri);
+                        // Sayım için eklenecek kodlar
                     }
                     else
                     {
@@ -5749,7 +5766,8 @@ namespace TamgaApp
                 }
 
                 txtSayimBarkod.Clear();
-                this.BeginInvoke(new Action(() => {
+                this.BeginInvoke(new Action(() =>
+                {
                     txtSayimBarkod.Focus();
                 }));
             }
@@ -5927,7 +5945,7 @@ namespace TamgaApp
             if (cmbAktifPalet.Items.Count > 0) cmbAktifPalet.SelectedIndex = 0;
         }
 
-        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (MALZEME KODLU TASARIM)
+        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (ŞİŞKİN TASARIM VE KODLU)
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
             if (cmbAktifPalet.SelectedItem == null)
@@ -5939,7 +5957,6 @@ namespace TamgaApp
             int aktifPaletIndex = cmbAktifPalet.SelectedIndex;
             string paletAdi = cmbAktifPalet.SelectedItem.ToString();
 
-            // Bu palete ait ürünleri topla ve metni temizle
             List<string> paletIcerigi = new List<string>();
             foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
             {
@@ -5947,18 +5964,16 @@ namespace TamgaApp
                 {
                     string hamVeri = row.Cells[aktifPaletIndex].Value.ToString();
 
-                    // 1. " | Adet: " kısmından böl
+                    // 1. Adeti ayır
                     string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
                     string urunKismi = parcalar[0];
                     string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
 
-                    // 2. Parantez içindeki Belge Numarasını Uçur: (SE-001) vs.
+                    // 2. Parantez içindeki Belge Numarasını Uçur: (26070685) vs.
                     int parantezIndex = urunKismi.LastIndexOf('(');
                     if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                    // 🚨 DİKKAT: Baştaki Malzeme Kodunu silme işlemini İPTAL ETTİK! Artık kod da kutuda yazacak.
-                    // urunKismi string'i şu an "KOD - ÜRÜN ADI" şeklinde.
-
+                    // Ürün Kısmı = "Malzeme Kodu - Ürün Adı" olarak kaldı. Kutuya ekle.
                     paletIcerigi.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
                 }
             }
@@ -5969,12 +5984,9 @@ namespace TamgaApp
                 return;
             }
 
-            // Barkodu RAM'den al veya yeni üret
             string paletBarkodu = "";
             if (aktifPaletBarkodlari.ContainsKey(paletAdi))
-            {
                 paletBarkodu = aktifPaletBarkodlari[paletAdi];
-            }
             else
             {
                 paletBarkodu = Ean13Olustur();
@@ -5988,26 +6000,23 @@ namespace TamgaApp
             string belgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>());
             string listeHtml = string.Join("", paletIcerigi);
 
-            // 🌟 YEPYENİ ŞİŞKİN VE TEK SATIRLI HTML TASARIMI
+            // 🌟 2 KAT BÜYÜK FİRMA, GENİŞ KUTU VE TEK SATIR KORUMASI (NOWRAP)
             string html = $@"<html>
     <head>
        <meta charset='utf-8'>
        <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
        <style>
           body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
-          .firma {{ font-size: 65px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
-          .sevk-musteri {{ font-size: 26px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
-          .belge {{ font-size: 24px; margin-bottom: 5px; color: #333; font-weight: bold; }}
-          .palet {{ font-size: 75px; margin: 5px 0; background: transparent; color: black; font-weight: bold; }}
+          .firma {{ font-size: 70px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
+          .sevk-musteri {{ font-size: 30px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+          .belge {{ font-size: 26px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+          .palet {{ font-size: 80px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
           
-          /* Kutu Genişletildi ve Yazılar Büyütüldü */
-          .urunler {{ text-align: left; font-size: 22px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 120px; }}
-          ul {{ margin: 0; padding-left: 5px; list-style-type: none; }}
+          .urunler {{ text-align: left; font-size: 24px; font-weight: bold; border: 4px dashed black; padding: 20px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
+          ul {{ margin: 0; padding-left: 0; list-style-type: none; }}
           
-          /* Yazı Taşıp Alt Satıra İnmesin, Tek Satırda Kalsın Koruması */
-          li {{ margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
-          
-          .barkod-alani {{ margin-top: 15px; }} 
+          li {{ margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 2px solid #ddd; padding-bottom: 6px; }}
+          .barkod-alani {{ margin-top: 20px; }} 
        </style>
     </head>
     <body>
@@ -6018,12 +6027,10 @@ namespace TamgaApp
        
        <div class='urunler'><ul>{listeHtml}</ul></div>
        
-       <div class='barkod-alani'>
-           <svg id='barkod'></svg>
-       </div>
+       <div class='barkod-alani'><svg id='barkod'></svg></div>
        <script>
-          // Genişliği(width) 5 yapıldı (kalın), boyu(height) 80 yapıldı (kısa ve geniş format)
-          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 80, displayValue: true, fontSize: 32, fontOptions: 'bold', margin: 0 }});
+          // Kalın Çizgiler (width:5), Okunaklı Format (height:90)
+          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
        </script>
     </body></html>";
 
@@ -6036,7 +6043,6 @@ namespace TamgaApp
             {
                 var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "EtiketPrintAktif"));
                 await web.EnsureCoreWebView2Async(ozelHafiza);
-
                 web.NavigationCompleted += (s2, e2) => { web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser); };
                 web.NavigateToString(html);
             };
@@ -6370,7 +6376,7 @@ namespace TamgaApp
             catch { }
         }
 
-        
+
 
         #endregion
 
@@ -6515,7 +6521,7 @@ namespace TamgaApp
                 }
             };
 
-            // 🌟 ETİKET YAZDIRMA MOTORU (Geçmiş Arşivden Etiket Çıkarma - MALZEME KODLU TASARIM)
+            // 🌟 ETİKET YAZDIRMA MOTORU (Geçmiş Arşivden Etiket Çıkarma)
             btnEtiketYazdir.Click += async (s, e) =>
             {
                 if (dgvDetay.SelectedRows.Count == 0) { MessageBox.Show("Lütfen etiketini yazdırmak istediğiniz ürünü seçin!"); return; }
@@ -6525,7 +6531,6 @@ namespace TamgaApp
 
                 if (string.IsNullOrEmpty(aktifSevkMusteri)) aktifSevkMusteri = "Belirtilmedi";
 
-                // Ürünleri topla ve metni temizle
                 List<string> urunler = new List<string>();
                 foreach (DataGridViewRow r in dgvDetay.Rows)
                 {
@@ -6540,34 +6545,28 @@ namespace TamgaApp
                         int parantezIndex = urunKismi.LastIndexOf('(');
                         if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                        // 🚨 DİKKAT: Baştaki Malzeme Kodunu silme işlemini İPTAL ETTİK! Artık kod da kutuda yazacak.
-
                         urunler.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
                     }
                 }
 
                 string listeHtml = string.Join("", urunler);
 
-                // 🌟 YEPYENİ ŞİŞKİN VE TEK SATIRLI HTML TASARIMI
                 string html = $@"<html>
         <head>
            <meta charset='utf-8'>
            <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
            <style>
               body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
-              .firma {{ font-size: 65px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
-              .sevk-musteri {{ font-size: 26px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
-              .belge {{ font-size: 24px; margin-bottom: 5px; color: #333; font-weight: bold; }}
-              .palet {{ font-size: 75px; margin: 5px 0; background: transparent; color: black; font-weight: bold; }}
+              .firma {{ font-size: 70px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
+              .sevk-musteri {{ font-size: 30px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+              .belge {{ font-size: 26px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+              .palet {{ font-size: 80px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
               
-              /* Kutu Genişletildi ve Yazılar Büyütüldü */
-              .urunler {{ text-align: left; font-size: 22px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 120px; }}
-              ul {{ margin: 0; padding-left: 5px; list-style-type: none; }}
+              .urunler {{ text-align: left; font-size: 24px; font-weight: bold; border: 4px dashed black; padding: 20px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
+              ul {{ margin: 0; padding-left: 0; list-style-type: none; }}
               
-              /* Yazı Taşıp Alt Satıra İnmesin, Tek Satırda Kalsın Koruması */
-              li {{ margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
-              
-              .barkod-alani {{ margin-top: 15px; }} 
+              li {{ margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 2px solid #ddd; padding-bottom: 6px; }}
+              .barkod-alani {{ margin-top: 20px; }} 
            </style>
         </head>
         <body>
@@ -6578,11 +6577,9 @@ namespace TamgaApp
            
            <div class='urunler'><ul>{listeHtml}</ul></div>
            
-           <div class='barkod-alani'>
-               <svg id='barkod'></svg>
-           </div>
+           <div class='barkod-alani'><svg id='barkod'></svg></div>
            <script>
-              JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 5, height: 80, displayValue: true, fontSize: 32, fontOptions: 'bold', margin: 0 }});
+              JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
            </script>
         </body></html>";
 
@@ -6595,7 +6592,6 @@ namespace TamgaApp
                 {
                     var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "EtiketPrintArsiv"));
                     await web.EnsureCoreWebView2Async(ozelHafiza);
-
                     web.NavigationCompleted += (s2, e2) => { web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser); };
                     web.NavigateToString(html);
                 };
@@ -7253,7 +7249,6 @@ namespace TamgaApp
                 return;
             }
 
-            // 1. KAMYONA YÜKLENECEK FİRMAYI/ARŞİVİ SEÇME EKRANI
             Form frmSecim = new Form
             {
                 Text = "Araç Yükleme - Sevkiyat Dosyası Seçimi",
@@ -7269,7 +7264,6 @@ namespace TamgaApp
             frmSecim.Controls.Add(tvArsiv);
             frmSecim.Controls.Add(btnDevam);
 
-            // Klasörleri ağaca dolduran yerel metot
             TreeNode kok = new TreeNode("📦 Tamamlanan Sevkiyatlar") { Tag = "KOK" };
             tvArsiv.Nodes.Add(kok);
 
@@ -7290,11 +7284,9 @@ namespace TamgaApp
             KlasorTaramasi(kokYol, kok);
             kok.ExpandAll();
 
-            // 🌟 KIOSK'a aktarılacak verileri tutacak değişkenler (Dışarıda tanımlıyoruz)
             Dictionary<string, string> secilenPaletler = null;
             string secilenMusteriAdi = "";
 
-            // 2. YÜKLEME BUTONUNA BASILINCA ÇALIŞACAK MOTOR
             btnDevam.Click += (s2, e2) =>
             {
                 if (tvArsiv.SelectedNode == null || tvArsiv.SelectedNode.Tag == null || !tvArsiv.SelectedNode.Tag.ToString().EndsWith(".csv"))
@@ -7304,35 +7296,23 @@ namespace TamgaApp
                 }
 
                 string seciliDosya = tvArsiv.SelectedNode.Tag.ToString();
-
-                // CSV Dosyasını Oku
                 string[] satirlar = File.ReadAllLines(seciliDosya, System.Text.Encoding.UTF8);
-                if (satirlar.Length < 4)
-                {
-                    MessageBox.Show("Seçilen dosyanın formatı hatalı veya içi boş!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
+                if (satirlar.Length < 4) { return; }
 
-                // Firma adını dosyadan çek (2. satır, ilk hücre)
                 secilenMusteriAdi = satirlar[1].Split(';')[0];
-
-                // Paletleri Topla (Key: Barkod, Value: Palet Adı)
                 secilenPaletler = new Dictionary<string, string>();
                 bool detaylarBasladi = false;
 
                 foreach (string satir in satirlar)
                 {
                     if (satir.Contains("--- DETAYLAR ---")) { detaylarBasladi = true; continue; }
-
                     if (detaylarBasladi && !satir.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(satir))
                     {
                         string[] hucreler = satir.Split(';');
                         if (hucreler.Length >= 3)
                         {
-                            string pAdi = hucreler[0].Trim(); // Örn: 1. Palet
-                            string pBarkod = hucreler[2].Trim(); // Örn: 2026... (EAN13)
-
-                            // Aynı paletin birden çok ürünü olabilir, bu yüzden sözlükte zaten varsa ekleme
+                            string pAdi = hucreler[0].Trim();
+                            string pBarkod = hucreler[2].Trim();
                             if (!string.IsNullOrEmpty(pBarkod) && !secilenPaletler.ContainsKey(pBarkod))
                             {
                                 secilenPaletler.Add(pBarkod, pAdi);
@@ -7341,18 +7321,13 @@ namespace TamgaApp
                     }
                 }
 
-                if (secilenPaletler.Count == 0)
-                {
-                    MessageBox.Show("Bu sevkiyatın içinde kayıtlı hiçbir palet barkodu bulunamadı!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
+                if (secilenPaletler.Count == 0) return;
 
-                // 🚨 İŞTE "DINI DINI" HATASINI ÇÖZEN KISIM
-                // Formu 'Hide' yapıp arkada açık/gizli bırakmıyoruz. Direkt kapatma sinyali (OK) gönderiyoruz.
+                // Seçim ekranını KÖKTEN Kapat
                 frmSecim.DialogResult = DialogResult.OK;
             };
 
-            // 3. SEÇİM EKRANI TAMAMEN KAPANINCA KIOSK EKRANINI AÇ (ODAK KAYBI YAŞANMAZ)
+            // Kiosk Başlıyor
             if (frmSecim.ShowDialog() == DialogResult.OK && secilenPaletler != null)
             {
                 FrmKamyonKiosk kiosk = new FrmKamyonKiosk(secilenMusteriAdi, secilenPaletler);
@@ -7364,11 +7339,8 @@ namespace TamgaApp
         // =========================================================================================
 
         #region 🚛 23. KIOSK MOTORU (TAM EKRAN YÜKLEME EKRANI)
-
-        // 🌟 KUSURSUZ KAMYON YÜKLEME KIOSK FORMU
         public class FrmKamyonKiosk : Form
         {
-            // Sözlük yapısı: Anahtar = EAN13 Barkod, Değer = "1. Palet" vb.
             private Dictionary<string, string> beklenenPaletler;
             private List<string> okutulanBarkodlar;
             private string firmaAdi;
@@ -7385,7 +7357,6 @@ namespace TamgaApp
                 this.beklenenPaletler = paletler;
                 this.okutulanBarkodlar = new List<string>();
 
-                // TAM EKRAN (KIOSK) AYARLARI
                 this.Text = "Kamyon Yükleme Kiosk";
                 this.WindowState = FormWindowState.Maximized;
                 this.FormBorderStyle = FormBorderStyle.None;
@@ -7402,9 +7373,7 @@ namespace TamgaApp
 
             private void ArayuzuCiz()
             {
-                // Sağ Taraftaki İnce Liste Paneli
                 Panel pnlSag = new Panel { Dock = DockStyle.Right, Width = 350, BackColor = Color.White };
-
                 Label lblFirma = new Label { Text = firmaAdi, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI", 18, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.FromArgb(15, 76, 58), ForeColor = Color.White };
 
                 lstSagPanel = new ListBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 15, FontStyle.Bold), ItemHeight = 35, IntegralHeight = false };
@@ -7412,46 +7381,67 @@ namespace TamgaApp
                 pnlSag.Controls.Add(lblFirma);
                 this.Controls.Add(pnlSag);
 
-                // Orta Dev Ekran
                 pnlOrta = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(33, 37, 41) };
                 lblMesaj = new Label { Text = "ARAÇ YÜKLEMESİ HAZIR\n\nİLK PALET ETİKETİNİ OKUTUNUZ...", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 55, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, ForeColor = Color.White };
                 pnlOrta.Controls.Add(lblMesaj);
                 this.Controls.Add(pnlOrta);
 
-                // Çıkış Butonu
                 Button btnCikis = new Button { Text = "X ÇIKIŞ", Size = new Size(150, 60), Location = new Point(20, 20), BackColor = Color.Red, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btnCikis.Click += (s, e) => this.Close();
                 pnlOrta.Controls.Add(btnCikis);
                 btnCikis.BringToFront();
 
-                // Gizli Barkod Dinleyici
                 txtGizliBarkod = new TextBox { Width = 0, Height = 0, Location = new Point(-100, -100) };
                 txtGizliBarkod.KeyDown += Barkod_KeyDown;
                 this.Controls.Add(txtGizliBarkod);
             }
 
-            // Ekrandaki herhangi bir yere tıklandığında imleci tekrar barkod okuyucuya kilitler
             protected override void OnShown(EventArgs e) { base.OnShown(e); txtGizliBarkod.Focus(); }
             protected override void OnClick(EventArgs e) { base.OnClick(e); txtGizliBarkod.Focus(); }
 
             private void ListeyiGuncelle()
             {
                 lstSagPanel.Items.Clear();
-
-                // Sözlükteki tüm paletleri gez
                 foreach (var palet in beklenenPaletler)
                 {
-                    string pBarkod = palet.Key;
-                    string pAdi = palet.Value;
+                    if (okutulanBarkodlar.Contains(palet.Key)) lstSagPanel.Items.Add($"✅ {palet.Value} (YÜKLENDİ)");
+                    else lstSagPanel.Items.Add($"📦 {palet.Value} (Bekliyor)");
+                }
+            }
 
-                    if (okutulanBarkodlar.Contains(pBarkod))
+            // COM PORT'tan ana form aracılığıyla veri geldiğinde burası tetiklenir!
+            public void DisaridanBarkodGeldi(string okunanKod)
+            {
+                if (string.IsNullOrEmpty(okunanKod)) return;
+
+                if (okutulanBarkodlar.Contains(okunanKod))
+                {
+                    HataVer("❌ DİKKAT!\nBU PALET ZATEN KAMYONA YÜKLENDİ!");
+                    return;
+                }
+
+                if (beklenenPaletler.ContainsKey(okunanKod))
+                {
+                    string paletAdi = beklenenPaletler[okunanKod];
+                    okutulanBarkodlar.Add(okunanKod);
+
+                    OnayVer($"✅ {paletAdi.ToUpper()} ONAYLANDI\nPALET YÜKLENEBİLİR!");
+                    ListeyiGuncelle();
+
+                    if (okutulanBarkodlar.Count == beklenenPaletler.Count)
                     {
-                        lstSagPanel.Items.Add($"✅ {pAdi} (YÜKLENDİ)");
+                        renkSifirlayici.Stop();
+                        pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
+                        lblMesaj.Text = "🎉 YÜKLEME TAMAMLANDI!\nTÜM PALETLER ARAÇTA.";
+                        try { Console.Beep(1000, 200); Console.Beep(1500, 400); } catch { }
+
+                        MessageBox.Show("Tüm paletler başarıyla araca yüklendi. Araç çıkış yapabilir.", "Sevkiyat Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        this.Close();
                     }
-                    else
-                    {
-                        lstSagPanel.Items.Add($"📦 {pAdi} (Bekliyor)");
-                    }
+                }
+                else
+                {
+                    HataVer("❌ YANLIŞ PALET!\nBU BARKOD SİPARİŞE AİT DEĞİL!");
                 }
             }
 
@@ -7462,68 +7452,170 @@ namespace TamgaApp
                     string okunanKod = txtGizliBarkod.Text.Trim();
                     txtGizliBarkod.Clear();
                     e.SuppressKeyPress = true;
-
-                    if (string.IsNullOrEmpty(okunanKod)) return;
-
-                    // 1. Zaten okutulmuş mu?
-                    if (okutulanBarkodlar.Contains(okunanKod))
-                    {
-                        HataVer("❌ DİKKAT!\nBU PALET ZATEN KAMYONA YÜKLENDİ!");
-                        return;
-                    }
-
-                    // 2. Bu firmanın sevkiyat listesinde var mı?
-                    if (beklenenPaletler.ContainsKey(okunanKod))
-                    {
-                        string paletAdi = beklenenPaletler[okunanKod]; // Örn: 3. Palet
-                        okutulanBarkodlar.Add(okunanKod); // Başarılı listesine at
-
-                        OnayVer($"✅ {paletAdi.ToUpper()} ONAYLANDI\nPALET YÜKLENEBİLİR!");
-                        ListeyiGuncelle();
-
-                        // 3. Tüm paletler bitti mi?
-                        if (okutulanBarkodlar.Count == beklenenPaletler.Count)
-                        {
-                            renkSifirlayici.Stop();
-                            pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
-                            lblMesaj.Text = "🎉 YÜKLEME TAMAMLANDI!\nTÜM PALETLER ARAÇTA.";
-                            try { Console.Beep(1000, 200); Console.Beep(1500, 400); } catch { }
-
-                            MessageBox.Show("Tüm paletler başarıyla araca yüklendi. Araç çıkış yapabilir.", "Sevkiyat Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            this.Close();
-                        }
-                    }
-                    else
-                    {
-                        // 4. Yanlış barkod / Başka firmanın paleti
-                        HataVer("❌ YANLIŞ PALET!\nBU BARKOD SİPARİŞE AİT DEĞİL!");
-                    }
+                    DisaridanBarkodGeldi(okunanKod); // Klavye ile okutulursa da aynı metoda pasla
                 }
             }
 
             private void OnayVer(string mesaj)
             {
-                pnlOrta.BackColor = Color.FromArgb(46, 204, 113); // Canlı Yeşil
+                pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
                 lblMesaj.Text = mesaj;
                 try { Console.Beep(800, 300); } catch { }
-                renkSifirlayici.Stop();
-                renkSifirlayici.Start();
+                renkSifirlayici.Stop(); renkSifirlayici.Start();
             }
 
             private void HataVer(string mesaj)
             {
-                pnlOrta.BackColor = Color.FromArgb(231, 76, 60); // Kan Kırmızı
+                pnlOrta.BackColor = Color.FromArgb(231, 76, 60);
                 lblMesaj.Text = mesaj;
                 try { Console.Beep(300, 1000); } catch { }
-                renkSifirlayici.Stop();
-                renkSifirlayici.Start();
+                renkSifirlayici.Stop(); renkSifirlayici.Start();
             }
 
             private void SinyalSifirla()
             {
                 renkSifirlayici.Stop();
-                pnlOrta.BackColor = Color.FromArgb(33, 37, 41); // Normal Koyu Tema
+                pnlOrta.BackColor = Color.FromArgb(33, 37, 41);
                 lblMesaj.Text = "SIRADAKİ PALET ETİKETİNİ OKUTUNUZ...";
+            }
+        }
+        #endregion
+
+        // =========================================================================================
+
+        #region 📖 24. DİNAMİK KULLANIM KILAVUZU MOTORU
+
+        public void YardimSekmesiniKur()
+        {
+            // 1. "❓ Yardım" sekmesi var mı kontrol et, yoksa en sona oluştur
+            TabPage yardimSekmesi = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "❓ Yardım");
+            if (yardimSekmesi == null)
+            {
+                yardimSekmesi = new TabPage("❓ Yardım");
+                yardimSekmesi.BackColor = Color.WhiteSmoke;
+                tabControl1.TabPages.Add(yardimSekmesi); // En sona ekler
+            }
+            else
+            {
+                yardimSekmesi.Controls.Clear(); // Yenilemelerde üst üste binmemesi için temizle
+            }
+
+            // 2. Kenar boşlukları için (Padding) bir panel oluştur
+            Panel pnlIcerik = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(40),
+                BackColor = Color.WhiteSmoke
+            };
+
+            // 3. Kılavuz metnini tutacak Okuma Kutusu
+            RichTextBox rtbIcerik = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 12),
+                ReadOnly = true,
+                BackColor = Color.WhiteSmoke,
+                BorderStyle = BorderStyle.None
+            };
+
+            // 4. Yetki Zırhı ve Metin Oluşturma
+            List<string> yetkiler = (AktifKullaniciAdi == "TamgaApp" || AktifYetkiler == "Sınırsız")
+                                    ? new List<string> { "Sınırsız" }
+                                    : AktifYetkiler.Split(',').Select(y => y.Trim()).ToList();
+
+            System.Text.StringBuilder kilavuzMetni = new System.Text.StringBuilder();
+
+            kilavuzMetni.AppendLine($"Merhaba {AktifKullaniciAdi}, Sisteme Hoş Geldiniz!\n");
+            kilavuzMetni.AppendLine("Aşağıda erişim yetkinizin bulunduğu modüllerin detaylı kullanım talimatlarını görebilirsiniz:\n");
+            kilavuzMetni.AppendLine(new string('-', 95) + "\n");
+
+            // --- YETKİYE GÖRE DİNAMİK DETAYLI METİNLER ---
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Ana Panel"))
+            {
+                kilavuzMetni.AppendLine("📌 ANA PANEL:");
+                kilavuzMetni.AppendLine("Sisteme giriş yaptığınızda sizi karşılayan kontrol merkezidir.");
+                kilavuzMetni.AppendLine("• Güncel sistem saatini ve takvimini bu ekranda takip edebilirsiniz.");
+                kilavuzMetni.AppendLine("• Ekranın altındaki 'Oturumu Kapat / Güvenli Çıkış' butonlarını kullanarak hesabınızdan veya sistemden güvenli bir şekilde çıkış yapabilirsiniz.\n");
+            }
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Sevkiyat Plan"))
+            {
+                kilavuzMetni.AppendLine("📌 SEVKİYAT PLAN (WMS):");
+                kilavuzMetni.AppendLine("Sipariş karşılama, barkodlu ürün toplama ve palet oluşturma merkezidir.");
+                kilavuzMetni.AppendLine("• Açık Siparişleri Çekme: 'Yenile' butonuna basarak ERP/SQL veritabanında bekleyen sevk emirlerini (SE/O1) güncelleyebilirsiniz.");
+                kilavuzMetni.AppendLine("• Filtreleme: Sol listeden işlem yapılacak müşteriyi ve ilgili Belge Numaralarını (veya Tümünü Seç ile hepsini) işaretleyip 'Ara' butonuna tıklayın.");
+                kilavuzMetni.AppendLine("• Barkod Okutma: El terminali ile ürün barkodlarını okutun. Sistem okutulan miktarı otomatik sayar ve kotası dolan ürünleri yeşil renk ile kilitler. Kotası dolmuş veya listede olmayan hatalı ürün okutulduğunda sesli uyarı verir.");
+                kilavuzMetni.AppendLine("• Palet Yönetimi: İşlem yapmadan önce sağ taraftan ürünlerin atılacağı bir 'Aktif Palet' seçin.");
+                kilavuzMetni.AppendLine("• Sevkiyatı Bitirme: Okutulmamış eksik ürünler varsa 'Kısmi Sevk', tüm ürünler %100 tamamlanmışsa 'Tam Sevk' butonu ile işlemi bitirip arşive gönderebilirsiniz.");
+                kilavuzMetni.AppendLine("• Askıya Alma: Bir sevkiyatı yarım bırakmanız gerekirse 'Sevkiyatı Askıya Al' diyerek ilerlemenizi dondurabilir, daha sonra 'Askıdakileri Getir' ile kaldığınız yerden devam edebilirsiniz.\n");
+            }
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Sevkiyat"))
+            {
+                kilavuzMetni.AppendLine("📌 SEVKİYAT (ARŞİV VE KIOSK):");
+                kilavuzMetni.AppendLine("Tamamlanmış sevkiyatların arşivlendiği ve kamyona yükleme işlemlerinin yapıldığı kontrol modülüdür.");
+                kilavuzMetni.AppendLine("• Geçmiş Arşiv: Tamamlanan tüm sevkiyatlar Yıl/Ay/Gün formatında sol taraftaki ağaç yapısında otomatik olarak klasörlenir. Eski kayıtlarınızı buradan açıp inceleyebilirsiniz.");
+                kilavuzMetni.AppendLine("• Kamyon Yükleme (Kiosk): Araca yükleme yaparken 'Araç Yüklemeyi Başlat' butonuna basın. Açılan ekrandan ilgili arşiv dosyasını seçtiğinizde sistem endüstriyel Kiosk (Tam Ekran) moduna geçer.");
+                kilavuzMetni.AppendLine("• Güvenli Yükleme: Kamyona yüklenen her paletin üzerindeki EAN-13 barkodunu okutarak sistemden sağlamasını yapın. Yanlış müşterinin paleti okutulduğunda devasa kırmızı ekran ve yüksek sesle personel uyarılır.\n");
+            }
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Depo Sayım"))
+            {
+                kilavuzMetni.AppendLine("📌 DEPO SAYIM:");
+                kilavuzMetni.AppendLine("Deponuzdaki mevcut envanteri hızlı ve hatasız saymanız için tasarlanmıştır.");
+                kilavuzMetni.AppendLine("• Okutma: El terminali ile ürün barkodlarını peş peşe okutabilirsiniz. Her başarılı okutmada ürün adedi 1 artar.");
+                kilavuzMetni.AppendLine("• Akıllı Bulucu: Daha önce hiç sayılmamış yeni bir barkod gelirse, sistem veritabanından malzeme kodunu ve rengini bularak tabloya anında yeni satır olarak ekler.");
+                kilavuzMetni.AppendLine("• Raporlama: İşleminiz bitince rapora bir isim verip 'Sayımı Bitir (Kaydet)' diyerek Excel (CSV) formatında arşivleyebilirsiniz.\n");
+            }
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Normal Zarf Yazdırma") || yetkiler.Contains("Çoklu Zarf Yazdırma"))
+            {
+                kilavuzMetni.AppendLine("📌 ZARF VE ETİKET YAZDIRMA:");
+                kilavuzMetni.AppendLine("Sürükle-bırak yöntemiyle çalışan, kağıt ve zarf tasarımı merkezidir.");
+                kilavuzMetni.AppendLine("• Şablon Tasarımı: İstediğiniz ebatlarda bir kağıt belirleyip üzerine metin, resim, barkod ekleyebilirsiniz.");
+                kilavuzMetni.AppendLine("• Dinamik Veriler: Sisteme eklediğiniz metin kutularının içine süslü parantez ile {FirmaAdi} veya {Adres} yazarsanız, çıktı alırken o alanlar seçili müşterinin bilgileriyle saniyeler içinde otomatik doldurulur.");
+                kilavuzMetni.AppendLine("• Çoklu Yazdırma: Listeden onlarca müşteriyi aynı anda seçerek tek tuşla peş peşe toplu etiket/zarf basımı gerçekleştirebilirsiniz.\n");
+            }
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Yönetim"))
+            {
+                kilavuzMetni.AppendLine("👑 YÖNETİCİ KONTROLLERİ:");
+                kilavuzMetni.AppendLine("Sistemin genel sağlığını, personel erişimlerini ve SQL veritabanını yönettiğiniz alandır.");
+                kilavuzMetni.AppendLine("• Personel Yönetimi: Sisteme yeni çalışma arkadaşları ekleyebilir, bu personellerin sadece çalışacakları modülleri (Örn: Sadece Depo Sayım) görmesi için özel kısıtlamalar uygulayabilirsiniz.");
+                kilavuzMetni.AppendLine("• Şifre Güvenliği: Personellerin şifre kullanım sürelerini (Örn: 1 Ayda bir değiştir) belirleyebilir veya unutulan şifreleri yönetici yetkinizle sıfırlayabilirsiniz.");
+                kilavuzMetni.AppendLine("• Veritabanı Temizliği: Tüm ürünleri/firmaları tek tıkla silme veya SQL ayarlarını sıfırlama gibi kritik ve tehlikeli operasyonlar sadece sizin yetkinizdedir.\n");
+            }
+
+            // Kılavuz sonu
+            kilavuzMetni.AppendLine(new string('-', 95));
+            kilavuzMetni.AppendLine("Sistem Destek ve İletişim: TamgaApp Otomasyon V2");
+
+            rtbIcerik.Text = kilavuzMetni.ToString();
+
+            // 5. Renklendirme Motorunu Çalıştır
+            Renklendir(rtbIcerik, "📌 ANA PANEL:", Color.DarkRed);
+            Renklendir(rtbIcerik, "📌 SEVKİYAT PLAN (WMS):", Color.DarkRed);
+            Renklendir(rtbIcerik, "📌 SEVKİYAT (ARŞİV VE KIOSK):", Color.DarkRed);
+            Renklendir(rtbIcerik, "📌 DEPO SAYIM:", Color.DarkRed);
+            Renklendir(rtbIcerik, "📌 ZARF VE ETİKET YAZDIRMA:", Color.DarkRed);
+            Renklendir(rtbIcerik, "👑 YÖNETİCİ KONTROLLERİ:", Color.Purple);
+
+            // Kutuyu panele, paneli de sekmeye ekle
+            pnlIcerik.Controls.Add(rtbIcerik);
+            yardimSekmesi.Controls.Add(pnlIcerik);
+        }
+
+        // Metin içindeki başlıkları otomatik bulup kalın ve renkli yapan küçük yardımcı metot
+        private void Renklendir(RichTextBox rtb, string kelime, Color renk)
+        {
+            int pos = rtb.Text.IndexOf(kelime);
+            if (pos >= 0)
+            {
+                rtb.Select(pos, kelime.Length);
+                rtb.SelectionColor = renk;
+                rtb.SelectionFont = new Font(rtb.Font, FontStyle.Bold);
+                rtb.Select(0, 0); // Seçimi bırak
             }
         }
 
@@ -7533,4 +7625,4 @@ namespace TamgaApp
 
         #endregion
     }
-}   
+}
