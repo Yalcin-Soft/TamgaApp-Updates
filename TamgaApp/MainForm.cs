@@ -4181,28 +4181,35 @@ namespace TamgaApp
                     string malzemeKodu = satir["Malzeme"].ToString().Trim();
                     string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
 
-                    // 🌟 SİHİRLİ ZIRH: Eğer ERP siparişinde renk boş gelmişse VEYA "Beyaz" yazıyorsa,
-                    // büyük/küçük harf veya boşluk hatalarını ezip hepsini standart "Beyaz" formatına sokuyoruz.
-                    if (string.IsNullOrEmpty(siparisRengi) || siparisRengi.Equals("BEYAZ", StringComparison.OrdinalIgnoreCase))
-                    {
-                        siparisRengi = "Beyaz";
-                    }
-
-                    // 🎯 HEDEFİ TAM ON İKİDEN VUR: Hem Malzeme Koduna HEM DE Renge göre aynı anda eşleştir!
+                    // 🎯 YENİ AKILLI EŞLEŞTİRME MOTORU (BEYAZ = BOŞ KURALI EKLENDİ)
                     var urun = yerelUrunler.FirstOrDefault(u =>
                         u.UrunKodu == malzemeKodu &&
-                        u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase));
+                        (
+                            // KURAL 1: Eğer ERP'den gelen açıklamanın içinde "Beyaz" geçiyorsa VE Excel'deki Renk hücresi BOŞSA -> Doğru üründür!
+                            (siparisRengi.IndexOf("Beyaz", StringComparison.OrdinalIgnoreCase) >= 0 && string.IsNullOrWhiteSpace(u.Renk))
 
-                    // BÜYÜK ZIRH: Eğer ERP'deki renk ismiyle Excel'deki uyuşmazsa (Örn: "Mat Siyah" vs "Siyah") 
-                    // sistem çökmesin diye sadece koda göre ilk bulduğunu getir.
+                            ||
+
+                            // KURAL 2: Renkler birebir aynıysa (Örn: İkisinde de Antrasit yazıyorsa) -> Doğru üründür!
+                            u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase)
+
+                            ||
+
+                            // KURAL 3: Excel'deki renk ("2N-Mat Siyah" gibi), ERP sipariş açıklamasının içinde bir yerlerde geçiyorsa -> Doğru üründür!
+                            (!string.IsNullOrWhiteSpace(u.Renk) && siparisRengi.IndexOf(u.Renk.Replace("2K-", "").Replace("2N-", "").Replace("2L-", "").Replace("2C-", "").Trim(), StringComparison.OrdinalIgnoreCase) >= 0)
+                        )
+                    );
+
+                    // 🛡️ SON ÇARE ZIRHI: Eğer renklerden hiçbir şekilde tutturamazsak, sistem çökmesin diye koda ait ilk ürünü getir.
                     if (urun == null)
                     {
                         urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
                     }
 
+                    // Bulunan barkodu değişkene at, yoksa "BARKOD YOK" yaz
                     string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
-                    dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
+                    // (Buradan sonra dtEkran.Rows.Add(...) diyerek tabloya ekleme kodun aynen devam edecek)
                 }
             }
 
