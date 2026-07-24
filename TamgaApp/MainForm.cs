@@ -4185,17 +4185,10 @@ namespace TamgaApp
                     var urun = yerelUrunler.FirstOrDefault(u =>
                         u.UrunKodu == malzemeKodu &&
                         (
-                            // KURAL 1: Eğer ERP'den gelen açıklamanın içinde "Beyaz" geçiyorsa VE Excel'deki Renk hücresi BOŞSA -> Doğru üründür!
                             (siparisRengi.IndexOf("Beyaz", StringComparison.OrdinalIgnoreCase) >= 0 && string.IsNullOrWhiteSpace(u.Renk))
-
                             ||
-
-                            // KURAL 2: Renkler birebir aynıysa (Örn: İkisinde de Antrasit yazıyorsa) -> Doğru üründür!
                             u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase)
-
                             ||
-
-                            // KURAL 3: Excel'deki renk ("2N-Mat Siyah" gibi), ERP sipariş açıklamasının içinde bir yerlerde geçiyorsa -> Doğru üründür!
                             (!string.IsNullOrWhiteSpace(u.Renk) && siparisRengi.IndexOf(u.Renk.Replace("2K-", "").Replace("2N-", "").Replace("2L-", "").Replace("2C-", "").Trim(), StringComparison.OrdinalIgnoreCase) >= 0)
                         )
                     );
@@ -4209,7 +4202,16 @@ namespace TamgaApp
                     // Bulunan barkodu değişkene at, yoksa "BARKOD YOK" yaz
                     string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
-                    // (Buradan sonra dtEkran.Rows.Add(...) diyerek tabloya ekleme kodun aynen devam edecek)
+                    // 🌟 İŞTE KAYBOLAN O SİHİRLİ SATIR (Tabloya Yazdırma İşlemi)
+                    dtEkran.Rows.Add(
+                        secilenBelge,
+                        malzemeKodu,
+                        barkod,
+                        satir["MalzemeAdi"].ToString().Trim(),
+                        satir["SecenekAciklamasi"].ToString().Trim(),
+                        Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])),
+                        0
+                    );
                 }
             }
 
