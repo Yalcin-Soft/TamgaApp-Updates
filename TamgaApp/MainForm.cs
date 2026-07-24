@@ -6459,8 +6459,8 @@ namespace TamgaApp
                <svg id='barkod'></svg>
            </div>
            <script>
-              JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 4, height: 140, displayValue: true, fontSize: 26, fontOptions: 'bold' }});
-           </script>
+      JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 2, height: 140, displayValue: true, fontSize: 26, fontOptions: 'bold' }});
+   </script>
         </body></html>";
 
                 Form frmYazdir = new Form { Text = "Etiket Yazdırılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent };
@@ -7120,6 +7120,197 @@ namespace TamgaApp
 
         // =========================================================================================
 
+        #region 🚛 21. KAMYON YÜKLEME (KIOSK) MODÜLÜ - SEVKİYAT PLAN SAYFASI
+
+        private void btnKamyonYukle_Click(object sender, EventArgs e)
+        {
+            // 1. Müşteri Adını Al (Sevkiyat Plan sayfasındaki Müşteri Seçilen ComboBox veya TextBox)
+            // ⚠️ DİKKAT: 'cmbMusteriSec' yerine kendi ComboBox'ının/TextBox'ının adını yaz!
+            string musteriAdi = cmbMusteri.Text;
+
+            if (string.IsNullOrWhiteSpace(musteriAdi))
+            {
+                MessageBox.Show("Lütfen önce bir müşteri seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2. Tablodaki Barkodları Topla
+            List<string> beklenenPaletler = new List<string>();
+
+            // ⚠️ DİKKAT: 'dgvMalzemeler' yerine kendi tablonun adını yaz! (Örn: dataGridView1)
+            foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
+            {
+                // Tablodaki "Barkod" sütununu okuyoruz. (Senin tablondaki başlık farklıysa burayı düzelt)
+                if (!satir.IsNewRow && satir.Cells["Barkod"] != null && satir.Cells["Barkod"].Value != null)
+                {
+                    string barkod = satir.Cells["Barkod"].Value.ToString().Trim();
+
+                    // Boş değilse, BARKOD YOK yazmıyorsa ve daha önce listeye eklenmediyse ekle
+                    if (!string.IsNullOrWhiteSpace(barkod) && barkod != "BARKOD YOK" && !beklenenPaletler.Contains(barkod))
+                    {
+                        beklenenPaletler.Add(barkod);
+                    }
+                }
+            }
+
+            // 3. Kontrol
+            if (beklenenPaletler.Count == 0)
+            {
+                MessageBox.Show("Yüklenecek geçerli bir palet/barkod bulunamadı! Tabloda veri olduğundan emin olun.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 4. Şov Başlasın! Tam Ekran Kiosk'u Çağır
+            FrmKamyonKiosk kioskEkran = new FrmKamyonKiosk(musteriAdi, beklenenPaletler);
+            kioskEkran.ShowDialog();
+        }
+
+        #endregion
+
+        // =========================================================================================
+
+        #region 🚛 22. KIOSK MOTORU (TAM EKRAN YÜKLEME EKRANI)
+
+        // 🌟 BU KODU ANA FORMUNUZUN DIŞINA (EN ALTA) YAPIŞTIRIN
+        public class FrmKamyonKiosk : Form
+        {
+            private List<string> beklenenPaletler;
+            private List<string> okutulanPaletler;
+            private string firmaAdi;
+
+            private Panel pnlOrta;
+            private Label lblMesaj;
+            private ListBox lstSagPanel;
+            private TextBox txtGizliBarkod;
+            private Timer renkSifirlayici;
+
+            public FrmKamyonKiosk(string musteriAdi, List<string> beklenenPaletler)
+            {
+                this.firmaAdi = musteriAdi;
+                this.beklenenPaletler = beklenenPaletler;
+                this.okutulanPaletler = new List<string>();
+
+                // TAM EKRAN AYARLARI
+                this.Text = "Kamyon Yükleme";
+                this.WindowState = FormWindowState.Maximized;
+                this.FormBorderStyle = FormBorderStyle.None;
+                this.BackColor = Color.FromArgb(33, 37, 41);
+                this.KeyPreview = true;
+                this.TopMost = true;
+
+                renkSifirlayici = new Timer { Interval = 2000 };
+                renkSifirlayici.Tick += (s, e) => SinyalSifirla();
+
+                ArayuzuCiz();
+                ListeyiGuncelle();
+            }
+
+            private void ArayuzuCiz()
+            {
+                Panel pnlSag = new Panel { Dock = DockStyle.Right, Width = 400, BackColor = Color.White };
+                Label lblFirma = new Label { Text = firmaAdi, Dock = DockStyle.Top, Height = 80, Font = new Font("Segoe UI", 16, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.FromArgb(15, 76, 58), ForeColor = Color.White };
+
+                lstSagPanel = new ListBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 14, FontStyle.Bold), ItemHeight = 30, IntegralHeight = false };
+                pnlSag.Controls.Add(lstSagPanel);
+                pnlSag.Controls.Add(lblFirma);
+                this.Controls.Add(pnlSag);
+
+                pnlOrta = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(33, 37, 41) };
+                lblMesaj = new Label { Text = "KAMYON YÜKLEMESİ HAZIR\n\nİLK PALETİ OKUTUNUZ...", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 48, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, ForeColor = Color.White };
+                pnlOrta.Controls.Add(lblMesaj);
+                this.Controls.Add(pnlOrta);
+
+                Button btnCikis = new Button { Text = "X ÇIKIŞ", Size = new Size(150, 60), Location = new Point(20, 20), BackColor = Color.Red, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
+                btnCikis.Click += (s, e) => this.Close();
+                pnlOrta.Controls.Add(btnCikis);
+                btnCikis.BringToFront();
+
+                txtGizliBarkod = new TextBox { Width = 0, Height = 0, Location = new Point(-100, -100) };
+                txtGizliBarkod.KeyDown += Barkod_KeyDown;
+                this.Controls.Add(txtGizliBarkod);
+            }
+
+            protected override void OnShown(EventArgs e) { base.OnShown(e); txtGizliBarkod.Focus(); }
+            protected override void OnClick(EventArgs e) { base.OnClick(e); txtGizliBarkod.Focus(); }
+
+            private void ListeyiGuncelle()
+            {
+                lstSagPanel.Items.Clear();
+                int sira = 1;
+                foreach (var palet in beklenenPaletler)
+                {
+                    if (okutulanPaletler.Contains(palet))
+                        lstSagPanel.Items.Add($"✅ {sira}. Palet (YÜKLENDİ)");
+                    else
+                        lstSagPanel.Items.Add($"📦 {sira}. Palet (Bekliyor)");
+                    sira++;
+                }
+            }
+
+            private void Barkod_KeyDown(object sender, KeyEventArgs e)
+            {
+                if (e.KeyCode == Keys.Enter)
+                {
+                    string okunanKod = txtGizliBarkod.Text.Trim();
+                    txtGizliBarkod.Clear();
+                    e.SuppressKeyPress = true;
+
+                    if (okutulanPaletler.Contains(okunanKod))
+                    {
+                        HataVer("❌ DİKKAT!\nBU PALET ZATEN YÜKLENDİ!");
+                        return;
+                    }
+
+                    if (beklenenPaletler.Contains(okunanKod))
+                    {
+                        okutulanPaletler.Add(okunanKod);
+                        OnayVer("✅ PALET YÜKLENEBİLİR");
+                        ListeyiGuncelle();
+
+                        if (okutulanPaletler.Count == beklenenPaletler.Count)
+                        {
+                            renkSifirlayici.Stop();
+                            pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
+                            lblMesaj.Text = "🎉 SEVKİYAT TAMAMLANDI!\nTÜM PALETLER YÜKLENDİ.";
+                            Console.Beep(1000, 200); Console.Beep(1500, 400);
+                            MessageBox.Show("Araç çıkış yapabilir.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            this.Close();
+                        }
+                    }
+                    else
+                    {
+                        HataVer("❌ YANLIŞ PALET!\nBU SİPARİŞE AİT DEĞİL!");
+                    }
+                }
+            }
+
+            private void OnayVer(string mesaj)
+            {
+                pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
+                lblMesaj.Text = mesaj;
+                Console.Beep(800, 300);
+                renkSifirlayici.Stop();
+                renkSifirlayici.Start();
+            }
+
+            private void HataVer(string mesaj)
+            {
+                pnlOrta.BackColor = Color.FromArgb(231, 76, 60);
+                lblMesaj.Text = mesaj;
+                Console.Beep(300, 1000);
+                renkSifirlayici.Stop();
+                renkSifirlayici.Start();
+            }
+
+            private void SinyalSifirla()
+            {
+                renkSifirlayici.Stop();
+                pnlOrta.BackColor = Color.FromArgb(33, 37, 41);
+                lblMesaj.Text = "SIRADAKİ PALETİ OKUTUNUZ...";
+            }
+        }
+
+        #endregion
         #endregion
     }
 }   
