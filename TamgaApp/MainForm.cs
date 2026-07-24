@@ -5647,7 +5647,7 @@ namespace TamgaApp
           .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 2px; line-height: 1.1; }}
           .sevk-musteri {{ font-size: 17px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 15px; }}
           .belge {{ font-size: 18px; margin-bottom: 10px; color: #333; font-weight: bold; }}
-          .palet {{ font-size: 34px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
+          .palet {{ font-size: 50px; margin: 15px 0; background: transparent; color: black; font-weight: bold; letter-spacing: 2px; }}
           .urunler {{ text-align: left; font-size: 16px; margin-bottom: 10px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
           ul {{ margin: 0; padding-left: 20px; }}
           li {{ margin-bottom: 5px; }}

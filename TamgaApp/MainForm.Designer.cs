@@ -3862,6 +3862,7 @@ namespace TamgaApp
             this.btnKamyonYukle.TabIndex = 48;
             this.btnKamyonYukle.Text = "ARAÇ YÜKLEMEYİ BAŞLAT";
             this.btnKamyonYukle.UseVisualStyleBackColor = false;
+            this.btnKamyonYukle.Click += new System.EventHandler(this.btnKamyonYukle_Click);
             // 
             // MainForm
             // 
