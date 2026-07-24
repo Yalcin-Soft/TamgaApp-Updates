@@ -5927,7 +5927,7 @@ namespace TamgaApp
             if (cmbAktifPalet.Items.Count > 0) cmbAktifPalet.SelectedIndex = 0;
         }
 
-        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (Yeni Tasarım)
+        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (YENİ SADELEŞTİRİLMİŞ TASARIM)
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
             if (cmbAktifPalet.SelectedItem == null)
@@ -5939,13 +5939,28 @@ namespace TamgaApp
             int aktifPaletIndex = cmbAktifPalet.SelectedIndex;
             string paletAdi = cmbAktifPalet.SelectedItem.ToString();
 
-            // Bu palete ait ürünleri topla
+            // Bu palete ait ürünleri topla ve metni temizle (Sadece Ürün Adı ve Adet)
             List<string> paletIcerigi = new List<string>();
             foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
             {
                 if (row.Cells[aktifPaletIndex].Value != null && !string.IsNullOrWhiteSpace(row.Cells[aktifPaletIndex].Value.ToString()))
                 {
-                    paletIcerigi.Add($"<li>{row.Cells[aktifPaletIndex].Value}</li>");
+                    string hamVeri = row.Cells[aktifPaletIndex].Value.ToString();
+
+                    // 1. " | Adet: " kısmından böl
+                    string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+                    string urunKismi = parcalar[0];
+                    string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
+
+                    // 2. Parantez içindeki Belge Numarasını Uçur: (SE-001) vs.
+                    int parantezIndex = urunKismi.LastIndexOf('(');
+                    if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
+
+                    // 3. Başındaki Malzeme Kodunu Uçur: 869768... - 
+                    int tireIndex = urunKismi.IndexOf(" - ");
+                    if (tireIndex > 0) urunKismi = urunKismi.Substring(tireIndex + 3).Trim();
+
+                    paletIcerigi.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
                 }
             }
 
@@ -5969,26 +5984,31 @@ namespace TamgaApp
 
             string musteriAdi = txtMusteriAdi.Text.Trim();
             string sevkMusteriAdi = txtSevkMusteri.Text.Trim();
-            if (string.IsNullOrEmpty(sevkMusteriAdi)) sevkMusteriAdi = "Belirtilmedi"; // Boşsa patlamasın
+            if (string.IsNullOrEmpty(sevkMusteriAdi)) sevkMusteriAdi = "Belirtilmedi";
 
             string belgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>());
             string listeHtml = string.Join("", paletIcerigi);
 
-            // 🌟 KUSURSUZ YENİ HTML TASARIMI
+            // 🌟 YEPYENİ ŞİŞKİN VE TEK SATIRLI HTML TASARIMI
             string html = $@"<html>
     <head>
        <meta charset='utf-8'>
        <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
        <style>
-          body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 5px 20px 20px 20px; }}
-          .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 2px; line-height: 1.1; }}
-          .sevk-musteri {{ font-size: 17px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 15px; }}
-          .belge {{ font-size: 18px; margin-bottom: 10px; color: #333; font-weight: bold; }}
-          .palet {{ font-size: 50px; margin: 15px 0; background: transparent; color: black; font-weight: bold; letter-spacing: 2px; }}
-          .urunler {{ text-align: left; font-size: 16px; margin-bottom: 10px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
-          ul {{ margin: 0; padding-left: 20px; }}
-          li {{ margin-bottom: 5px; }}
-          .barkod-alani {{ margin-top: 40px; }} 
+          body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
+          .firma {{ font-size: 65px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
+          .sevk-musteri {{ font-size: 26px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+          .belge {{ font-size: 24px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+          .palet {{ font-size: 75px; margin: 5px 0; background: transparent; color: black; font-weight: bold; }}
+          
+          /* Kutu Genişletildi ve Yazılar Büyütüldü */
+          .urunler {{ text-align: left; font-size: 22px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 120px; }}
+          ul {{ margin: 0; padding-left: 5px; list-style-type: none; }}
+          
+          /* Yazı Taşıp Alt Satıra İnmesin, Tek Satırda Kalsın Koruması */
+          li {{ margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
+          
+          .barkod-alani {{ margin-top: 15px; }} 
        </style>
     </head>
     <body>
@@ -5996,12 +6016,15 @@ namespace TamgaApp
        <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
        <div class='belge'>Belge No: {belgeNo}</div>
        <div class='palet'>{paletAdi}</div>
+       
        <div class='urunler'><ul>{listeHtml}</ul></div>
+       
        <div class='barkod-alani'>
            <svg id='barkod'></svg>
        </div>
        <script>
-          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 4, height: 140, displayValue: true, fontSize: 26, fontOptions: 'bold' }});
+          // Genişliği(width) 5 yapıldı (kalın), boyu(height) 80 yapıldı (kısa ve geniş format)
+          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 80, displayValue: true, fontSize: 32, fontOptions: 'bold', margin: 0 }});
        </script>
     </body></html>";
 
@@ -6501,34 +6524,52 @@ namespace TamgaApp
                 string seciliPalet = dgvDetay.SelectedRows[0].Cells[0].Value.ToString();
                 string barkod = dgvDetay.SelectedRows[0].Cells[2].Value.ToString();
 
-                if (string.IsNullOrEmpty(aktifSevkMusteri)) aktifSevkMusteri = "Belirtilmedi"; // Boşsa engelle
+                if (string.IsNullOrEmpty(aktifSevkMusteri)) aktifSevkMusteri = "Belirtilmedi";
 
+                // Ürünleri topla ve metni temizle
                 List<string> urunler = new List<string>();
                 foreach (DataGridViewRow r in dgvDetay.Rows)
                 {
                     if (r.Cells[0].Value.ToString() == seciliPalet && r.Cells[2].Value.ToString() == barkod)
                     {
-                        urunler.Add($"<li>{r.Cells[1].Value}</li>");
+                        string hamVeri = r.Cells[1].Value.ToString();
+
+                        string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+                        string urunKismi = parcalar[0];
+                        string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
+
+                        int parantezIndex = urunKismi.LastIndexOf('(');
+                        if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
+
+                        int tireIndex = urunKismi.IndexOf(" - ");
+                        if (tireIndex > 0) urunKismi = urunKismi.Substring(tireIndex + 3).Trim();
+
+                        urunler.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
                     }
                 }
 
                 string listeHtml = string.Join("", urunler);
 
-                // 🌟 KUSURSUZ YENİ HTML TASARIMI (BÜYÜK FİRMA, SEVK MÜŞTERİ, GENİŞ BARKOD)
+                // 🌟 YEPYENİ ŞİŞKİN VE TEK SATIRLI HTML TASARIMI
                 string html = $@"<html>
         <head>
            <meta charset='utf-8'>
            <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
            <style>
-              body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 5px 20px 20px 20px; }}
-              .firma {{ font-size: 34px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 2px; line-height: 1.1; }}
-              .sevk-musteri {{ font-size: 17px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 15px; }}
-              .belge {{ font-size: 18px; margin-bottom: 10px; color: #333; font-weight: bold; }}
-              .palet {{ font-size: 34px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
-              .urunler {{ text-align: left; font-size: 16px; margin-bottom: 10px; font-weight: 500; border: 2px dashed black; padding: 15px; min-height: 120px; }}
-              ul {{ margin: 0; padding-left: 20px; }}
-              li {{ margin-bottom: 5px; }}
-              .barkod-alani {{ margin-top: 40px; }} 
+              body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
+              .firma {{ font-size: 65px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
+              .sevk-musteri {{ font-size: 26px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+              .belge {{ font-size: 24px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+              .palet {{ font-size: 75px; margin: 5px 0; background: transparent; color: black; font-weight: bold; }}
+              
+              /* Kutu Genişletildi ve Yazılar Büyütüldü */
+              .urunler {{ text-align: left; font-size: 22px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 120px; }}
+              ul {{ margin: 0; padding-left: 5px; list-style-type: none; }}
+              
+              /* Yazı Taşıp Alt Satıra İnmesin, Tek Satırda Kalsın Koruması */
+              li {{ margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 1px solid #ccc; padding-bottom: 5px; }}
+              
+              .barkod-alani {{ margin-top: 15px; }} 
            </style>
         </head>
         <body>
@@ -6536,13 +6577,15 @@ namespace TamgaApp
            <div class='sevk-musteri'>Sevk: {aktifSevkMusteri}</div>
            <div class='belge'>Belge No: {aktifBelge}</div>
            <div class='palet'>{seciliPalet}</div>
+           
            <div class='urunler'><ul>{listeHtml}</ul></div>
+           
            <div class='barkod-alani'>
                <svg id='barkod'></svg>
            </div>
            <script>
-      JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 2, height: 140, displayValue: true, fontSize: 26, fontOptions: 'bold' }});
-   </script>
+              JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 5, height: 80, displayValue: true, fontSize: 32, fontOptions: 'bold', margin: 0 }});
+           </script>
         </body></html>";
 
                 Form frmYazdir = new Form { Text = "Etiket Yazdırılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent };
@@ -6560,7 +6603,7 @@ namespace TamgaApp
                 };
 
                 frmYazdir.ShowDialog();
-        };
+            };
 
             // 🌟 KÜRESEL BARKOD SORGULAMA MOTORU (Cihazdan okutulan EAN-13'ü tüm arşivde arar)
             txtSorgu.KeyDown += (s, e) =>
