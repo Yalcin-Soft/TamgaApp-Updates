@@ -40,6 +40,7 @@ namespace TamgaApp
             this.tabPage13 = new System.Windows.Forms.TabPage();
             this.splitContainer6 = new System.Windows.Forms.SplitContainer();
             this.panel8 = new System.Windows.Forms.Panel();
+            this.btnKamyonYukle = new System.Windows.Forms.Button();
             this.btnAskidanSil = new System.Windows.Forms.Button();
             this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
             this.lstYarimSevkler = new System.Windows.Forms.ListBox();
@@ -347,7 +348,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnKamyonYukle = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -490,6 +490,18 @@ namespace TamgaApp
             this.panel8.Name = "panel8";
             this.panel8.Size = new System.Drawing.Size(519, 333);
             this.panel8.TabIndex = 53;
+            // 
+            // btnKamyonYukle
+            // 
+            this.btnKamyonYukle.BackColor = System.Drawing.Color.LimeGreen;
+            this.btnKamyonYukle.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnKamyonYukle.Location = new System.Drawing.Point(389, 154);
+            this.btnKamyonYukle.Name = "btnKamyonYukle";
+            this.btnKamyonYukle.Size = new System.Drawing.Size(127, 146);
+            this.btnKamyonYukle.TabIndex = 48;
+            this.btnKamyonYukle.Text = "ARAÇ YÜKLEMEYİ BAŞLAT";
+            this.btnKamyonYukle.UseVisualStyleBackColor = false;
+            this.btnKamyonYukle.Click += new System.EventHandler(this.btnKamyonYukle_Click);
             // 
             // btnAskidanSil
             // 
@@ -3851,18 +3863,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Name = "cmbPaletSayisi";
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
-            // 
-            // btnKamyonYukle
-            // 
-            this.btnKamyonYukle.BackColor = System.Drawing.Color.LimeGreen;
-            this.btnKamyonYukle.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnKamyonYukle.Location = new System.Drawing.Point(389, 154);
-            this.btnKamyonYukle.Name = "btnKamyonYukle";
-            this.btnKamyonYukle.Size = new System.Drawing.Size(127, 146);
-            this.btnKamyonYukle.TabIndex = 48;
-            this.btnKamyonYukle.Text = "ARAÇ YÜKLEMEYİ BAŞLAT";
-            this.btnKamyonYukle.UseVisualStyleBackColor = false;
-            this.btnKamyonYukle.Click += new System.EventHandler(this.btnKamyonYukle_Click);
             // 
             // MainForm
             // 

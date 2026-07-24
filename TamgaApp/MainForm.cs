@@ -2931,7 +2931,8 @@ namespace TamgaApp
         }
         #endregion
 
-        #region 📂 10.3 GEÇMİŞ RAPORLARI GÖRÜNTÜLEME
+        #region 📂 10.3 GEÇMİŞ RAPORLARI GÖRÜNTÜLEME VE İPTAL MOTORU
+
         // Kaydedilmiş klasörü tarar ve dosyaları Yıl > Ay ağacına (TreeView) yerleştirir
         private void btnRaporYenile_Click(object sender, EventArgs e)
         {
@@ -3065,6 +3066,310 @@ namespace TamgaApp
                 }
             }
         }
+
+        private void btnGecmisSevkleriListele_Click(object sender, EventArgs e)
+        {
+            string kokYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar");
+            if (!Directory.Exists(kokYol))
+            {
+                MessageBox.Show("Henüz tamamlanmış hiçbir sevkiyat arşivi bulunamadı.", "Arşiv Boş", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            Form frmArsiv = new Form { Text = "Gelişmiş Geçmiş Sevkiyatlar Arşivi", Size = new Size(1200, 750), StartPosition = FormStartPosition.CenterScreen, Icon = this.Icon };
+
+            Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(45, 52, 54), ForeColor = Color.White };
+
+            Label lblTur = new Label { Text = "Tür:", AutoSize = true, Location = new Point(15, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            ComboBox cmbTur = new ComboBox { Location = new Point(55, 22), Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbTur.Items.AddRange(new string[] { "Tümü", "İhracat", "Yurtiçi" }); cmbTur.SelectedIndex = 0;
+
+            Label lblYil = new Label { Text = "Yıl:", AutoSize = true, Location = new Point(165, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            ComboBox cmbYil = new ComboBox { Location = new Point(195, 22), Width = 80, DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbYil.Items.Add("Tümü"); cmbYil.SelectedIndex = 0;
+
+            Label lblAy = new Label { Text = "Ay:", AutoSize = true, Location = new Point(285, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            ComboBox cmbAy = new ComboBox { Location = new Point(315, 22), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbAy.Items.Add("Tümü"); cmbAy.SelectedIndex = 0;
+
+            Label lblGun = new Label { Text = "Gün:", AutoSize = true, Location = new Point(385, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            ComboBox cmbGun = new ComboBox { Location = new Point(425, 22), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList };
+            cmbGun.Items.Add("Tümü"); cmbGun.SelectedIndex = 0;
+
+            Label lblFirma = new Label { Text = "Firma Ara:", AutoSize = true, Location = new Point(495, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            TextBox txtFirmaAra = new TextBox { Location = new Point(575, 22), Width = 180, Font = new Font("Segoe UI", 10) };
+
+            Button btnFiltrele = new Button { Text = "🔍 Sorgula", Location = new Point(765, 20), Width = 100, Height = 30, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
+
+            // 🚨 İŞTE O KAN KIRMIZISI "SEVKİYATI GERİ AL" BUTONU BURADA
+            Button btnGeriAl = new Button();
+            btnGeriAl.Text = "↩️ SEVKİYATI GERİ AL";
+            btnGeriAl.BackColor = Color.FromArgb(231, 76, 60);
+            btnGeriAl.ForeColor = Color.White;
+            btnGeriAl.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            btnGeriAl.Size = new Size(160, 30);
+            btnGeriAl.Location = new Point(875, 20);
+            btnGeriAl.Cursor = Cursors.Hand;
+            btnGeriAl.FlatStyle = FlatStyle.Flat;
+
+            pnlUst.Controls.AddRange(new Control[] { lblTur, cmbTur, lblYil, cmbYil, lblAy, cmbAy, lblGun, cmbGun, lblFirma, txtFirmaAra, btnFiltrele, btnGeriAl });
+
+            try
+            {
+                var yillar = Directory.GetDirectories(kokYol, "*", SearchOption.AllDirectories)
+                    .Select(d => new DirectoryInfo(d).Name).Where(n => n.Length == 4 && n.StartsWith("20")).Distinct().OrderBy(x => x);
+                foreach (var y in yillar) cmbYil.Items.Add(y);
+                for (int i = 1; i <= 12; i++) cmbAy.Items.Add(i.ToString("D2"));
+                for (int i = 1; i <= 31; i++) cmbGun.Items.Add(i.ToString("D2"));
+            }
+            catch { }
+
+            SplitContainer split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 350 };
+            TreeView tvArsiv = new TreeView { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11) };
+            split.Panel1.Controls.Add(tvArsiv);
+
+            DataGridView dgvDetay = new DataGridView { Dock = DockStyle.Fill, AllowUserToAddRows = false, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.WhiteSmoke, SelectionMode = DataGridViewSelectionMode.FullRowSelect };
+            Button btnYazdir = new Button { Text = "🖨️ Seçili Raporu Çıktı Al (Edge)", Dock = DockStyle.Bottom, Height = 50, BackColor = Color.Orange, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
+            split.Panel2.Controls.Add(dgvDetay);
+            split.Panel2.Controls.Add(btnYazdir);
+
+            frmArsiv.Controls.Add(split);
+            frmArsiv.Controls.Add(pnlUst);
+
+            string aktifDosyaYolu = "";
+            string aktifDosyaAdi = "";
+
+            Action AgaciDoldur = () =>
+            {
+                tvArsiv.Nodes.Clear();
+                TreeNode kok = new TreeNode("📦 Filtrelenmiş Arşiv") { Tag = "KOK" };
+                tvArsiv.Nodes.Add(kok);
+
+                string seciliTur = cmbTur.SelectedItem.ToString();
+                string seciliYil = cmbYil.SelectedItem.ToString();
+                string seciliAy = cmbAy.SelectedItem.ToString();
+                string seciliGun = cmbGun.SelectedItem.ToString();
+                string arananFirma = txtFirmaAra.Text.Trim().ToLower();
+
+                string[] tumDosyalar = Directory.GetFiles(kokYol, "*.csv", SearchOption.AllDirectories);
+
+                foreach (string dosya in tumDosyalar)
+                {
+                    string[] parcalar = dosya.Substring(kokYol.Length + 1).Split(Path.DirectorySeparatorChar);
+                    if (parcalar.Length >= 4)
+                    {
+                        string dTur = parcalar[0];
+                        string dYil = parcalar[1];
+                        string dAy = parcalar[2];
+                        string dGun = parcalar[3];
+                        string dAd = Path.GetFileNameWithoutExtension(dosya);
+
+                        if (seciliTur != "Tümü" && dTur != seciliTur) continue;
+                        if (seciliYil != "Tümü" && dYil != seciliYil) continue;
+                        if (seciliAy != "Tümü" && dAy != seciliAy) continue;
+                        if (seciliGun != "Tümü" && dGun != seciliGun) continue;
+                        if (!string.IsNullOrEmpty(arananFirma) && !dAd.ToLower().Contains(arananFirma)) continue;
+
+                        TreeNode turNode = kok.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dTur) ?? kok.Nodes.Add(dTur, dTur);
+                        TreeNode yilNode = turNode.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dYil) ?? turNode.Nodes.Add(dYil, dYil);
+                        TreeNode ayNode = yilNode.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dAy) ?? yilNode.Nodes.Add(dAy, dAy);
+                        TreeNode gunNode = ayNode.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dGun) ?? ayNode.Nodes.Add(dGun, dGun);
+
+                        gunNode.Nodes.Add(new TreeNode("📄 " + dAd) { Tag = dosya, ForeColor = Color.DarkBlue });
+                    }
+                }
+                kok.ExpandAll();
+            };
+
+            btnFiltrele.Click += (btnSender, btnEv) => AgaciDoldur();
+            AgaciDoldur();
+
+            // 🚨 GERİ AL BUTONU OLAYI (CS0136 HATASINI ÖNLEMEK İÇİN PARAMETRELER DEĞİŞTİRİLDİ)
+            btnGeriAl.Click += (btnSender, btnEv) =>
+            {
+                if (tvArsiv.SelectedNode == null || tvArsiv.SelectedNode.Tag == null || !tvArsiv.SelectedNode.Tag.ToString().EndsWith(".csv"))
+                {
+                    MessageBox.Show("Lütfen sol taraftaki ağaçtan iptal etmek istediğiniz sevkiyat dosyasını seçin!", "Dosya Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string dosyaYolu = tvArsiv.SelectedNode.Tag.ToString();
+                string dosyaAdi = tvArsiv.SelectedNode.Text;
+
+                DialogResult onay = MessageBox.Show($"DİKKAT! '{dosyaAdi}' sevkiyatını iptal edip GERİ ALMAK istiyor musunuz?\n\nBu işlemle:\n1. Arşivdeki bu CSV dosyası tamamen silinecek.\n2. Sistem bu dosyayı bulamadığı için içindeki belge numaralarını tekrar 'BEKLEYENLER' listesine düşürecektir.\n\nEmin misiniz?", "Sevkiyatı Geri Al Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+                if (onay == DialogResult.Yes)
+                {
+                    try
+                    {
+                        if (File.Exists(dosyaYolu))
+                        {
+                            File.Delete(dosyaYolu); // Dosyayı sildiğimiz için siparişler ana ekrana dönecek
+                            MessageBox.Show("Sevkiyat başarıyla iptal edildi ve geri alındı. Sipariş numaraları ana ekrana döndü.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            tvArsiv.Nodes.Remove(tvArsiv.SelectedNode); // Ağaçtan sil
+                            dgvDetay.Rows.Clear(); // Detay tablosunu temizle
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Dosya silinirken hata oluştu (Dosya açık olabilir): \n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+
+            tvArsiv.AfterSelect += (treeSender, treeEv) =>
+            {
+                if (treeEv.Node.Tag != null && treeEv.Node.Tag.ToString().EndsWith(".csv"))
+                {
+                    aktifDosyaYolu = treeEv.Node.Tag.ToString();
+                    aktifDosyaAdi = Path.GetFileNameWithoutExtension(aktifDosyaYolu);
+
+                    DataTable dtPivot = new DataTable();
+                    dtPivot.Columns.Add("Belge No", typeof(string));
+                    dtPivot.Columns.Add("TOPLAM ADET", typeof(int));
+                    dtPivot.Columns.Add("Malzeme Kodu", typeof(string));
+                    dtPivot.Columns.Add("Malzeme Adı", typeof(string));
+
+                    string[] csvSatirlar = File.ReadAllLines(aktifDosyaYolu, System.Text.Encoding.UTF8);
+                    bool detaylarBasladi = false;
+
+                    List<string> paletSutunlari = new List<string>();
+                    var veriHavuzu = new Dictionary<string, Dictionary<string, int>>();
+
+                    foreach (string satir in csvSatirlar)
+                    {
+                        if (satir.Contains("--- DETAYLAR ---")) { detaylarBasladi = true; continue; }
+                        if (detaylarBasladi && !satir.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(satir))
+                        {
+                            string[] huc = satir.Split(';');
+                            if (huc.Length == 3 || huc.Length == 2)
+                            {
+                                string paletNo = huc[0].Trim();
+                                string icerik = huc[1].Trim();
+
+                                if (!paletSutunlari.Contains(paletNo))
+                                {
+                                    paletSutunlari.Add(paletNo);
+                                    dtPivot.Columns.Add(paletNo, typeof(int));
+                                }
+
+                                string[] parcalar = icerik.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
+                                if (parcalar.Length == 2)
+                                {
+                                    string urunVeBelge = parcalar[0].Trim();
+                                    int.TryParse(parcalar[1].Trim(), out int adet);
+
+                                    string bNo = "BİLİNMEYEN";
+                                    string malzemeKodu = urunVeBelge;
+                                    string malzemeAdi = "";
+
+                                    int sonParantezAc = urunVeBelge.LastIndexOf('(');
+                                    int sonParantezKapat = urunVeBelge.LastIndexOf(')');
+                                    if (sonParantezAc > 0 && sonParantezKapat > sonParantezAc)
+                                    {
+                                        bNo = urunVeBelge.Substring(sonParantezAc + 1, sonParantezKapat - sonParantezAc - 1).Trim();
+                                        urunVeBelge = urunVeBelge.Substring(0, sonParantezAc).Trim();
+                                    }
+
+                                    int tireIndex = urunVeBelge.IndexOf(" - ");
+                                    if (tireIndex > 0)
+                                    {
+                                        malzemeKodu = urunVeBelge.Substring(0, tireIndex).Trim();
+                                        malzemeAdi = urunVeBelge.Substring(tireIndex + 3).Trim();
+                                    }
+                                    else { malzemeKodu = urunVeBelge; }
+
+                                    string anahtar = $"{bNo}|||{malzemeKodu}|||{malzemeAdi}";
+
+                                    if (!veriHavuzu.ContainsKey(anahtar)) veriHavuzu[anahtar] = new Dictionary<string, int>();
+
+                                    if (veriHavuzu[anahtar].ContainsKey(paletNo)) veriHavuzu[anahtar][paletNo] += adet;
+                                    else veriHavuzu[anahtar][paletNo] = adet;
+                                }
+                            }
+                        }
+                    }
+
+                    foreach (var kvp in veriHavuzu)
+                    {
+                        string[] anahtarParcalar = kvp.Key.Split(new string[] { "|||" }, StringSplitOptions.None);
+                        DataRow row = dtPivot.NewRow();
+                        row["Belge No"] = anahtarParcalar[0];
+                        row["Malzeme Kodu"] = anahtarParcalar[1];
+                        row["Malzeme Adı"] = anahtarParcalar[2];
+
+                        int genelToplam = 0;
+                        foreach (var paletKvp in kvp.Value)
+                        {
+                            row[paletKvp.Key] = paletKvp.Value;
+                            genelToplam += paletKvp.Value;
+                        }
+                        row["TOPLAM ADET"] = genelToplam;
+                        dtPivot.Rows.Add(row);
+                    }
+
+                    dgvDetay.DataSource = dtPivot;
+                }
+            };
+
+            btnYazdir.Click += async (printSender, printEv) =>
+            {
+                if (dgvDetay.Rows.Count == 0 || string.IsNullOrEmpty(aktifDosyaYolu)) { MessageBox.Show("Önce soldaki listeden bir rapor seçin!"); return; }
+
+                System.Text.StringBuilder html = new System.Text.StringBuilder();
+                html.AppendLine("<html><head><meta charset='utf-8'><style>");
+                html.AppendLine("table { border-collapse: collapse; width: 100%; font-family: 'Segoe UI', Arial; font-size: 12px; }");
+                html.AppendLine("th, td { border: 1px solid black; padding: 6px; text-align: center; }");
+                html.AppendLine("th { background-color: #d9d9d9; font-weight: bold; }");
+                html.AppendLine(".sol-hizala { text-align: left; }");
+                html.AppendLine(".kalin { font-weight: bold; }");
+                html.AppendLine("h2 { text-align: center; font-family: 'Segoe UI', Arial; margin-bottom: 20px; }");
+                html.AppendLine("</style></head><body>");
+
+                html.AppendLine($"<h2>{aktifDosyaAdi} - DETAY DÖKÜMÜ</h2>");
+
+                html.AppendLine("<table><tr>");
+                foreach (DataGridViewColumn col in dgvDetay.Columns) html.AppendLine($"<th>{col.HeaderText}</th>");
+                html.AppendLine("</tr>");
+
+                foreach (DataGridViewRow r in dgvDetay.Rows)
+                {
+                    if (!r.Visible) continue;
+                    html.AppendLine("<tr>");
+                    foreach (DataGridViewCell cell in r.Cells)
+                    {
+                        string sinif = "";
+                        if (dgvDetay.Columns[cell.ColumnIndex].HeaderText == "Malzeme Adı") sinif = "class='sol-hizala'";
+                        else if (dgvDetay.Columns[cell.ColumnIndex].HeaderText == "TOPLAM ADET" || dgvDetay.Columns[cell.ColumnIndex].HeaderText == "Belge No") sinif = "class='kalin'";
+
+                        html.AppendLine($"<td {sinif}>{cell.Value}</td>");
+                    }
+                    html.AppendLine("</tr>");
+                }
+                html.AppendLine("</table></body></html>");
+
+                Form frmYazdir = new Form { Text = "Rapor Yazdırılıyor...", Width = 1000, Height = 600, ShowIcon = false, StartPosition = FormStartPosition.CenterParent };
+                Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+                frmYazdir.Controls.Add(web);
+                frmYazdir.FormClosed += (formSender, formEv) => { web.Dispose(); };
+
+                frmYazdir.Shown += async (formSender, formEv) =>
+                {
+                    string tempFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "ArsivPrint");
+                    var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, tempFolder);
+                    await web.EnsureCoreWebView2Async(ozelHafiza);
+
+                    web.NavigationCompleted += (webSender, navEv) => { web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser); };
+                    web.NavigateToString(html.ToString());
+                };
+
+                frmYazdir.ShowDialog();
+            };
+
+            frmArsiv.ShowDialog();
+        }
+
         #endregion
 
         #region 📊 10.4 EXCEL'DEN VERİTABANINA ÜRÜN AKTARIMI VE SİLME
@@ -6011,264 +6316,7 @@ namespace TamgaApp
             catch { }
         }
 
-        // Filtreli ve Ağaç Yapılı Gelişmiş Sevkiyat Arşivi Ekranı
-        private void btnGecmisSevkleriListele_Click(object sender, EventArgs e)
-        {
-            string kokYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar");
-            if (!Directory.Exists(kokYol))
-            {
-                MessageBox.Show("Henüz tamamlanmış hiçbir sevkiyat arşivi bulunamadı.", "Arşiv Boş", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            Form frmArsiv = new Form { Text = "Gelişmiş Geçmiş Sevkiyatlar Arşivi", Size = new Size(1200, 750), StartPosition = FormStartPosition.CenterScreen, Icon = this.Icon };
-
-            Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(45, 52, 54), ForeColor = Color.White };
-
-            Label lblTur = new Label { Text = "Tür:", AutoSize = true, Location = new Point(15, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            ComboBox cmbTur = new ComboBox { Location = new Point(55, 22), Width = 100, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbTur.Items.AddRange(new string[] { "Tümü", "İhracat", "Yurtiçi" }); cmbTur.SelectedIndex = 0;
-
-            Label lblYil = new Label { Text = "Yıl:", AutoSize = true, Location = new Point(165, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            ComboBox cmbYil = new ComboBox { Location = new Point(195, 22), Width = 80, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbYil.Items.Add("Tümü"); cmbYil.SelectedIndex = 0;
-
-            Label lblAy = new Label { Text = "Ay:", AutoSize = true, Location = new Point(285, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            ComboBox cmbAy = new ComboBox { Location = new Point(315, 22), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbAy.Items.Add("Tümü"); cmbAy.SelectedIndex = 0;
-
-            Label lblGun = new Label { Text = "Gün:", AutoSize = true, Location = new Point(385, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            ComboBox cmbGun = new ComboBox { Location = new Point(425, 22), Width = 60, DropDownStyle = ComboBoxStyle.DropDownList };
-            cmbGun.Items.Add("Tümü"); cmbGun.SelectedIndex = 0;
-
-            Label lblFirma = new Label { Text = "Firma Ara:", AutoSize = true, Location = new Point(495, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            TextBox txtFirmaAra = new TextBox { Location = new Point(575, 22), Width = 200, Font = new Font("Segoe UI", 10) };
-
-            Button btnFiltrele = new Button { Text = "🔍 Sorgula", Location = new Point(790, 20), Width = 120, Height = 30, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
-
-            pnlUst.Controls.AddRange(new Control[] { lblTur, cmbTur, lblYil, cmbYil, lblAy, cmbAy, lblGun, cmbGun, lblFirma, txtFirmaAra, btnFiltrele });
-
-            try
-            {
-                var yillar = Directory.GetDirectories(kokYol, "*", SearchOption.AllDirectories)
-                    .Select(d => new DirectoryInfo(d).Name).Where(n => n.Length == 4 && n.StartsWith("20")).Distinct().OrderBy(x => x);
-                foreach (var y in yillar) cmbYil.Items.Add(y);
-                for (int i = 1; i <= 12; i++) cmbAy.Items.Add(i.ToString("D2"));
-                for (int i = 1; i <= 31; i++) cmbGun.Items.Add(i.ToString("D2"));
-            }
-            catch { }
-
-            SplitContainer split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 350 };
-            TreeView tvArsiv = new TreeView { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11) };
-            split.Panel1.Controls.Add(tvArsiv);
-
-            DataGridView dgvDetay = new DataGridView { Dock = DockStyle.Fill, AllowUserToAddRows = false, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, BackgroundColor = Color.WhiteSmoke, SelectionMode = DataGridViewSelectionMode.FullRowSelect };
-            Button btnYazdir = new Button { Text = "🖨️ Seçili Raporu Çıktı Al (Edge)", Dock = DockStyle.Bottom, Height = 50, BackColor = Color.Orange, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
-            split.Panel2.Controls.Add(dgvDetay);
-            split.Panel2.Controls.Add(btnYazdir);
-
-            frmArsiv.Controls.Add(split);
-            frmArsiv.Controls.Add(pnlUst);
-
-            string aktifDosyaYolu = "";
-            string aktifDosyaAdi = "";
-
-            Action AgaciDoldur = () =>
-            {
-                tvArsiv.Nodes.Clear();
-                TreeNode kok = new TreeNode("📦 Filtrelenmiş Arşiv") { Tag = "KOK" };
-                tvArsiv.Nodes.Add(kok);
-
-                string seciliTur = cmbTur.SelectedItem.ToString();
-                string seciliYil = cmbYil.SelectedItem.ToString();
-                string seciliAy = cmbAy.SelectedItem.ToString();
-                string seciliGun = cmbGun.SelectedItem.ToString();
-                string arananFirma = txtFirmaAra.Text.Trim().ToLower();
-
-                string[] tumDosyalar = Directory.GetFiles(kokYol, "*.csv", SearchOption.AllDirectories);
-
-                foreach (string dosya in tumDosyalar)
-                {
-                    string[] parcalar = dosya.Substring(kokYol.Length + 1).Split(Path.DirectorySeparatorChar);
-                    if (parcalar.Length >= 4)
-                    {
-                        string dTur = parcalar[0];
-                        string dYil = parcalar[1];
-                        string dAy = parcalar[2];
-                        string dGun = parcalar[3];
-                        string dAd = Path.GetFileNameWithoutExtension(dosya);
-
-                        if (seciliTur != "Tümü" && dTur != seciliTur) continue;
-                        if (seciliYil != "Tümü" && dYil != seciliYil) continue;
-                        if (seciliAy != "Tümü" && dAy != seciliAy) continue;
-                        if (seciliGun != "Tümü" && dGun != seciliGun) continue;
-                        if (!string.IsNullOrEmpty(arananFirma) && !dAd.ToLower().Contains(arananFirma)) continue;
-
-                        TreeNode turNode = kok.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dTur) ?? kok.Nodes.Add(dTur, dTur);
-                        TreeNode yilNode = turNode.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dYil) ?? turNode.Nodes.Add(dYil, dYil);
-                        TreeNode ayNode = yilNode.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dAy) ?? yilNode.Nodes.Add(dAy, dAy);
-                        TreeNode gunNode = ayNode.Nodes.Cast<TreeNode>().FirstOrDefault(n => n.Text == dGun) ?? ayNode.Nodes.Add(dGun, dGun);
-
-                        gunNode.Nodes.Add(new TreeNode("📄 " + dAd) { Tag = dosya, ForeColor = Color.DarkBlue });
-                    }
-                }
-                kok.ExpandAll();
-            };
-
-            btnFiltrele.Click += (s, ev) => AgaciDoldur();
-            AgaciDoldur();
-
-            tvArsiv.AfterSelect += (s, ev) =>
-            {
-                if (ev.Node.Tag != null && ev.Node.Tag.ToString().EndsWith(".csv"))
-                {
-                    aktifDosyaYolu = ev.Node.Tag.ToString();
-                    aktifDosyaAdi = Path.GetFileNameWithoutExtension(aktifDosyaYolu);
-
-                    DataTable dtPivot = new DataTable();
-                    dtPivot.Columns.Add("Belge No", typeof(string));
-                    dtPivot.Columns.Add("TOPLAM ADET", typeof(int));
-                    dtPivot.Columns.Add("Malzeme Kodu", typeof(string));
-                    dtPivot.Columns.Add("Malzeme Adı", typeof(string));
-
-                    string[] csvSatirlar = File.ReadAllLines(aktifDosyaYolu, System.Text.Encoding.UTF8);
-                    bool detaylarBasladi = false;
-
-                    List<string> paletSutunlari = new List<string>();
-                    var veriHavuzu = new Dictionary<string, Dictionary<string, int>>();
-
-                    foreach (string satir in csvSatirlar)
-                    {
-                        if (satir.Contains("--- DETAYLAR ---")) { detaylarBasladi = true; continue; }
-                        if (detaylarBasladi && !satir.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(satir))
-                        {
-                            string[] huc = satir.Split(';');
-                            if (huc.Length == 3 || huc.Length == 2)
-                            {
-                                string paletNo = huc[0].Trim();
-                                string icerik = huc[1].Trim();
-
-                                if (!paletSutunlari.Contains(paletNo))
-                                {
-                                    paletSutunlari.Add(paletNo);
-                                    dtPivot.Columns.Add(paletNo, typeof(int));
-                                }
-
-                                string[] parcalar = icerik.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
-                                if (parcalar.Length == 2)
-                                {
-                                    string urunVeBelge = parcalar[0].Trim();
-                                    int.TryParse(parcalar[1].Trim(), out int adet);
-
-                                    string bNo = "BİLİNMEYEN";
-                                    string malzemeKodu = urunVeBelge;
-                                    string malzemeAdi = "";
-
-                                    int sonParantezAc = urunVeBelge.LastIndexOf('(');
-                                    int sonParantezKapat = urunVeBelge.LastIndexOf(')');
-                                    if (sonParantezAc > 0 && sonParantezKapat > sonParantezAc)
-                                    {
-                                        bNo = urunVeBelge.Substring(sonParantezAc + 1, sonParantezKapat - sonParantezAc - 1).Trim();
-                                        urunVeBelge = urunVeBelge.Substring(0, sonParantezAc).Trim();
-                                    }
-
-                                    int tireIndex = urunVeBelge.IndexOf(" - ");
-                                    if (tireIndex > 0)
-                                    {
-                                        malzemeKodu = urunVeBelge.Substring(0, tireIndex).Trim();
-                                        malzemeAdi = urunVeBelge.Substring(tireIndex + 3).Trim();
-                                    }
-                                    else { malzemeKodu = urunVeBelge; }
-
-                                    string anahtar = $"{bNo}|||{malzemeKodu}|||{malzemeAdi}";
-
-                                    if (!veriHavuzu.ContainsKey(anahtar)) veriHavuzu[anahtar] = new Dictionary<string, int>();
-
-                                    if (veriHavuzu[anahtar].ContainsKey(paletNo)) veriHavuzu[anahtar][paletNo] += adet;
-                                    else veriHavuzu[anahtar][paletNo] = adet;
-                                }
-                            }
-                        }
-                    }
-
-                    foreach (var kvp in veriHavuzu)
-                    {
-                        string[] anahtarParcalar = kvp.Key.Split(new string[] { "|||" }, StringSplitOptions.None);
-                        DataRow row = dtPivot.NewRow();
-                        row["Belge No"] = anahtarParcalar[0];
-                        row["Malzeme Kodu"] = anahtarParcalar[1];
-                        row["Malzeme Adı"] = anahtarParcalar[2];
-
-                        int genelToplam = 0;
-                        foreach (var paletKvp in kvp.Value)
-                        {
-                            row[paletKvp.Key] = paletKvp.Value;
-                            genelToplam += paletKvp.Value;
-                        }
-                        row["TOPLAM ADET"] = genelToplam;
-                        dtPivot.Rows.Add(row);
-                    }
-
-                    dgvDetay.DataSource = dtPivot;
-                }
-            };
-
-            btnYazdir.Click += async (s, ev) =>
-            {
-                if (dgvDetay.Rows.Count == 0 || string.IsNullOrEmpty(aktifDosyaYolu)) { MessageBox.Show("Önce soldaki listeden bir rapor seçin!"); return; }
-
-                System.Text.StringBuilder html = new System.Text.StringBuilder();
-                html.AppendLine("<html><head><meta charset='utf-8'><style>");
-                html.AppendLine("table { border-collapse: collapse; width: 100%; font-family: 'Segoe UI', Arial; font-size: 12px; }");
-                html.AppendLine("th, td { border: 1px solid black; padding: 6px; text-align: center; }");
-                html.AppendLine("th { background-color: #d9d9d9; font-weight: bold; }");
-                html.AppendLine(".sol-hizala { text-align: left; }");
-                html.AppendLine(".kalin { font-weight: bold; }");
-                html.AppendLine("h2 { text-align: center; font-family: 'Segoe UI', Arial; margin-bottom: 20px; }");
-                html.AppendLine("</style></head><body>");
-
-                html.AppendLine($"<h2>{aktifDosyaAdi} - DETAY DÖKÜMÜ</h2>");
-
-                html.AppendLine("<table><tr>");
-                foreach (DataGridViewColumn col in dgvDetay.Columns) html.AppendLine($"<th>{col.HeaderText}</th>");
-                html.AppendLine("</tr>");
-
-                foreach (DataGridViewRow r in dgvDetay.Rows)
-                {
-                    if (!r.Visible) continue;
-                    html.AppendLine("<tr>");
-                    foreach (DataGridViewCell cell in r.Cells)
-                    {
-                        string sinif = "";
-                        if (dgvDetay.Columns[cell.ColumnIndex].HeaderText == "Malzeme Adı") sinif = "class='sol-hizala'";
-                        else if (dgvDetay.Columns[cell.ColumnIndex].HeaderText == "TOPLAM ADET" || dgvDetay.Columns[cell.ColumnIndex].HeaderText == "Belge No") sinif = "class='kalin'";
-
-                        html.AppendLine($"<td {sinif}>{cell.Value}</td>");
-                    }
-                    html.AppendLine("</tr>");
-                }
-                html.AppendLine("</table></body></html>");
-
-                Form frmYazdir = new Form { Text = "Rapor Yazdırılıyor...", Width = 1000, Height = 600, ShowIcon = false, StartPosition = FormStartPosition.CenterParent };
-                Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
-                frmYazdir.Controls.Add(web);
-                frmYazdir.FormClosed += (senderForm, args) => { web.Dispose(); };
-
-                frmYazdir.Shown += async (senderForm, args) =>
-                {
-                    string tempFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "ArsivPrint");
-                    var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, tempFolder);
-                    await web.EnsureCoreWebView2Async(ozelHafiza);
-
-                    web.NavigationCompleted += (senderWeb, evArgs) => { web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser); };
-                    web.NavigateToString(html.ToString());
-                };
-
-                frmYazdir.ShowDialog();
-            };
-
-            frmArsiv.ShowDialog();
-        }
+        
 
         #endregion
 
@@ -6311,6 +6359,8 @@ namespace TamgaApp
 
             Label lblSorgu = new Label { Text = "🔍 Palet Barkodu Okut:", ForeColor = Color.White, Location = new Point(20, 20), Font = new Font("Segoe UI", 11, FontStyle.Bold), AutoSize = true };
             TextBox txtSorgu = new TextBox { Location = new Point(220, 18), Width = 300, Font = new Font("Segoe UI", 12) };
+
+
 
             Label lblFirmaSorgu = new Label { Text = "Müşteri / Palet Ara:", ForeColor = Color.White, Location = new Point(20, 60), Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true };
             TextBox txtFirmaSorgu = new TextBox { Location = new Point(220, 58), Width = 300, Font = new Font("Segoe UI", 11) };
@@ -7124,45 +7174,111 @@ namespace TamgaApp
 
         private void btnKamyonYukle_Click(object sender, EventArgs e)
         {
-            // 1. Müşteri Adını Al (Sevkiyat Plan sayfasındaki Müşteri Seçilen ComboBox veya TextBox)
-            // ⚠️ DİKKAT: 'cmbMusteriSec' yerine kendi ComboBox'ının/TextBox'ının adını yaz!
-            string musteriAdi = cmbMusteri.Text;
-
-            if (string.IsNullOrWhiteSpace(musteriAdi))
+            string kokYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar");
+            if (!Directory.Exists(kokYol))
             {
-                MessageBox.Show("Lütfen önce bir müşteri seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Henüz tamamlanmış (arşive alınmış) hiçbir sevkiyat bulunamadı. Lütfen önce sevkiyat işlemi yapın.", "Arşiv Boş", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            // 2. Tablodaki Barkodları Topla
-            List<string> beklenenPaletler = new List<string>();
-
-            // ⚠️ DİKKAT: 'dgvMalzemeler' yerine kendi tablonun adını yaz! (Örn: dataGridView1)
-            foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
+            // 1. KAMYONA YÜKLENECEK FİRMAYI/ARŞİVİ SEÇME EKRANI
+            Form frmSecim = new Form
             {
-                // Tablodaki "Barkod" sütununu okuyoruz. (Senin tablondaki başlık farklıysa burayı düzelt)
-                if (!satir.IsNewRow && satir.Cells["Barkod"] != null && satir.Cells["Barkod"].Value != null)
-                {
-                    string barkod = satir.Cells["Barkod"].Value.ToString().Trim();
+                Text = "Araç Yükleme - Sevkiyat Dosyası Seçimi",
+                Size = new Size(800, 600),
+                StartPosition = FormStartPosition.CenterScreen,
+                Icon = this.Icon,
+                ShowIcon = false
+            };
 
-                    // Boş değilse, BARKOD YOK yazmıyorsa ve daha önce listeye eklenmediyse ekle
-                    if (!string.IsNullOrWhiteSpace(barkod) && barkod != "BARKOD YOK" && !beklenenPaletler.Contains(barkod))
-                    {
-                        beklenenPaletler.Add(barkod);
-                    }
+            TreeView tvArsiv = new TreeView { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 12) };
+            Button btnDevam = new Button { Text = "🚀 SEÇİLİ SEVKİYATIN KAMYON YÜKLEMESİNİ BAŞLAT", Dock = DockStyle.Bottom, Height = 60, BackColor = Color.MediumSeaGreen, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            frmSecim.Controls.Add(tvArsiv);
+            frmSecim.Controls.Add(btnDevam);
+
+            // Klasörleri ağaca dolduran yerel metot
+            TreeNode kok = new TreeNode("📦 Tamamlanan Sevkiyatlar") { Tag = "KOK" };
+            tvArsiv.Nodes.Add(kok);
+
+            void KlasorTaramasi(string dizin, TreeNode ebeveyn)
+            {
+                foreach (string klasor in Directory.GetDirectories(dizin))
+                {
+                    TreeNode dugum = new TreeNode("📁 " + Path.GetFileName(klasor)) { Tag = klasor };
+                    ebeveyn.Nodes.Add(dugum);
+                    KlasorTaramasi(klasor, dugum);
+                }
+                foreach (string dosya in Directory.GetFiles(dizin, "*.csv"))
+                {
+                    ebeveyn.Nodes.Add(new TreeNode("📄 " + Path.GetFileNameWithoutExtension(dosya)) { Tag = dosya, ForeColor = Color.DarkBlue });
                 }
             }
 
-            // 3. Kontrol
-            if (beklenenPaletler.Count == 0)
-            {
-                MessageBox.Show("Yüklenecek geçerli bir palet/barkod bulunamadı! Tabloda veri olduğundan emin olun.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+            KlasorTaramasi(kokYol, kok);
+            kok.ExpandAll();
 
-            // 4. Şov Başlasın! Tam Ekran Kiosk'u Çağır
-            FrmKamyonKiosk kioskEkran = new FrmKamyonKiosk(musteriAdi, beklenenPaletler);
-            kioskEkran.ShowDialog();
+            // 2. YÜKLEME BUTONUNA BASILINCA ÇALIŞACAK MOTOR
+            btnDevam.Click += (s2, e2) =>
+            {
+                if (tvArsiv.SelectedNode == null || tvArsiv.SelectedNode.Tag == null || !tvArsiv.SelectedNode.Tag.ToString().EndsWith(".csv"))
+                {
+                    MessageBox.Show("Lütfen kamyona yüklenecek sevkiyat dosyasını (📄) listeden seçin!", "Seçim Yapılmadı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string seciliDosya = tvArsiv.SelectedNode.Tag.ToString();
+
+                // CSV Dosyasını Oku
+                string[] satirlar = File.ReadAllLines(seciliDosya, System.Text.Encoding.UTF8);
+                if (satirlar.Length < 4)
+                {
+                    MessageBox.Show("Seçilen dosyanın formatı hatalı veya içi boş!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // Firma adını dosyadan çek (2. satır, ilk hücre)
+                string musteriAdi = satirlar[1].Split(';')[0];
+
+                // Paletleri Topla (Key: Barkod, Value: Palet Adı)
+                Dictionary<string, string> paletler = new Dictionary<string, string>();
+                bool detaylarBasladi = false;
+
+                foreach (string satir in satirlar)
+                {
+                    if (satir.Contains("--- DETAYLAR ---")) { detaylarBasladi = true; continue; }
+
+                    if (detaylarBasladi && !satir.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(satir))
+                    {
+                        string[] hucreler = satir.Split(';');
+                        if (hucreler.Length >= 3)
+                        {
+                            string pAdi = hucreler[0].Trim(); // Örn: 1. Palet
+                            string pBarkod = hucreler[2].Trim(); // Örn: 2026... (EAN13)
+
+                            // Aynı paletin birden çok ürünü olabilir, bu yüzden sözlükte zaten varsa ekleme
+                            if (!string.IsNullOrEmpty(pBarkod) && !paletler.ContainsKey(pBarkod))
+                            {
+                                paletler.Add(pBarkod, pAdi);
+                            }
+                        }
+                    }
+                }
+
+                if (paletler.Count == 0)
+                {
+                    MessageBox.Show("Bu sevkiyatın içinde kayıtlı hiçbir palet barkodu bulunamadı!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // ŞOV BAŞLASIN! Tam ekran Kiosk'u tetikle
+                frmSecim.Hide();
+                FrmKamyonKiosk kiosk = new FrmKamyonKiosk(musteriAdi, paletler);
+                kiosk.ShowDialog();
+                frmSecim.Close(); // Kiosk kapanınca seçim ekranını da tamamen kapat
+            };
+
+            frmSecim.ShowDialog();
         }
 
         #endregion
@@ -7171,11 +7287,12 @@ namespace TamgaApp
 
         #region 🚛 22. KIOSK MOTORU (TAM EKRAN YÜKLEME EKRANI)
 
-        // 🌟 BU KODU ANA FORMUNUZUN DIŞINA (EN ALTA) YAPIŞTIRIN
+        // 🌟 KUSURSUZ KAMYON YÜKLEME KIOSK FORMU
         public class FrmKamyonKiosk : Form
         {
-            private List<string> beklenenPaletler;
-            private List<string> okutulanPaletler;
+            // Sözlük yapısı: Anahtar = EAN13 Barkod, Değer = "1. Palet" vb.
+            private Dictionary<string, string> beklenenPaletler;
+            private List<string> okutulanBarkodlar;
             private string firmaAdi;
 
             private Panel pnlOrta;
@@ -7184,14 +7301,14 @@ namespace TamgaApp
             private TextBox txtGizliBarkod;
             private Timer renkSifirlayici;
 
-            public FrmKamyonKiosk(string musteriAdi, List<string> beklenenPaletler)
+            public FrmKamyonKiosk(string musteriAdi, Dictionary<string, string> paletler)
             {
                 this.firmaAdi = musteriAdi;
-                this.beklenenPaletler = beklenenPaletler;
-                this.okutulanPaletler = new List<string>();
+                this.beklenenPaletler = paletler;
+                this.okutulanBarkodlar = new List<string>();
 
-                // TAM EKRAN AYARLARI
-                this.Text = "Kamyon Yükleme";
+                // TAM EKRAN (KIOSK) AYARLARI
+                this.Text = "Kamyon Yükleme Kiosk";
                 this.WindowState = FormWindowState.Maximized;
                 this.FormBorderStyle = FormBorderStyle.None;
                 this.BackColor = Color.FromArgb(33, 37, 41);
@@ -7207,43 +7324,56 @@ namespace TamgaApp
 
             private void ArayuzuCiz()
             {
-                Panel pnlSag = new Panel { Dock = DockStyle.Right, Width = 400, BackColor = Color.White };
-                Label lblFirma = new Label { Text = firmaAdi, Dock = DockStyle.Top, Height = 80, Font = new Font("Segoe UI", 16, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.FromArgb(15, 76, 58), ForeColor = Color.White };
+                // Sağ Taraftaki İnce Liste Paneli
+                Panel pnlSag = new Panel { Dock = DockStyle.Right, Width = 350, BackColor = Color.White };
 
-                lstSagPanel = new ListBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 14, FontStyle.Bold), ItemHeight = 30, IntegralHeight = false };
+                Label lblFirma = new Label { Text = firmaAdi, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI", 18, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.FromArgb(15, 76, 58), ForeColor = Color.White };
+
+                lstSagPanel = new ListBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 15, FontStyle.Bold), ItemHeight = 35, IntegralHeight = false };
                 pnlSag.Controls.Add(lstSagPanel);
                 pnlSag.Controls.Add(lblFirma);
                 this.Controls.Add(pnlSag);
 
+                // Orta Dev Ekran
                 pnlOrta = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(33, 37, 41) };
-                lblMesaj = new Label { Text = "KAMYON YÜKLEMESİ HAZIR\n\nİLK PALETİ OKUTUNUZ...", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 48, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, ForeColor = Color.White };
+                lblMesaj = new Label { Text = "ARAÇ YÜKLEMESİ HAZIR\n\nİLK PALET ETİKETİNİ OKUTUNUZ...", Dock = DockStyle.Fill, Font = new Font("Segoe UI", 55, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, ForeColor = Color.White };
                 pnlOrta.Controls.Add(lblMesaj);
                 this.Controls.Add(pnlOrta);
 
-                Button btnCikis = new Button { Text = "X ÇIKIŞ", Size = new Size(150, 60), Location = new Point(20, 20), BackColor = Color.Red, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
+                // Çıkış Butonu
+                Button btnCikis = new Button { Text = "X ÇIKIŞ", Size = new Size(150, 60), Location = new Point(20, 20), BackColor = Color.Red, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btnCikis.Click += (s, e) => this.Close();
                 pnlOrta.Controls.Add(btnCikis);
                 btnCikis.BringToFront();
 
+                // Gizli Barkod Dinleyici
                 txtGizliBarkod = new TextBox { Width = 0, Height = 0, Location = new Point(-100, -100) };
                 txtGizliBarkod.KeyDown += Barkod_KeyDown;
                 this.Controls.Add(txtGizliBarkod);
             }
 
+            // Ekrandaki herhangi bir yere tıklandığında imleci tekrar barkod okuyucuya kilitler
             protected override void OnShown(EventArgs e) { base.OnShown(e); txtGizliBarkod.Focus(); }
             protected override void OnClick(EventArgs e) { base.OnClick(e); txtGizliBarkod.Focus(); }
 
             private void ListeyiGuncelle()
             {
                 lstSagPanel.Items.Clear();
-                int sira = 1;
+
+                // Sözlükteki tüm paletleri gez
                 foreach (var palet in beklenenPaletler)
                 {
-                    if (okutulanPaletler.Contains(palet))
-                        lstSagPanel.Items.Add($"✅ {sira}. Palet (YÜKLENDİ)");
+                    string pBarkod = palet.Key;
+                    string pAdi = palet.Value;
+
+                    if (okutulanBarkodlar.Contains(pBarkod))
+                    {
+                        lstSagPanel.Items.Add($"✅ {pAdi} (YÜKLENDİ)");
+                    }
                     else
-                        lstSagPanel.Items.Add($"📦 {sira}. Palet (Bekliyor)");
-                    sira++;
+                    {
+                        lstSagPanel.Items.Add($"📦 {pAdi} (Bekliyor)");
+                    }
                 }
             }
 
@@ -7255,49 +7385,58 @@ namespace TamgaApp
                     txtGizliBarkod.Clear();
                     e.SuppressKeyPress = true;
 
-                    if (okutulanPaletler.Contains(okunanKod))
+                    if (string.IsNullOrEmpty(okunanKod)) return;
+
+                    // 1. Zaten okutulmuş mu?
+                    if (okutulanBarkodlar.Contains(okunanKod))
                     {
-                        HataVer("❌ DİKKAT!\nBU PALET ZATEN YÜKLENDİ!");
+                        HataVer("❌ DİKKAT!\nBU PALET ZATEN KAMYONA YÜKLENDİ!");
                         return;
                     }
 
-                    if (beklenenPaletler.Contains(okunanKod))
+                    // 2. Bu firmanın sevkiyat listesinde var mı?
+                    if (beklenenPaletler.ContainsKey(okunanKod))
                     {
-                        okutulanPaletler.Add(okunanKod);
-                        OnayVer("✅ PALET YÜKLENEBİLİR");
+                        string paletAdi = beklenenPaletler[okunanKod]; // Örn: 3. Palet
+                        okutulanBarkodlar.Add(okunanKod); // Başarılı listesine at
+
+                        OnayVer($"✅ {paletAdi.ToUpper()} ONAYLANDI\nPALET YÜKLENEBİLİR!");
                         ListeyiGuncelle();
 
-                        if (okutulanPaletler.Count == beklenenPaletler.Count)
+                        // 3. Tüm paletler bitti mi?
+                        if (okutulanBarkodlar.Count == beklenenPaletler.Count)
                         {
                             renkSifirlayici.Stop();
                             pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
-                            lblMesaj.Text = "🎉 SEVKİYAT TAMAMLANDI!\nTÜM PALETLER YÜKLENDİ.";
-                            Console.Beep(1000, 200); Console.Beep(1500, 400);
-                            MessageBox.Show("Araç çıkış yapabilir.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            lblMesaj.Text = "🎉 YÜKLEME TAMAMLANDI!\nTÜM PALETLER ARAÇTA.";
+                            try { Console.Beep(1000, 200); Console.Beep(1500, 400); } catch { }
+
+                            MessageBox.Show("Tüm paletler başarıyla araca yüklendi. Araç çıkış yapabilir.", "Sevkiyat Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             this.Close();
                         }
                     }
                     else
                     {
-                        HataVer("❌ YANLIŞ PALET!\nBU SİPARİŞE AİT DEĞİL!");
+                        // 4. Yanlış barkod / Başka firmanın paleti
+                        HataVer("❌ YANLIŞ PALET!\nBU BARKOD SİPARİŞE AİT DEĞİL!");
                     }
                 }
             }
 
             private void OnayVer(string mesaj)
             {
-                pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
+                pnlOrta.BackColor = Color.FromArgb(46, 204, 113); // Canlı Yeşil
                 lblMesaj.Text = mesaj;
-                Console.Beep(800, 300);
+                try { Console.Beep(800, 300); } catch { }
                 renkSifirlayici.Stop();
                 renkSifirlayici.Start();
             }
 
             private void HataVer(string mesaj)
             {
-                pnlOrta.BackColor = Color.FromArgb(231, 76, 60);
+                pnlOrta.BackColor = Color.FromArgb(231, 76, 60); // Kan Kırmızı
                 lblMesaj.Text = mesaj;
-                Console.Beep(300, 1000);
+                try { Console.Beep(300, 1000); } catch { }
                 renkSifirlayici.Stop();
                 renkSifirlayici.Start();
             }
@@ -7305,12 +7444,15 @@ namespace TamgaApp
             private void SinyalSifirla()
             {
                 renkSifirlayici.Stop();
-                pnlOrta.BackColor = Color.FromArgb(33, 37, 41);
-                lblMesaj.Text = "SIRADAKİ PALETİ OKUTUNUZ...";
+                pnlOrta.BackColor = Color.FromArgb(33, 37, 41); // Normal Koyu Tema
+                lblMesaj.Text = "SIRADAKİ PALET ETİKETİNİ OKUTUNUZ...";
             }
         }
 
         #endregion
+
+        // =========================================================================================
+
         #endregion
     }
 }   
