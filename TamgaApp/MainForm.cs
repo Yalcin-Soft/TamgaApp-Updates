@@ -3184,7 +3184,7 @@ namespace TamgaApp
             btnFiltrele.Click += (btnSender, btnEv) => AgaciDoldur();
             AgaciDoldur();
 
-            // 🚨 GERİ AL BUTONU OLAYI (CS0136 HATASINI ÖNLEMEK İÇİN PARAMETRELER DEĞİŞTİRİLDİ)
+            // 🚨 GERİ AL BUTONU TIKLANMA MOTORU (CS0136 HATASINI ÖNLEME VE DATASOURCE TEMİZLİĞİ)
             btnGeriAl.Click += (btnSender, btnEv) =>
             {
                 if (tvArsiv.SelectedNode == null || tvArsiv.SelectedNode.Tag == null || !tvArsiv.SelectedNode.Tag.ToString().EndsWith(".csv"))
@@ -3204,16 +3204,48 @@ namespace TamgaApp
                     {
                         if (File.Exists(dosyaYolu))
                         {
-                            File.Delete(dosyaYolu); // Dosyayı sildiğimiz için siparişler ana ekrana dönecek
-                            MessageBox.Show("Sevkiyat başarıyla iptal edildi ve geri alındı. Sipariş numaraları ana ekrana döndü.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            // 🌟 1. ADIM: GERÇEK GERİ ALMA (GHOST MODU KARA LİSTESİNDEN ÇIKARTMA)
+                            string[] satirlar = File.ReadAllLines(dosyaYolu, System.Text.Encoding.UTF8);
+                            if (satirlar.Length > 1)
+                            {
+                                string[] huc = satirlar[1].Split(';');
+                                if (huc.Length >= 3)
+                                {
+                                    string belgeNolar = huc[2]; // Örn: SE-001, SE-002
+                                    string[] belgeler = belgeNolar.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
+                                    foreach (string b in belgeler)
+                                    {
+                                        TamamlananBelgeNolar.Remove(b); // RAM'deki kara listeden sil
+                                    }
+
+                                    // TXT Dosyasını (Kalıcı Kara Listeyi) de güncelle
+                                    string txtYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "KapananBelgeler.txt");
+                                    if (File.Exists(txtYol))
+                                    {
+                                        var guncelListe = File.ReadAllLines(txtYol).Where(x => !belgeler.Contains(x.Trim())).ToList();
+                                        File.WriteAllLines(txtYol, guncelListe);
+                                    }
+                                }
+                            }
+
+                            // 🌟 2. ADIM: DOSYAYI UÇUR
+                            File.Delete(dosyaYolu);
+
+                            MessageBox.Show("Sevkiyat başarıyla iptal edildi ve geri alındı!\n\nSipariş numaraları Ghost modundan çıkartıldı ve ana ekrandaki açık sipariş listesine döndü.", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            // 🌟 3. ADIM: ARAYÜZÜ (UI) HATASIZ TEMİZLE
                             tvArsiv.Nodes.Remove(tvArsiv.SelectedNode); // Ağaçtan sil
-                            dgvDetay.Rows.Clear(); // Detay tablosunu temizle
+
+                            // İŞTE ÇÖZÜM: Önce veri kaynağını (DataSource) koparıyoruz, sonra siliyoruz!
+                            dgvDetay.DataSource = null;
+                            dgvDetay.Rows.Clear();
+                            dgvDetay.Columns.Clear();
                         }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("Dosya silinirken hata oluştu (Dosya açık olabilir): \n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Geri alma işlemi sırasında hata oluştu: \n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             };
