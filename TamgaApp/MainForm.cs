@@ -5927,7 +5927,7 @@ namespace TamgaApp
             if (cmbAktifPalet.Items.Count > 0) cmbAktifPalet.SelectedIndex = 0;
         }
 
-        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (YENİ SADELEŞTİRİLMİŞ TASARIM)
+        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (MALZEME KODLU TASARIM)
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
             if (cmbAktifPalet.SelectedItem == null)
@@ -5939,7 +5939,7 @@ namespace TamgaApp
             int aktifPaletIndex = cmbAktifPalet.SelectedIndex;
             string paletAdi = cmbAktifPalet.SelectedItem.ToString();
 
-            // Bu palete ait ürünleri topla ve metni temizle (Sadece Ürün Adı ve Adet)
+            // Bu palete ait ürünleri topla ve metni temizle
             List<string> paletIcerigi = new List<string>();
             foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
             {
@@ -5956,9 +5956,8 @@ namespace TamgaApp
                     int parantezIndex = urunKismi.LastIndexOf('(');
                     if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                    // 3. Başındaki Malzeme Kodunu Uçur: 869768... - 
-                    int tireIndex = urunKismi.IndexOf(" - ");
-                    if (tireIndex > 0) urunKismi = urunKismi.Substring(tireIndex + 3).Trim();
+                    // 🚨 DİKKAT: Baştaki Malzeme Kodunu silme işlemini İPTAL ETTİK! Artık kod da kutuda yazacak.
+                    // urunKismi string'i şu an "KOD - ÜRÜN ADI" şeklinde.
 
                     paletIcerigi.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
                 }
@@ -6516,7 +6515,7 @@ namespace TamgaApp
                 }
             };
 
-            // 🌟 ETİKET YAZDIRMA MOTORU (Geçmiş Arşivden Etiket Çıkarma)
+            // 🌟 ETİKET YAZDIRMA MOTORU (Geçmiş Arşivden Etiket Çıkarma - MALZEME KODLU TASARIM)
             btnEtiketYazdir.Click += async (s, e) =>
             {
                 if (dgvDetay.SelectedRows.Count == 0) { MessageBox.Show("Lütfen etiketini yazdırmak istediğiniz ürünü seçin!"); return; }
@@ -6541,8 +6540,7 @@ namespace TamgaApp
                         int parantezIndex = urunKismi.LastIndexOf('(');
                         if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                        int tireIndex = urunKismi.IndexOf(" - ");
-                        if (tireIndex > 0) urunKismi = urunKismi.Substring(tireIndex + 3).Trim();
+                        // 🚨 DİKKAT: Baştaki Malzeme Kodunu silme işlemini İPTAL ETTİK! Artık kod da kutuda yazacak.
 
                         urunler.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
                     }
@@ -7245,8 +7243,7 @@ namespace TamgaApp
 
         // =========================================================================================
 
-        #region 🚛 21. KAMYON YÜKLEME (KIOSK) MODÜLÜ - SEVKİYAT PLAN SAYFASI
-
+        #region 🚛 22. KAMYON YÜKLEME (KIOSK) MODÜLÜ - SEVKİYAT PLAN SAYFASI
         private void btnKamyonYukle_Click(object sender, EventArgs e)
         {
             string kokYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar");
@@ -7293,6 +7290,10 @@ namespace TamgaApp
             KlasorTaramasi(kokYol, kok);
             kok.ExpandAll();
 
+            // 🌟 KIOSK'a aktarılacak verileri tutacak değişkenler (Dışarıda tanımlıyoruz)
+            Dictionary<string, string> secilenPaletler = null;
+            string secilenMusteriAdi = "";
+
             // 2. YÜKLEME BUTONUNA BASILINCA ÇALIŞACAK MOTOR
             btnDevam.Click += (s2, e2) =>
             {
@@ -7313,10 +7314,10 @@ namespace TamgaApp
                 }
 
                 // Firma adını dosyadan çek (2. satır, ilk hücre)
-                string musteriAdi = satirlar[1].Split(';')[0];
+                secilenMusteriAdi = satirlar[1].Split(';')[0];
 
                 // Paletleri Topla (Key: Barkod, Value: Palet Adı)
-                Dictionary<string, string> paletler = new Dictionary<string, string>();
+                secilenPaletler = new Dictionary<string, string>();
                 bool detaylarBasladi = false;
 
                 foreach (string satir in satirlar)
@@ -7332,35 +7333,37 @@ namespace TamgaApp
                             string pBarkod = hucreler[2].Trim(); // Örn: 2026... (EAN13)
 
                             // Aynı paletin birden çok ürünü olabilir, bu yüzden sözlükte zaten varsa ekleme
-                            if (!string.IsNullOrEmpty(pBarkod) && !paletler.ContainsKey(pBarkod))
+                            if (!string.IsNullOrEmpty(pBarkod) && !secilenPaletler.ContainsKey(pBarkod))
                             {
-                                paletler.Add(pBarkod, pAdi);
+                                secilenPaletler.Add(pBarkod, pAdi);
                             }
                         }
                     }
                 }
 
-                if (paletler.Count == 0)
+                if (secilenPaletler.Count == 0)
                 {
                     MessageBox.Show("Bu sevkiyatın içinde kayıtlı hiçbir palet barkodu bulunamadı!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
-                // ŞOV BAŞLASIN! Tam ekran Kiosk'u tetikle
-                frmSecim.Hide();
-                FrmKamyonKiosk kiosk = new FrmKamyonKiosk(musteriAdi, paletler);
-                kiosk.ShowDialog();
-                frmSecim.Close(); // Kiosk kapanınca seçim ekranını da tamamen kapat
+                // 🚨 İŞTE "DINI DINI" HATASINI ÇÖZEN KISIM
+                // Formu 'Hide' yapıp arkada açık/gizli bırakmıyoruz. Direkt kapatma sinyali (OK) gönderiyoruz.
+                frmSecim.DialogResult = DialogResult.OK;
             };
 
-            frmSecim.ShowDialog();
+            // 3. SEÇİM EKRANI TAMAMEN KAPANINCA KIOSK EKRANINI AÇ (ODAK KAYBI YAŞANMAZ)
+            if (frmSecim.ShowDialog() == DialogResult.OK && secilenPaletler != null)
+            {
+                FrmKamyonKiosk kiosk = new FrmKamyonKiosk(secilenMusteriAdi, secilenPaletler);
+                kiosk.ShowDialog();
+            }
         }
-
         #endregion
 
         // =========================================================================================
 
-        #region 🚛 22. KIOSK MOTORU (TAM EKRAN YÜKLEME EKRANI)
+        #region 🚛 23. KIOSK MOTORU (TAM EKRAN YÜKLEME EKRANI)
 
         // 🌟 KUSURSUZ KAMYON YÜKLEME KIOSK FORMU
         public class FrmKamyonKiosk : Form
