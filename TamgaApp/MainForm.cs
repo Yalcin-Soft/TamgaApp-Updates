@@ -5964,12 +5964,22 @@ namespace TamgaApp
                     string urunKismi = parcalar[0];
                     string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
 
-                    // 2. Parantez içindeki Belge Numarasını Uçur: (26070685) vs.
+                    // 2. Parantez içindeki Belge Numarasını Uçur: (SE-001) vs.
                     int parantezIndex = urunKismi.LastIndexOf('(');
                     if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                    // Ürün Kısmı = "Malzeme Kodu - Ürün Adı" olarak kaldı. Kutuya ekle.
-                    paletIcerigi.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
+                    // 🌟 3. ÜRÜN KODU VE ÜRÜN ADINI AYIRMA MANTIĞI
+                    string uKodu = urunKismi;
+                    string uAdi = "";
+                    int tireIndex = urunKismi.IndexOf(" - ");
+                    if (tireIndex > 0)
+                    {
+                        uKodu = urunKismi.Substring(0, tireIndex).Trim();
+                        uAdi = urunKismi.Substring(tireIndex + 3).Trim();
+                    }
+
+                    // 🌟 4. YENİ LİSTE TASARIMINA EKLE
+                    paletIcerigi.Add($"<li><span class='k-kod'>• {uKodu}</span><span class='k-ad'>{uAdi}</span><span class='k-adet'>Adet: {adetKismi}</span></li>");
                 }
             }
 
@@ -5995,22 +6005,30 @@ namespace TamgaApp
             string belgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>());
             string listeHtml = string.Join("", paletIcerigi);
 
-            // 🌟 2 KAT BÜYÜK FİRMA, GENİŞ KUTU VE TEK SATIR KORUMASI (NOWRAP)
+            // 🌟 FİRMA ADI 2 SATIRA SINIRLANDI, KUTU İÇİ "KOD | AD | ADET" OLARAK DÜZENLENDİ
             string html = $@"<html>
     <head>
        <meta charset='utf-8'>
        <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
        <style>
           body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
-          .firma {{ font-size: 70px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
-          .sevk-musteri {{ font-size: 30px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
-          .belge {{ font-size: 26px; margin-bottom: 5px; color: #333; font-weight: bold; }}
-          .palet {{ font-size: 80px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
           
-          .urunler {{ text-align: left; font-size: 24px; font-weight: bold; border: 4px dashed black; padding: 20px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
+          /* Firma adı küçültüldü ve maks 2 satır kilidi konuldu */
+          .firma {{ font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
+          .sevk-musteri {{ font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+          .belge {{ font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+          .palet {{ font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
+          
+          /* YENİ: Kutu ve İçindeki Listelerin 3'lü Dağılımı */
+          .urunler {{ text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
           ul {{ margin: 0; padding-left: 0; list-style-type: none; }}
           
-          li {{ margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 2px solid #ddd; padding-bottom: 6px; }}
+          /* YENİ: Tek Satır, Taşmayan Esnek Tasarım */
+          li {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }}
+          .k-kod {{ flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }}
+          .k-ad {{ flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }}
+          .k-adet {{ flex: 2; text-align: right; font-size: 20px; color: black; }}
+          
           .barkod-alani {{ margin-top: 20px; }} 
        </style>
     </head>
@@ -6024,12 +6042,11 @@ namespace TamgaApp
        
        <div class='barkod-alani'><svg id='barkod'></svg></div>
        <script>
-          // Kalın Çizgiler (width:5), Okunaklı Format (height:90)
           JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
        </script>
     </body></html>";
 
-            Form frmYazdir = new Form { Text = "Palet Etiketi Çıkartılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent, Icon = this.Icon }; // 🌟 SON KISMA EKLENDİ
+            Form frmYazdir = new Form { Text = "Palet Etiketi Çıkartılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent, Icon = this.Icon };
             Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
             frmYazdir.Controls.Add(web);
             frmYazdir.FormClosed += (s1, e1) => { web.Dispose(); };
@@ -6540,7 +6557,17 @@ namespace TamgaApp
                         int parantezIndex = urunKismi.LastIndexOf('(');
                         if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                        urunler.Add($"<li>• {urunKismi} <span style='float:right;'><b>Adet: {adetKismi}</b></span></li>");
+                        // 🌟 KOD VE AD AYIRIMI (Arşiv İçin)
+                        string uKodu = urunKismi;
+                        string uAdi = "";
+                        int tireIndex = urunKismi.IndexOf(" - ");
+                        if (tireIndex > 0)
+                        {
+                            uKodu = urunKismi.Substring(0, tireIndex).Trim();
+                            uAdi = urunKismi.Substring(tireIndex + 3).Trim();
+                        }
+
+                        urunler.Add($"<li><span class='k-kod'>• {uKodu}</span><span class='k-ad'>{uAdi}</span><span class='k-adet'>Adet: {adetKismi}</span></li>");
                     }
                 }
 
@@ -6552,15 +6579,23 @@ namespace TamgaApp
            <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
            <style>
               body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
-              .firma {{ font-size: 70px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; }}
-              .sevk-musteri {{ font-size: 30px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
-              .belge {{ font-size: 26px; margin-bottom: 5px; color: #333; font-weight: bold; }}
-              .palet {{ font-size: 80px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
               
-              .urunler {{ text-align: left; font-size: 24px; font-weight: bold; border: 4px dashed black; padding: 20px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
+              /* Firma adı küçültüldü ve maks 2 satır kilidi konuldu */
+              .firma {{ font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
+              .sevk-musteri {{ font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+              .belge {{ font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+              .palet {{ font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
+              
+              /* YENİ: Kutu ve İçindeki Listelerin 3'lü Dağılımı */
+              .urunler {{ text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
               ul {{ margin: 0; padding-left: 0; list-style-type: none; }}
               
-              li {{ margin-bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; border-bottom: 2px solid #ddd; padding-bottom: 6px; }}
+              /* YENİ: Tek Satır, Taşmayan Esnek Tasarım */
+              li {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }}
+              .k-kod {{ flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }}
+              .k-ad {{ flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }}
+              .k-adet {{ flex: 2; text-align: right; font-size: 20px; color: black; }}
+              
               .barkod-alani {{ margin-top: 20px; }} 
            </style>
         </head>
@@ -6578,7 +6613,7 @@ namespace TamgaApp
            </script>
         </body></html>";
 
-                Form frmYazdir = new Form { Text = "Etiket Yazdırılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent };
+                Form frmYazdir = new Form { Text = "Etiket Yazdırılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent, Icon = this.Icon };
                 Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
                 frmYazdir.Controls.Add(web);
                 frmYazdir.FormClosed += (s1, e1) => { web.Dispose(); };
