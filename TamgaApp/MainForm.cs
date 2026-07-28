@@ -5952,6 +5952,13 @@ namespace TamgaApp
             int aktifPaletIndex = cmbAktifPalet.SelectedIndex;
             string paletAdi = cmbAktifPalet.SelectedItem.ToString();
 
+            // 🌟 SİHİRLİ DOKUNUŞ: Eğer toplam palet sayısı 1 ise yazıyı "1 Palet Dolap" yap
+            string gosterilenPaletAdi = paletAdi;
+            if (cmbAktifPalet.Items.Count == 1)
+            {
+                gosterilenPaletAdi = "1 Palet Dolap";
+            }
+
             List<string> paletIcerigi = new List<string>();
             foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
             {
@@ -6036,7 +6043,7 @@ namespace TamgaApp
        <div class='firma'>{musteriAdi}</div>
        <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
        <div class='belge'>Belge No: {belgeNo}</div>
-       <div class='palet'>{paletAdi}</div>
+       <div class='palet'>{gosterilenPaletAdi}</div>
        
        <div class='urunler'><ul>{listeHtml}</ul></div>
        
@@ -6541,6 +6548,19 @@ namespace TamgaApp
                 string seciliPalet = dgvDetay.SelectedRows[0].Cells[0].Value.ToString();
                 string barkod = dgvDetay.SelectedRows[0].Cells[2].Value.ToString();
 
+                // 🌟 SİHİRLİ DOKUNUŞ: Arşivdeki o sevkiyatta toplam kaç benzersiz palet var bul
+                int toplamPaletSayisi = dgvDetay.Rows.Cast<DataGridViewRow>()
+                                        .Select(r => r.Cells[0].Value?.ToString())
+                                        .Where(v => !string.IsNullOrEmpty(v))
+                                        .Distinct()
+                                        .Count();
+
+                string gosterilenPaletAdi = seciliPalet;
+                if (toplamPaletSayisi == 1)
+                {
+                    gosterilenPaletAdi = "1 Palet Dolap";
+                }
+
                 if (string.IsNullOrEmpty(aktifSevkMusteri)) aktifSevkMusteri = "Belirtilmedi";
 
                 List<string> urunler = new List<string>();
@@ -6603,7 +6623,7 @@ namespace TamgaApp
            <div class='firma'>{aktifMusteri}</div>
            <div class='sevk-musteri'>Sevk: {aktifSevkMusteri}</div>
            <div class='belge'>Belge No: {aktifBelge}</div>
-           <div class='palet'>{seciliPalet}</div>
+           <div class='palet'>{gosterilenPaletAdi}</div>
            
            <div class='urunler'><ul>{listeHtml}</ul></div>
            
