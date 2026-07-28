@@ -125,6 +125,8 @@ C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\TamgaApp.exe
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\TamgaApp.pdb
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\AutoUpdater.NET.dll
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ExcelDataReader.DataSet.dll
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ExcelDataReader.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\Microsoft.Data.Sqlite.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\Microsoft.Web.WebView2.Core.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\Microsoft.Web.WebView2.WinForms.dll
@@ -138,8 +140,13 @@ C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.Memory.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.Numerics.Vectors.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.Runtime.CompilerServices.Unsafe.dll
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.ValueTuple.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\AutoUpdater.NET.pdb
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\AutoUpdater.NET.xml
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ExcelDataReader.pdb
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ExcelDataReader.xml
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ExcelDataReader.DataSet.pdb
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ExcelDataReader.DataSet.xml
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\Microsoft.Data.Sqlite.xml
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\Microsoft.Web.WebView2.Core.xml
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\Microsoft.Web.WebView2.WinForms.xml
@@ -149,6 +156,7 @@ C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.Memory.xml
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.Numerics.Vectors.xml
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.Runtime.CompilerServices.Unsafe.xml
+C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\System.ValueTuple.xml
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\ar\AutoUpdater.NET.resources.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\cs\AutoUpdater.NET.resources.dll
 C:\Users\ugury\OneDrive\Masaüstü\YalçınSoft\TamgaApp\TamgaApp-Updates\Yalcin-Soft\TamgaApp-Updates\TamgaApp\bin\x64\Debug\da\AutoUpdater.NET.resources.dll

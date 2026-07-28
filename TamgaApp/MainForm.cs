@@ -6,6 +6,7 @@ using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
+using ExcelDataReader;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading.Tasks;
@@ -3482,27 +3483,26 @@ namespace TamgaApp
 
                     try
                     {
-                        // 3. EXCEL'İ GÜVENLİ BÖLGEDE (UI THREAD) OKU VE RAM'E AL
+                        // 3. EXCEL'İ GÜVENLİ VE BAĞIMSIZ MOTÖRLE (EXCELDATAREADER) OKU
                         System.Data.DataTable dt = new System.Data.DataTable();
 
-                        string connString = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={ofd.FileName};Extended Properties=\"Excel 12.0 Xml;HDR=YES;IMEX=1\";";
-                        using (System.Data.OleDb.OleDbConnection conn = new System.Data.OleDb.OleDbConnection(connString))
+                        // Dosyayı kilitlemeden, sadece okuma modunda açıyoruz
+                        using (var stream = File.Open(ofd.FileName, FileMode.Open, FileAccess.Read))
                         {
-                            conn.Open();
-                            System.Data.DataTable dtExcelSchema = conn.GetOleDbSchemaTable(System.Data.OleDb.OleDbSchemaGuid.Tables, null);
-
-                            // Geçerli sayfayı bul ($ işaretiyle biten)
-                            string sheetName = "";
-                            foreach (System.Data.DataRow schemaRow in dtExcelSchema.Rows)
+                            // Kütüphanenin Excel'i okuması için okuyucuyu başlatıyoruz
+                            using (var reader = ExcelReaderFactory.CreateReader(stream))
                             {
-                                string tempName = schemaRow["TABLE_NAME"].ToString();
-                                if (tempName.EndsWith("$") || tempName.EndsWith("$'")) { sheetName = tempName; break; }
-                            }
-                            if (string.IsNullOrEmpty(sheetName)) sheetName = dtExcelSchema.Rows[0]["TABLE_NAME"].ToString();
+                                // Excel'in ilk satırını Sütun Başlıkları (Header) olarak kabul et
+                                var result = reader.AsDataSet(new ExcelDataSetConfiguration()
+                                {
+                                    ConfigureDataTable = (_) => new ExcelDataTableConfiguration()
+                                    {
+                                        UseHeaderRow = true
+                                    }
+                                });
 
-                            using (System.Data.OleDb.OleDbDataAdapter da = new System.Data.OleDb.OleDbDataAdapter($"SELECT * FROM [{sheetName}]", conn))
-                            {
-                                da.Fill(dt); // Excel verisi artık 'dt' tablosunun içinde, RAM'de!
+                                // İlk sayfadaki (Sheet1) verileri DataTable'a aktar
+                                dt = result.Tables[0];
                             }
                         }
 
@@ -3514,13 +3514,8 @@ namespace TamgaApp
                                 // Ürün kodu boşsa o satırı atla
                                 if (row[0] == DBNull.Value || string.IsNullOrWhiteSpace(row[0].ToString())) continue;
 
-                                // 🌟 YENİ SQL SÜTUN SIRASINA GÖRE VERİLERİ ÇEKİYORUZ 
-                                // (0:KOD, 1:AÇIKLAMA, 2:İNG.AÇIKLAMA, 3:BARKOD, 4:VARYANT, 5:RENK)
-
                                 string renkGelen = row.ItemArray.Length > 5 ? row[5].ToString().Trim() : "";
 
-                                // 🌟 SİHİRLİ DOKUNUŞ (BOŞ RENGİ 'BEYAZ' YAPMA ZIRHI)
-                                // Eğer veritabanında/Excel'de renk hücresi boş gelmişse, onu otomatik "Beyaz" olarak kabul et!
                                 if (string.IsNullOrEmpty(renkGelen))
                                 {
                                     renkGelen = "Beyaz";
@@ -3532,7 +3527,7 @@ namespace TamgaApp
                                     Aciklama = row.ItemArray.Length > 1 ? row[1].ToString().Trim() : "",
                                     IngilizceAciklama = row.ItemArray.Length > 2 ? row[2].ToString().Trim() : "",
                                     Barkod = row.ItemArray.Length > 3 ? row[3].ToString().Trim() : "",
-                                    Renk = renkGelen // Sihirli zırhtan geçen rengi kaydet
+                                    Renk = renkGelen
                                 };
 
                                 DataAccess.InsertUrun(yeniUrun);
