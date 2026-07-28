@@ -7623,6 +7623,125 @@ namespace TamgaApp
 
         // =========================================================================================
 
+        #region 📦 25. AMBAR YÖNETİMİ (PARSİYEL YÜKLEME) SİSTEMİ
+
+        // 🌟 1. HAFIZA BEYNİ: Tüm ambarı arka planda tutacak ortak dictionary (Firma Adı -> O firmanın JSON sevkiyat verisi)
+        Dictionary<string, string> AmbarHafizasi = new Dictionary<string, string>();
+
+        // 🌟 2. AMBARA KAYDET BUTONU: Okutulan malları kamyona (hafızaya) atar
+        private void btnAmbarKaydet_Click(object sender, EventArgs e)
+        {
+            string seciliFirma = cmbMusteri.Text; // Kendi combobox ismine göre düzelt
+            if (string.IsNullOrEmpty(seciliFirma))
+            {
+                MessageBox.Show("Lütfen önce bir firma seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // TODO: Mevcut palet matrisini JSON'a çevir (Eski Askıya Al kodundaki Serialize kısmını buraya kopyalayacaksın)
+            string jsonVeri = "Buraya_JSON_Cevirme_Kodun_Gelecek";
+
+            // Ambar aracında bu firma varsa üzerine yaz (güncelle), yoksa yeni kayıt olarak ekle
+            if (AmbarHafizasi.ContainsKey(seciliFirma))
+            {
+                AmbarHafizasi[seciliFirma] = jsonVeri;
+            }
+            else
+            {
+                AmbarHafizasi.Add(seciliFirma, jsonVeri);
+            }
+
+            MessageBox.Show($"{seciliFirma} firmasının ürünleri Ambar Aracına yüklendi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // TODO: Ekranı temizleme metodunu buraya çağır ki diğer firmaya geçebilesin
+        }
+
+        // 🌟 3. AMBAR GETİR BUTONU: Ambardaki malı geri ekrana (palet matrisine) dizer
+        private void btnAmbarGetir_Click(object sender, EventArgs e)
+        {
+            string seciliFirma = cmbMusteri.Text; // Kendi combobox ismine göre düzelt
+
+            // Firma hafızada (ambarda) var mı diye kontrol et
+            if (AmbarHafizasi.ContainsKey(seciliFirma))
+            {
+                string geriGelenJson = AmbarHafizasi[seciliFirma];
+
+                // TODO: JSON'u çözüp ekrana dizme (Deserialize) kodunu buraya kopyalayacaksın
+
+                MessageBox.Show($"{seciliFirma} firması ambardan ekrana getirildi. İşleme devam edebilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("Bu firma Ambar Aracında bulunmuyor!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        // 🌟 4. AMBAR GÖRÜNTÜLE BUTONU: Kamyonun içini gösteren yönetim paneli
+        private void btnAmbarGoruntule_Click(object sender, EventArgs e)
+        {
+            // Yönetim Paneli için yepyeni bir form (pencere) oluşturuyoruz
+            Form frmAmbar = new Form
+            {
+                Text = "🚛 Ambar Aracı Yönetim Paneli",
+                Size = new Size(700, 500),
+                StartPosition = FormStartPosition.CenterScreen,
+                BackColor = Color.WhiteSmoke
+            };
+
+            // Ambardaki firmaları göstereceğimiz liste kutusu
+            ListBox lstAmbardakiFirmalar = new ListBox { Location = new Point(20, 20), Size = new Size(300, 400), Font = new Font("Segoe UI", 12) };
+
+            // Dictionary'deki (AmbarHafizasi) tüm firmaları listeye dolduruyoruz
+            foreach (var firma in AmbarHafizasi.Keys)
+            {
+                lstAmbardakiFirmalar.Items.Add(firma);
+            }
+
+            // Sil ve Tamamla butonlarını dinamik olarak oluşturuyoruz
+            Button btnSil = new Button { Text = "❌ Seçileni Ambardan Sil", Location = new Point(350, 50), Size = new Size(300, 50), BackColor = Color.DarkRed, ForeColor = Color.White };
+            Button btnTamamla = new Button { Text = "✅ Ambarı Tamamla (Toplu Sevk)", Location = new Point(350, 120), Size = new Size(300, 70), BackColor = Color.DarkGreen, ForeColor = Color.White };
+
+            // ❌ SİL BUTONU İŞLEMİ (Kamyondan malı indirir)
+            btnSil.Click += (s, ev) =>
+            {
+                if (lstAmbardakiFirmalar.SelectedItem != null)
+                {
+                    string silinecekFirma = lstAmbardakiFirmalar.SelectedItem.ToString();
+                    AmbarHafizasi.Remove(silinecekFirma); // Arka plan hafızasından sil
+                    lstAmbardakiFirmalar.Items.Remove(silinecekFirma); // Ekrandaki listeden sil
+                    MessageBox.Show($"{silinecekFirma} firmasının malları ambardan indirildi (Sipariş geri alındı)!", "Bilgi");
+                }
+            };
+
+            // ✅ AMBAR TAMAMLA BUTONU İŞLEMİ (Kamyonu yola çıkarır)
+            btnTamamla.Click += (s, ev) =>
+            {
+                if (AmbarHafizasi.Count == 0)
+                {
+                    MessageBox.Show("Ambar aracı şu an boş!", "Uyarı");
+                    return;
+                }
+
+                DialogResult onay = MessageBox.Show("Ambardaki TÜM firmaların sevkiyatı kapatılıp arşive gönderilecek. Emin misiniz?", "Ambar Çıkışı", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (onay == DialogResult.Yes)
+                {
+                    // TODO: BURAYA SQL GÜNCELLEME KODUN GELECEK (Döngü ile listedeki tüm firmaları SQL'de sevk etme işlemi)
+
+                    AmbarHafizasi.Clear(); // Kamyon yola çıktığı için ambarı tamamen boşalt
+                    frmAmbar.Close(); // Yönetim penceresini kapat
+                    MessageBox.Show("Kamyon yola çıktı! Tüm kayıtlar başarıyla sevk edildi.", "Başarılı");
+                }
+            };
+
+            // Oluşturulan listeyi ve butonları forma ekle ve formu ekranda göster
+            frmAmbar.Controls.Add(lstAmbardakiFirmalar);
+            frmAmbar.Controls.Add(btnSil);
+            frmAmbar.Controls.Add(btnTamamla);
+            frmAmbar.ShowDialog();
+        }
+
+        #endregion
         #endregion
     }
+
 }

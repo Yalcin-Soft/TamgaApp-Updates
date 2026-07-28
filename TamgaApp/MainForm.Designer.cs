@@ -348,6 +348,9 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
+            this.btnAmbarKaydet = new System.Windows.Forms.Button();
+            this.btnAmbarGoruntule = new System.Windows.Forms.Button();
+            this.btnAmbarGetir = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -475,6 +478,9 @@ namespace TamgaApp
             // 
             // panel8
             // 
+            this.panel8.Controls.Add(this.btnAmbarGetir);
+            this.panel8.Controls.Add(this.btnAmbarGoruntule);
+            this.panel8.Controls.Add(this.btnAmbarKaydet);
             this.panel8.Controls.Add(this.btnKamyonYukle);
             this.panel8.Controls.Add(this.btnAskidanSil);
             this.panel8.Controls.Add(this.btnAnlikPaletEtiketi);
@@ -495,9 +501,9 @@ namespace TamgaApp
             // 
             this.btnKamyonYukle.BackColor = System.Drawing.Color.LimeGreen;
             this.btnKamyonYukle.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnKamyonYukle.Location = new System.Drawing.Point(389, 154);
+            this.btnKamyonYukle.Location = new System.Drawing.Point(389, 89);
             this.btnKamyonYukle.Name = "btnKamyonYukle";
-            this.btnKamyonYukle.Size = new System.Drawing.Size(127, 146);
+            this.btnKamyonYukle.Size = new System.Drawing.Size(127, 65);
             this.btnKamyonYukle.TabIndex = 48;
             this.btnKamyonYukle.Text = "ARAÇ YÜKLEMEYİ BAŞLAT";
             this.btnKamyonYukle.UseVisualStyleBackColor = false;
@@ -521,7 +527,7 @@ namespace TamgaApp
             this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(389, 8);
             this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
-            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 146);
+            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 75);
             this.btnAnlikPaletEtiketi.TabIndex = 46;
             this.btnAnlikPaletEtiketi.Text = "Seçili Paleti Kapat ve Etiketi Bas";
             this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
@@ -592,7 +598,7 @@ namespace TamgaApp
             this.btnGecmisSevkleriListele.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(3, 266);
             this.btnGecmisSevkleriListele.Name = "btnGecmisSevkleriListele";
-            this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(380, 34);
+            this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(380, 47);
             this.btnGecmisSevkleriListele.TabIndex = 14;
             this.btnGecmisSevkleriListele.Text = "Geçmiş Sevkler Listele";
             this.btnGecmisSevkleriListele.UseVisualStyleBackColor = true;
@@ -3864,6 +3870,36 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
+            // btnAmbarKaydet
+            // 
+            this.btnAmbarKaydet.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarKaydet.Location = new System.Drawing.Point(389, 160);
+            this.btnAmbarKaydet.Name = "btnAmbarKaydet";
+            this.btnAmbarKaydet.Size = new System.Drawing.Size(118, 47);
+            this.btnAmbarKaydet.TabIndex = 49;
+            this.btnAmbarKaydet.Text = "AMBAR ARACI KAYDET";
+            this.btnAmbarKaydet.UseVisualStyleBackColor = true;
+            // 
+            // btnAmbarGoruntule
+            // 
+            this.btnAmbarGoruntule.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarGoruntule.Location = new System.Drawing.Point(389, 213);
+            this.btnAmbarGoruntule.Name = "btnAmbarGoruntule";
+            this.btnAmbarGoruntule.Size = new System.Drawing.Size(118, 47);
+            this.btnAmbarGoruntule.TabIndex = 50;
+            this.btnAmbarGoruntule.Text = "AMBAR GÖRÜNTÜLE";
+            this.btnAmbarGoruntule.UseVisualStyleBackColor = true;
+            // 
+            // btnAmbarGetir
+            // 
+            this.btnAmbarGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarGetir.Location = new System.Drawing.Point(389, 266);
+            this.btnAmbarGetir.Name = "btnAmbarGetir";
+            this.btnAmbarGetir.Size = new System.Drawing.Size(118, 47);
+            this.btnAmbarGetir.TabIndex = 51;
+            this.btnAmbarGetir.Text = "AMBAR GETİR";
+            this.btnAmbarGetir.UseVisualStyleBackColor = true;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -4297,6 +4333,9 @@ namespace TamgaApp
         private TextBox txtUretimYolu;
         private Button btnAyarlariKaydet;
         private Button btnKamyonYukle;
+        private Button btnAmbarGetir;
+        private Button btnAmbarGoruntule;
+        private Button btnAmbarKaydet;
     }
 }
 
