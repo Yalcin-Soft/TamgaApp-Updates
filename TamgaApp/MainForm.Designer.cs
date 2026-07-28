@@ -3875,30 +3875,33 @@ namespace TamgaApp
             this.btnAmbarKaydet.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnAmbarKaydet.Location = new System.Drawing.Point(389, 160);
             this.btnAmbarKaydet.Name = "btnAmbarKaydet";
-            this.btnAmbarKaydet.Size = new System.Drawing.Size(118, 47);
+            this.btnAmbarKaydet.Size = new System.Drawing.Size(127, 47);
             this.btnAmbarKaydet.TabIndex = 49;
             this.btnAmbarKaydet.Text = "AMBAR ARACI KAYDET";
             this.btnAmbarKaydet.UseVisualStyleBackColor = true;
+            this.btnAmbarKaydet.Click += new System.EventHandler(this.btnAmbarKaydet_Click);
             // 
             // btnAmbarGoruntule
             // 
             this.btnAmbarGoruntule.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnAmbarGoruntule.Location = new System.Drawing.Point(389, 213);
             this.btnAmbarGoruntule.Name = "btnAmbarGoruntule";
-            this.btnAmbarGoruntule.Size = new System.Drawing.Size(118, 47);
+            this.btnAmbarGoruntule.Size = new System.Drawing.Size(127, 47);
             this.btnAmbarGoruntule.TabIndex = 50;
             this.btnAmbarGoruntule.Text = "AMBAR GÖRÜNTÜLE";
             this.btnAmbarGoruntule.UseVisualStyleBackColor = true;
+            this.btnAmbarGoruntule.Click += new System.EventHandler(this.btnAmbarGoruntule_Click);
             // 
             // btnAmbarGetir
             // 
             this.btnAmbarGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnAmbarGetir.Location = new System.Drawing.Point(389, 266);
             this.btnAmbarGetir.Name = "btnAmbarGetir";
-            this.btnAmbarGetir.Size = new System.Drawing.Size(118, 47);
+            this.btnAmbarGetir.Size = new System.Drawing.Size(127, 47);
             this.btnAmbarGetir.TabIndex = 51;
             this.btnAmbarGetir.Text = "AMBAR GETİR";
             this.btnAmbarGetir.UseVisualStyleBackColor = true;
+            this.btnAmbarGetir.Click += new System.EventHandler(this.btnAmbarGetir_Click);
             // 
             // MainForm
             // 
