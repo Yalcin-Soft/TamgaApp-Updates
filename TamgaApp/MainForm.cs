@@ -5959,6 +5959,9 @@ namespace TamgaApp
                 gosterilenPaletAdi = "1 Palet Dolap";
             }
 
+            // 🌟 VERİTABANI BAĞLANTISI: Eski kayıtlar için ürün isimlerini veritabanından çekeceğiz
+            var yerelUrunler = DataAccess.GetAllUrunler();
+
             List<string> paletIcerigi = new List<string>();
             foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
             {
@@ -5975,14 +5978,24 @@ namespace TamgaApp
                     int parantezIndex = urunKismi.LastIndexOf('(');
                     if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                    // 🌟 3. ÜRÜN KODU VE ÜRÜN ADINI AYIRMA MANTIĞI
+                    // 🌟 3. ÜRÜN KODU VE ÜRÜN ADINI AYIRMA VEYA VERİTABANINDAN BULMA MANTIĞI
                     string uKodu = urunKismi;
                     string uAdi = "";
                     int tireIndex = urunKismi.IndexOf(" - ");
+
                     if (tireIndex > 0)
                     {
+                        // Yeni sistem kaydıysa (Tire varsa direkt böl)
                         uKodu = urunKismi.Substring(0, tireIndex).Trim();
                         uAdi = urunKismi.Substring(tireIndex + 3).Trim();
+                    }
+                    else
+                    {
+                        // 🌟 ESKİ KAYIT ZIRHI: Eski arşivde isim yoksa, veritabanından koda göre bul!
+                        uKodu = urunKismi.Trim();
+                        var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == uKodu || u.Barkod == uKodu);
+                        if (urun != null) uAdi = urun.Aciklama;
+                        else uAdi = "Bilinmeyen Ürün"; // Eğer veritabanında bile silinmişse
                     }
 
                     // 🌟 4. YENİ LİSTE TASARIMINA EKLE
@@ -6563,6 +6576,9 @@ namespace TamgaApp
 
                 if (string.IsNullOrEmpty(aktifSevkMusteri)) aktifSevkMusteri = "Belirtilmedi";
 
+                // 🌟 VERİTABANI BAĞLANTISI: Eski arşiv kayıtlarında isim yoksa veritabanından çek!
+                var yerelUrunler = DataAccess.GetAllUrunler();
+
                 List<string> urunler = new List<string>();
                 foreach (DataGridViewRow r in dgvDetay.Rows)
                 {
@@ -6577,14 +6593,23 @@ namespace TamgaApp
                         int parantezIndex = urunKismi.LastIndexOf('(');
                         if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
 
-                        // 🌟 KOD VE AD AYIRIMI (Arşiv İçin)
+                        // 🌟 KOD VE AD AYIRIMI (Eski Arşiv Zırhı)
                         string uKodu = urunKismi;
                         string uAdi = "";
                         int tireIndex = urunKismi.IndexOf(" - ");
+
                         if (tireIndex > 0)
                         {
                             uKodu = urunKismi.Substring(0, tireIndex).Trim();
                             uAdi = urunKismi.Substring(tireIndex + 3).Trim();
+                        }
+                        else
+                        {
+                            // Arşivde ürün adı bulunamadıysa SQL'e bağlanıp soruyoruz
+                            uKodu = urunKismi.Trim();
+                            var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == uKodu || u.Barkod == uKodu);
+                            if (urun != null) uAdi = urun.Aciklama;
+                            else uAdi = "Bilinmeyen Ürün";
                         }
 
                         urunler.Add($"<li><span class='k-kod'>• {uKodu}</span><span class='k-ad'>{uAdi}</span><span class='k-adet'>Adet: {adetKismi}</span></li>");
@@ -7976,6 +8001,211 @@ namespace TamgaApp
 
         #endregion
 
+        // =========================================================================================
+
+        #region 🚛 26. AMBAR VE SEVK KONTROL RAPORLAMA MOTORU
+
+        // 🌟 "Ambar" butonuna bastığında açılacak olan Ana Pencereyi (UI) dinamik olarak çizer
+        private void AmbarRaporlamaEkraniniAc()
+        {
+            if (dgvAmbarSonListe == null || dgvAmbarSonListe.Rows.Count == 0)
+            {
+                MessageBox.Show("Raporlanacak hiçbir ambar verisi bulunamadı. Lütfen önce listeye palet ekleyin!", "Liste Boş", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 1. Şık Raporlama Formu
+            Form frmRapor = new Form
+            {
+                Text = "📦 Ambar ve Sevk Kontrol Raporlama Merkezi",
+                Size = new Size(1200, 700),
+                StartPosition = FormStartPosition.CenterScreen,
+                BackColor = Color.WhiteSmoke,
+                Icon = this.Icon
+            };
+
+            // 2. Üst Kontrol Paneli (Butonların duracağı yer)
+            Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(45, 52, 54) };
+
+            Button btnAmbarRapor = new Button { Text = "📄 AMBAR RAPORU YAZDIR (Geniş Format)", Location = new Point(20, 15), Size = new Size(350, 50), BackColor = Color.Gold, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnSevkKontrol = new Button { Text = "📋 SEVK KONTROL RAPORU YAZDIR (Dar Format)", Location = new Point(400, 15), Size = new Size(380, 50), BackColor = Color.White, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+
+            pnlUst.Controls.Add(btnAmbarRapor);
+            pnlUst.Controls.Add(btnSevkKontrol);
+            frmRapor.Controls.Add(pnlUst);
+
+            // 3. Verileri Gösterecek Ortak Tablo (DataGridView)
+            DataGridView dgvKonsolide = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = false,
+                ReadOnly = true,
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = Color.White,
+                RowHeadersVisible = false,
+                Font = new Font("Segoe UI", 10)
+            };
+
+            dgvKonsolide.Columns.Add("Firma", "FİRMA");
+            dgvKonsolide.Columns.Add("Adres", "ADRES (İletişim)");
+            dgvKonsolide.Columns.Add("Palet1", "1. PALET DESİ");
+            dgvKonsolide.Columns.Add("Palet2", "2. PALET DESİ");
+            dgvKonsolide.Columns.Add("Palet3", "3. PALET DESİ");
+            dgvKonsolide.Columns.Add("Palet4", "4. PALET DESİ");
+            dgvKonsolide.Columns.Add("Adet", "PALET ADETİ");
+
+            // dgvAmbarSonListe'deki verileri bu yeni tabloya uygun şekilde ayrıştırarak ekliyoruz
+            foreach (DataGridViewRow row in dgvAmbarSonListe.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                string firma = row.Cells[1].Value?.ToString() ?? "";
+                string adres = $"{row.Cells[2].Value} - {row.Cells[3].Value} | Tel: {row.Cells[4].Value} {row.Cells[5].Value}";
+                string adet = row.Cells[6].Value?.ToString() ?? "0";
+
+                // Ölçüleri satır atlamalarına göre diziye bölüyoruz
+                string olculerHam = row.Cells[7].Value?.ToString() ?? "";
+                string[] olculer = olculerHam.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                string p1 = olculer.Length > 0 ? olculer[0] : "";
+                string p2 = olculer.Length > 1 ? olculer[1] : "";
+                string p3 = olculer.Length > 2 ? olculer[2] : "";
+                string p4 = olculer.Length > 3 ? olculer[3] : "";
+
+                dgvKonsolide.Rows.Add(firma, adres, p1, p2, p3, p4, $"{adet} PALET");
+            }
+
+            frmRapor.Controls.Add(dgvKonsolide);
+            dgvKonsolide.BringToFront(); // Tabloyu butonların altına yerleştir
+
+            // ====================================================================
+            // 🚀 BUTON 1: AMBAR RAPORU (SARI BAŞLIKLI GENİŞ FORMAT)
+            // ====================================================================
+            btnAmbarRapor.Click += async (s, ev) =>
+            {
+                System.Text.StringBuilder html = new System.Text.StringBuilder();
+                html.AppendLine("<html><head><meta charset='utf-8'><style>");
+                html.AppendLine("@page { size: A4 landscape; margin: 10mm; }");
+                html.AppendLine("body { font-family: 'Calibri', Arial, sans-serif; font-size: 11px; }");
+                html.AppendLine("table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }");
+                html.AppendLine("th, td { border: 1.5px solid black; padding: 4px 6px; }");
+                html.AppendLine("th { background-color: #FFFF00; font-weight: bold; text-align: center; font-size: 12px; }");
+                html.AppendLine(".adres-hucresi { font-size: 10px; max-width: 300px; }");
+                html.AppendLine(".sari-bg { background-color: #FFFF00; font-weight: bold; text-align: center; }");
+                html.AppendLine(".sofor-tablo { width: 350px; font-weight: bold; font-size: 12px; margin-top: 30px; }");
+                html.AppendLine(".sofor-tablo th { background-color: transparent; text-align: left; width: 100px; }");
+                html.AppendLine("</style></head><body>");
+
+                html.AppendLine("<table><tr>");
+                html.AppendLine("<th style='width: 20%;'>FİRMA</th>");
+                html.AppendLine("<th style='width: 30%;'>ADRES</th>");
+                html.AppendLine("<th>1. PALET DESİ</th>");
+                html.AppendLine("<th>2. PALET DESİ</th>");
+                html.AppendLine("<th>3. PALET DESİ</th>");
+                html.AppendLine("<th>4. PALET DESİ</th>");
+                html.AppendLine("<th>PALET ADETİ</th>");
+                html.AppendLine("</tr>");
+
+                foreach (DataGridViewRow r in dgvKonsolide.Rows)
+                {
+                    html.AppendLine("<tr>");
+                    html.AppendLine($"<td><b>{r.Cells["Firma"].Value}</b></td>");
+                    html.AppendLine($"<td class='adres-hucresi'>{r.Cells["Adres"].Value}</td>");
+                    html.AppendLine($"<td>{r.Cells["Palet1"].Value}</td>");
+                    html.AppendLine($"<td>{r.Cells["Palet2"].Value}</td>");
+                    html.AppendLine($"<td>{r.Cells["Palet3"].Value}</td>");
+                    html.AppendLine($"<td>{r.Cells["Palet4"].Value}</td>");
+                    html.AppendLine($"<td class='sari-bg'>{r.Cells["Adet"].Value}</td>");
+                    html.AppendLine("</tr>");
+                }
+
+                // Alt Kısım: Şoför Bilgileri Tablosu
+                html.AppendLine("</table>");
+                html.AppendLine("<table class='sofor-tablo'>");
+                html.AppendLine("<tr><th>ŞOFÖR</th><td>: </td></tr>");
+                html.AppendLine("<tr><th>PLAKA</th><td>: </td></tr>");
+                html.AppendLine("<tr><th>TELEFON</th><td>: </td></tr>");
+                html.AppendLine("</table>");
+                html.AppendLine("</body></html>");
+
+                await HtmlYaziciMotorunuCalistir(html.ToString(), "Ambar Raporu");
+            };
+
+            // ====================================================================
+            // 🚀 BUTON 2: SEVK KONTROL RAPORU (BEYAZ BAŞLIKLI DAR FORMAT)
+            // ====================================================================
+            btnSevkKontrol.Click += async (s, ev) =>
+            {
+                System.Text.StringBuilder html = new System.Text.StringBuilder();
+                html.AppendLine("<html><head><meta charset='utf-8'><style>");
+                html.AppendLine("@page { size: A4 portrait; margin: 10mm; }");
+                html.AppendLine("body { font-family: 'Times New Roman', serif; font-size: 13px; }");
+                html.AppendLine("table { width: 100%; border-collapse: collapse; }");
+                html.AppendLine("th, td { border: 1.5px solid black; padding: 6px; text-align: center; }");
+                html.AppendLine("th { font-weight: bold; font-size: 14px; }");
+                html.AppendLine(".sol-hizala { text-align: left; font-weight: bold; }");
+                html.AppendLine("</style></head><body>");
+
+                html.AppendLine("<table><tr>");
+                html.AppendLine("<th style='width: 45%;'>MÜŞTERİ ADI</th>");
+                html.AppendLine("<th style='width: 15%;'>PALET ADETİ</th>");
+                html.AppendLine("<th style='width: 20%;'>DESİ</th>");
+                html.AppendLine("<th style='width: 20%;'>DESİ</th>");
+                html.AppendLine("</tr>");
+
+                foreach (DataGridViewRow r in dgvKonsolide.Rows)
+                {
+                    html.AppendLine("<tr>");
+                    html.AppendLine($"<td class='sol-hizala'>{r.Cells["Firma"].Value}</td>");
+                    html.AppendLine($"<td>{r.Cells["Adet"].Value}</td>");
+
+                    // Görseldeki gibi Desi 1 ve Desi 2'yi yan yana, eğer yoksa boş bırakarak yazıyoruz
+                    string d1 = r.Cells["Palet1"].Value.ToString();
+                    string d2 = r.Cells["Palet2"].Value.ToString();
+
+                    html.AppendLine($"<td>{d1}</td>");
+                    html.AppendLine($"<td>{d2}</td>");
+                    html.AppendLine("</tr>");
+                }
+
+                html.AppendLine("</table></body></html>");
+
+                await HtmlYaziciMotorunuCalistir(html.ToString(), "Sevk Kontrol Raporu");
+            };
+
+            frmRapor.ShowDialog();
+        }
+
+        // 🌟 Her iki butonun da kullandığı ortak Edge (WebView2) Yazdırma Motoru
+        private async Task HtmlYaziciMotorunuCalistir(string htmlIcerik, string baslik)
+        {
+            Form frmYazdir = new Form { Text = $"{baslik} Yazdırılıyor...", Width = 900, Height = 600, StartPosition = FormStartPosition.CenterParent, ShowIcon = false };
+            Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+            frmYazdir.Controls.Add(web);
+            frmYazdir.FormClosed += (sender, args) => { web.Dispose(); };
+
+            frmYazdir.Shown += async (sender, args) =>
+            {
+                // Yetki hatasını önlemek için AppData içinde geçici profil yaratıyoruz
+                var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "RaporPrint"));
+                await web.EnsureCoreWebView2Async(ozelHafiza);
+
+                web.NavigationCompleted += (s, e) => { web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser); };
+                web.NavigateToString(htmlIcerik);
+            };
+
+            frmYazdir.ShowDialog();
+        }
+
+        private void btnAmbar_Click(object sender, EventArgs e)
+        {
+            AmbarRaporlamaEkraniniAc();
+        }
+
         #endregion
+
+        #endregion
+
     }
 }

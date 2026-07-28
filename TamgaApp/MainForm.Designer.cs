@@ -40,6 +40,9 @@ namespace TamgaApp
             this.tabPage13 = new System.Windows.Forms.TabPage();
             this.splitContainer6 = new System.Windows.Forms.SplitContainer();
             this.panel8 = new System.Windows.Forms.Panel();
+            this.btnAmbarGetir = new System.Windows.Forms.Button();
+            this.btnAmbarGoruntule = new System.Windows.Forms.Button();
+            this.btnAmbarKaydet = new System.Windows.Forms.Button();
             this.btnKamyonYukle = new System.Windows.Forms.Button();
             this.btnAskidanSil = new System.Windows.Forms.Button();
             this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
@@ -348,9 +351,7 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnAmbarKaydet = new System.Windows.Forms.Button();
-            this.btnAmbarGoruntule = new System.Windows.Forms.Button();
-            this.btnAmbarGetir = new System.Windows.Forms.Button();
+            this.btnAmbar = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -496,6 +497,39 @@ namespace TamgaApp
             this.panel8.Name = "panel8";
             this.panel8.Size = new System.Drawing.Size(519, 333);
             this.panel8.TabIndex = 53;
+            // 
+            // btnAmbarGetir
+            // 
+            this.btnAmbarGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarGetir.Location = new System.Drawing.Point(389, 266);
+            this.btnAmbarGetir.Name = "btnAmbarGetir";
+            this.btnAmbarGetir.Size = new System.Drawing.Size(127, 47);
+            this.btnAmbarGetir.TabIndex = 51;
+            this.btnAmbarGetir.Text = "AMBAR GETİR";
+            this.btnAmbarGetir.UseVisualStyleBackColor = true;
+            this.btnAmbarGetir.Click += new System.EventHandler(this.btnAmbarGetir_Click);
+            // 
+            // btnAmbarGoruntule
+            // 
+            this.btnAmbarGoruntule.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarGoruntule.Location = new System.Drawing.Point(389, 213);
+            this.btnAmbarGoruntule.Name = "btnAmbarGoruntule";
+            this.btnAmbarGoruntule.Size = new System.Drawing.Size(127, 47);
+            this.btnAmbarGoruntule.TabIndex = 50;
+            this.btnAmbarGoruntule.Text = "AMBAR GÖRÜNTÜLE";
+            this.btnAmbarGoruntule.UseVisualStyleBackColor = true;
+            this.btnAmbarGoruntule.Click += new System.EventHandler(this.btnAmbarGoruntule_Click);
+            // 
+            // btnAmbarKaydet
+            // 
+            this.btnAmbarKaydet.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarKaydet.Location = new System.Drawing.Point(389, 160);
+            this.btnAmbarKaydet.Name = "btnAmbarKaydet";
+            this.btnAmbarKaydet.Size = new System.Drawing.Size(127, 47);
+            this.btnAmbarKaydet.TabIndex = 49;
+            this.btnAmbarKaydet.Text = "AMBAR ARACI KAYDET";
+            this.btnAmbarKaydet.UseVisualStyleBackColor = true;
+            this.btnAmbarKaydet.Click += new System.EventHandler(this.btnAmbarKaydet_Click);
             // 
             // btnKamyonYukle
             // 
@@ -3728,6 +3762,7 @@ namespace TamgaApp
             // 
             // panel4
             // 
+            this.panel4.Controls.Add(this.btnAmbar);
             this.panel4.Controls.Add(this.btnZarfHafiza);
             this.panel4.Controls.Add(this.btnManuelAdresEkle);
             this.panel4.Controls.Add(this.btnAmbarAra);
@@ -3751,7 +3786,7 @@ namespace TamgaApp
             this.btnZarfHafiza.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnZarfHafiza.Location = new System.Drawing.Point(1525, 5);
             this.btnZarfHafiza.Name = "btnZarfHafiza";
-            this.btnZarfHafiza.Size = new System.Drawing.Size(137, 46);
+            this.btnZarfHafiza.Size = new System.Drawing.Size(112, 46);
             this.btnZarfHafiza.TabIndex = 26;
             this.btnZarfHafiza.Text = "Hafıza";
             this.btnZarfHafiza.UseVisualStyleBackColor = true;
@@ -3870,38 +3905,16 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // btnAmbarKaydet
+            // btnAmbar
             // 
-            this.btnAmbarKaydet.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarKaydet.Location = new System.Drawing.Point(389, 160);
-            this.btnAmbarKaydet.Name = "btnAmbarKaydet";
-            this.btnAmbarKaydet.Size = new System.Drawing.Size(127, 47);
-            this.btnAmbarKaydet.TabIndex = 49;
-            this.btnAmbarKaydet.Text = "AMBAR ARACI KAYDET";
-            this.btnAmbarKaydet.UseVisualStyleBackColor = true;
-            this.btnAmbarKaydet.Click += new System.EventHandler(this.btnAmbarKaydet_Click);
-            // 
-            // btnAmbarGoruntule
-            // 
-            this.btnAmbarGoruntule.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarGoruntule.Location = new System.Drawing.Point(389, 213);
-            this.btnAmbarGoruntule.Name = "btnAmbarGoruntule";
-            this.btnAmbarGoruntule.Size = new System.Drawing.Size(127, 47);
-            this.btnAmbarGoruntule.TabIndex = 50;
-            this.btnAmbarGoruntule.Text = "AMBAR GÖRÜNTÜLE";
-            this.btnAmbarGoruntule.UseVisualStyleBackColor = true;
-            this.btnAmbarGoruntule.Click += new System.EventHandler(this.btnAmbarGoruntule_Click);
-            // 
-            // btnAmbarGetir
-            // 
-            this.btnAmbarGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarGetir.Location = new System.Drawing.Point(389, 266);
-            this.btnAmbarGetir.Name = "btnAmbarGetir";
-            this.btnAmbarGetir.Size = new System.Drawing.Size(127, 47);
-            this.btnAmbarGetir.TabIndex = 51;
-            this.btnAmbarGetir.Text = "AMBAR GETİR";
-            this.btnAmbarGetir.UseVisualStyleBackColor = true;
-            this.btnAmbarGetir.Click += new System.EventHandler(this.btnAmbarGetir_Click);
+            this.btnAmbar.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbar.Location = new System.Drawing.Point(1643, 5);
+            this.btnAmbar.Name = "btnAmbar";
+            this.btnAmbar.Size = new System.Drawing.Size(112, 46);
+            this.btnAmbar.TabIndex = 27;
+            this.btnAmbar.Text = "AMBAR";
+            this.btnAmbar.UseVisualStyleBackColor = true;
+            this.btnAmbar.Click += new System.EventHandler(this.btnAmbar_Click);
             // 
             // MainForm
             // 
@@ -4339,6 +4352,7 @@ namespace TamgaApp
         private Button btnAmbarGetir;
         private Button btnAmbarGoruntule;
         private Button btnAmbarKaydet;
+        private Button btnAmbar;
     }
 }
 
