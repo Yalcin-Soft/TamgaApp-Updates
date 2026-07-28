@@ -6034,7 +6034,7 @@ namespace TamgaApp
        </script>
     </body></html>";
 
-            Form frmYazdir = new Form { Text = "Palet Etiketi Çıkartılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent };
+            Form frmYazdir = new Form { Text = "Palet Etiketi Çıkartılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent, Icon = this.Icon }; // 🌟 SON KISMA EKLENDİ
             Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
             frmYazdir.Controls.Add(web);
             frmYazdir.FormClosed += (s1, e1) => { web.Dispose(); };
@@ -6727,7 +6727,8 @@ namespace TamgaApp
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent,
                 MaximizeBox = false,
-                MinimizeBox = false
+                MinimizeBox = false,
+                Icon = this.Icon
             };
 
             // 2. Kutuları ve Etiketleri Hazırlıyoruz
@@ -6816,7 +6817,8 @@ namespace TamgaApp
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent,
                 MaximizeBox = false,
-                MinimizeBox = false
+                MinimizeBox = false,
+                Icon = this.Icon
             };
 
             // 2. Kontrolleri Hazırla
@@ -7659,21 +7661,63 @@ namespace TamgaApp
         // 🌟 3. AMBAR GETİR BUTONU: Ambardaki malı geri ekrana (palet matrisine) dizer
         private void btnAmbarGetir_Click(object sender, EventArgs e)
         {
-            string seciliFirma = cmbMusteri.Text; // Kendi combobox ismine göre düzelt
-
-            // Firma hafızada (ambarda) var mı diye kontrol et
-            if (AmbarHafizasi.ContainsKey(seciliFirma))
+            if (AmbarHafizasi.Count == 0)
             {
+                MessageBox.Show("Ambar aracı şu an boş! Getirilecek herhangi bir firma bulunmuyor.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Seçim ekranı için dinamik ve şık bir form oluşturuyoruz
+            Form frmSecim = new Form
+            {
+                Text = "🔄 Ambardan Geri Getir",
+                Size = new Size(400, 350),
+                StartPosition = FormStartPosition.CenterScreen,
+                BackColor = Color.WhiteSmoke,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                Icon = this.Icon // 🌟 İKON BURAYA EKLENDİ
+            };
+
+            Label lblBilgi = new Label { Text = "Ekrana geri getirmek istediğiniz firmayı seçin:", Location = new Point(20, 15), Size = new Size(340, 20), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            ListBox lstAmbardakiFirmalar = new ListBox { Location = new Point(20, 40), Size = new Size(340, 200), Font = new Font("Segoe UI", 12) };
+
+            // Ambardaki (hafızadaki) firmaları listeye doldur
+            foreach (var firma in AmbarHafizasi.Keys)
+            {
+                lstAmbardakiFirmalar.Items.Add(firma);
+            }
+
+            Button btnGetir = new Button { Text = "⬇️ Seçili Firmayı Ekrana Getir", Location = new Point(20, 250), Size = new Size(340, 45), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            // Seçili firmayı getirme ve ekrana dizme işlemi
+            btnGetir.Click += (s, ev) =>
+            {
+                if (lstAmbardakiFirmalar.SelectedItem == null)
+                {
+                    MessageBox.Show("Lütfen listeden bir firma seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string seciliFirma = lstAmbardakiFirmalar.SelectedItem.ToString();
                 string geriGelenJson = AmbarHafizasi[seciliFirma];
 
                 // TODO: JSON'u çözüp ekrana dizme (Deserialize) kodunu buraya kopyalayacaksın
+                // (Eski sistemdeki 'Yarım Kalanı Getir' mantığını buraya yedireceksin)
 
-                MessageBox.Show($"{seciliFirma} firması ambardan ekrana getirildi. İşleme devam edebilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else
-            {
-                MessageBox.Show("Bu firma Ambar Aracında bulunmuyor!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+                // İstersen getirilen firmayı ambardan (hafızadan) anında silmek için bu alttaki yorum satırını açabilirsin
+                // AmbarHafizasi.Remove(seciliFirma); 
+
+                frmSecim.Close(); // İşlem bitince mini pencereyi kapat
+                MessageBox.Show($"{seciliFirma} firması ambardan masaya indirildi. İşleme devam edebilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            frmSecim.Controls.Add(lblBilgi);
+            frmSecim.Controls.Add(lstAmbardakiFirmalar);
+            frmSecim.Controls.Add(btnGetir);
+
+            frmSecim.ShowDialog();
         }
 
         // 🌟 4. AMBAR GÖRÜNTÜLE BUTONU: Kamyonun içini gösteren yönetim paneli
@@ -7685,7 +7729,8 @@ namespace TamgaApp
                 Text = "🚛 Ambar Aracı Yönetim Paneli",
                 Size = new Size(700, 500),
                 StartPosition = FormStartPosition.CenterScreen,
-                BackColor = Color.WhiteSmoke
+                BackColor = Color.WhiteSmoke,
+                Icon = this.Icon // 🌟 İKON BURAYA EKLENDİ
             };
 
             // Ambardaki firmaları göstereceğimiz liste kutusu
@@ -7741,7 +7786,7 @@ namespace TamgaApp
         }
 
         #endregion
+
         #endregion
     }
-
 }
