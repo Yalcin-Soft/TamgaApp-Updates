@@ -7152,15 +7152,10 @@ namespace TamgaApp
         #region 📦 19. AKILLI DESİ HESAPLAMA MOTORU (ÇOKLU ZARF)
         private void dgvPaletler_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            // DİKKAT: Kendi tablondaki sütun isimlerini buraya yazmalısın. 
-            // Eğer tabloda "Ölçü" yerine "Ebat" yazıyorsa onu değiştir.
-            string olcuSutunAdi = "Ölçü";
-            string desiSutunAdi = "Desi";
-
-            // Sadece "Ölçü" sütununda bir değişiklik yapıldıysa çalışsın
-            if (dgvPaletler.Columns[e.ColumnIndex].Name == olcuSutunAdi)
+            // Sütun indeksini (1 = Ebatlar Sütunu) baz alıyoruz ki isim değişse bile çökmesin
+            if (e.ColumnIndex == 1 && e.RowIndex >= 0)
             {
-                var hucreDegeri = dgvPaletler.Rows[e.RowIndex].Cells[olcuSutunAdi].Value;
+                var hucreDegeri = dgvPaletler.Rows[e.RowIndex].Cells[1].Value;
 
                 if (hucreDegeri != null && !string.IsNullOrWhiteSpace(hucreDegeri.ToString()))
                 {
@@ -7169,11 +7164,11 @@ namespace TamgaApp
 
                     try
                     {
-                        // 🌟 1. DURUM: Kullanıcı araya * veya X veya boşluk koyduysa (Örn: 80*120*155 veya 80x120x155)
-                        if (girdi.Contains("*") || girdi.Contains("x") || girdi.Contains(" "))
+                        // 🌟 1. DURUM: Araya herhangi bir işaret konduysa (*, x, - veya boşluk)
+                        if (girdi.Contains("*") || girdi.Contains("x") || girdi.Contains(" ") || girdi.Contains("-"))
                         {
-                            // Bütün farklı işaretleri yıldıza çevirip parçalıyoruz
-                            girdi = girdi.Replace("x", "*").Replace(" ", "*");
+                            // Bütün garip işaretleri standarda (*) çevir ve böl
+                            girdi = girdi.Replace("x", "*").Replace(" ", "*").Replace("-", "*");
                             string[] parcalar = girdi.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
 
                             if (parcalar.Length == 3)
@@ -7181,38 +7176,62 @@ namespace TamgaApp
                                 double en = Convert.ToDouble(parcalar[0]);
                                 double boy = Convert.ToDouble(parcalar[1]);
                                 double yukseklik = Convert.ToDouble(parcalar[2]);
-
                                 desi = (en * boy * yukseklik) / 3000.0;
+
+                                // Kutuyu da jilet gibi formata geri çevir
+                                dgvPaletler.Rows[e.RowIndex].Cells[1].Value = $"{en}*{boy}*{yukseklik}";
                             }
                         }
-                        // 🌟 2. DURUM: Eski alışkanlık, dümdüz bitişik yazıldıysa
+                        // 🌟 2. DURUM: Dümdüz bitişik rakam yazıldıysa (Örn: 65120150, 80120150)
                         else
                         {
-                            if (girdi.Length == 9) // Örn: 100120155 (100 x 120 x 155)
+                            // Sadece rakamları al (Yanlışlıkla harf girdiyse sistemi çökertmemek için)
+                            string sadeceRakam = new string(girdi.Where(char.IsDigit).ToArray());
+
+                            double en = 0, boy = 0, yuk = 0;
+
+                            if (sadeceRakam.Length == 9) // Örn: 100 120 150
                             {
-                                double en = Convert.ToDouble(girdi.Substring(0, 3));
-                                double boy = Convert.ToDouble(girdi.Substring(3, 3));
-                                double yukseklik = Convert.ToDouble(girdi.Substring(6, 3));
-                                desi = (en * boy * yukseklik) / 3000.0;
+                                en = Convert.ToDouble(sadeceRakam.Substring(0, 3));
+                                boy = Convert.ToDouble(sadeceRakam.Substring(3, 3));
+                                yuk = Convert.ToDouble(sadeceRakam.Substring(6, 3));
                             }
-                            else if (girdi.Length == 8) // Örn: 80120155 (80 x 120 x 155)
+                            else if (sadeceRakam.Length == 8) // Örn: 80 120 150 (80x120x150)
                             {
-                                double en = Convert.ToDouble(girdi.Substring(0, 2)); // İlk 2 haneyi alır (80)
-                                double boy = Convert.ToDouble(girdi.Substring(2, 3));
-                                double yukseklik = Convert.ToDouble(girdi.Substring(5, 3));
-                                desi = (en * boy * yukseklik) / 3000.0;
+                                en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
+                                boy = Convert.ToDouble(sadeceRakam.Substring(2, 3));
+                                yuk = Convert.ToDouble(sadeceRakam.Substring(5, 3));
+                            }
+                            else if (sadeceRakam.Length == 7) // Örn: 65 80 150 (65x80x150) -> İŞTE EKSİK OLAN BUYDU!
+                            {
+                                en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
+                                boy = Convert.ToDouble(sadeceRakam.Substring(2, 2));
+                                yuk = Convert.ToDouble(sadeceRakam.Substring(4, 3));
+                            }
+                            else if (sadeceRakam.Length == 6) // Örn: 65 80 80 (65x80x80)
+                            {
+                                en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
+                                boy = Convert.ToDouble(sadeceRakam.Substring(2, 2));
+                                yuk = Convert.ToDouble(sadeceRakam.Substring(4, 2));
+                            }
+
+                            if (en > 0 && boy > 0 && yuk > 0)
+                            {
+                                desi = (en * boy * yuk) / 3000.0;
+                                // Sistemi anladığı formata geri yapıştır (Örn: 65*80*150)
+                                dgvPaletler.Rows[e.RowIndex].Cells[1].Value = $"{en}*{boy}*{yuk}";
                             }
                         }
 
-                        // 🌟 SONUÇ YAZDIRMA: Hesaplanan Desi'yi virgülden sonra 2 hane olacak şekilde tabloya çak!
+                        // 🌟 SONUÇ: Desi başarıyla hesaplandıysa yuvarla ve yan hücreye çak!
                         if (desi > 0)
                         {
-                            dgvPaletler.Rows[e.RowIndex].Cells[desiSutunAdi].Value = Math.Round(desi, 2);
+                            dgvPaletler.Rows[e.RowIndex].Cells[2].Value = Math.Round(desi, 0) + " Ds."; // Tam sayı istersen 0, küsurat istersen 2 yapabilirsin
                         }
                     }
                     catch
                     {
-                        // Kullanıcı "abc" gibi saçma sapan bir harf girerse program çökmesin, sessizce yoksaysın
+                        // Kullanıcı saçma sapan bir şey yazarsa program çökmesin, görmezden gelsin
                     }
                 }
             }
@@ -8005,6 +8024,11 @@ namespace TamgaApp
 
         #region 🚛 26. AMBAR VE SEVK KONTROL RAPORLAMA MOTORU
 
+        private void btnAmbar_Click(object sender, EventArgs e)
+        {
+            AmbarRaporlamaEkraniniAc();
+        }
+
         // 🌟 "Ambar" butonuna bastığında açılacak olan Ana Pencereyi (UI) dinamik olarak çizer
         private void AmbarRaporlamaEkraniniAc()
         {
@@ -8014,7 +8038,19 @@ namespace TamgaApp
                 return;
             }
 
-            // 1. Şık Raporlama Formu
+            // 🌟 1. DİNAMİK PALET SAYISINI BUL (En fazla paleti olan firmayı tespit et)
+            int maxPalet = 1;
+            foreach (DataGridViewRow row in dgvAmbarSonListe.Rows)
+            {
+                if (row.IsNewRow) continue;
+                string olculerHam = row.Cells[7].Value?.ToString() ?? "";
+
+                // Kaç satır ölçü yazıldıysa, o firmanın o kadar paleti vardır
+                int pCount = olculerHam.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                if (pCount > maxPalet) maxPalet = pCount;
+            }
+
+            // 2. Şık Raporlama Formu
             Form frmRapor = new Form
             {
                 Text = "📦 Ambar ve Sevk Kontrol Raporlama Merkezi",
@@ -8024,17 +8060,31 @@ namespace TamgaApp
                 Icon = this.Icon
             };
 
-            // 2. Üst Kontrol Paneli (Butonların duracağı yer)
-            Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(45, 52, 54) };
+            // 3. Üst Kontrol Paneli (Şoför Bilgileri ve Butonların duracağı yer)
+            Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.FromArgb(45, 52, 54) };
 
-            Button btnAmbarRapor = new Button { Text = "📄 AMBAR RAPORU YAZDIR (Geniş Format)", Location = new Point(20, 15), Size = new Size(350, 50), BackColor = Color.Gold, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
-            Button btnSevkKontrol = new Button { Text = "📋 SEVK KONTROL RAPORU YAZDIR (Dar Format)", Location = new Point(400, 15), Size = new Size(380, 50), BackColor = Color.White, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnAmbarRapor = new Button { Text = "📄 AMBAR RAPORU YAZDIR (Geniş Format)", Location = new Point(20, 15), Size = new Size(350, 45), BackColor = Color.Gold, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnSevkKontrol = new Button { Text = "📋 SEVK KONTROL RAPORU YAZDIR (Dar Format)", Location = new Point(400, 15), Size = new Size(380, 45), BackColor = Color.White, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+
+            // 🌟 ŞOFÖR, PLAKA, TELEFON KUTULARI
+            Label lblSofor = new Label { Text = "Şoför:", Location = new Point(20, 72), AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtSofor = new TextBox { Location = new Point(65, 70), Width = 150, Font = new Font("Segoe UI", 9) };
+
+            Label lblPlaka = new Label { Text = "Plaka:", Location = new Point(240, 72), AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtPlaka = new TextBox { Location = new Point(285, 70), Width = 120, Font = new Font("Segoe UI", 9) };
+
+            Label lblTelefon = new Label { Text = "Telefon:", Location = new Point(430, 72), AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtTelefon = new TextBox { Location = new Point(490, 70), Width = 130, Font = new Font("Segoe UI", 9) };
 
             pnlUst.Controls.Add(btnAmbarRapor);
             pnlUst.Controls.Add(btnSevkKontrol);
+            pnlUst.Controls.Add(lblSofor); pnlUst.Controls.Add(txtSofor);
+            pnlUst.Controls.Add(lblPlaka); pnlUst.Controls.Add(txtPlaka);
+            pnlUst.Controls.Add(lblTelefon); pnlUst.Controls.Add(txtTelefon);
+
             frmRapor.Controls.Add(pnlUst);
 
-            // 3. Verileri Gösterecek Ortak Tablo (DataGridView)
+            // 4. Verileri Gösterecek Ortak Tablo (DataGridView)
             DataGridView dgvKonsolide = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -8049,10 +8099,12 @@ namespace TamgaApp
 
             dgvKonsolide.Columns.Add("Firma", "FİRMA");
             dgvKonsolide.Columns.Add("Adres", "ADRES (İletişim)");
-            dgvKonsolide.Columns.Add("Palet1", "1. PALET DESİ");
-            dgvKonsolide.Columns.Add("Palet2", "2. PALET DESİ");
-            dgvKonsolide.Columns.Add("Palet3", "3. PALET DESİ");
-            dgvKonsolide.Columns.Add("Palet4", "4. PALET DESİ");
+
+            // 🌟 DİNAMİK SÜTUN EKLEME (Max Palet sayısına göre sütun inşa et)
+            for (int i = 1; i <= maxPalet; i++)
+            {
+                dgvKonsolide.Columns.Add($"Palet{i}", $"{i}. PALET DESİ");
+            }
             dgvKonsolide.Columns.Add("Adet", "PALET ADETİ");
 
             // dgvAmbarSonListe'deki verileri bu yeni tabloya uygun şekilde ayrıştırarak ekliyoruz
@@ -8064,16 +8116,21 @@ namespace TamgaApp
                 string adres = $"{row.Cells[2].Value} - {row.Cells[3].Value} | Tel: {row.Cells[4].Value} {row.Cells[5].Value}";
                 string adet = row.Cells[6].Value?.ToString() ?? "0";
 
-                // Ölçüleri satır atlamalarına göre diziye bölüyoruz
                 string olculerHam = row.Cells[7].Value?.ToString() ?? "";
                 string[] olculer = olculerHam.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
-                string p1 = olculer.Length > 0 ? olculer[0] : "";
-                string p2 = olculer.Length > 1 ? olculer[1] : "";
-                string p3 = olculer.Length > 2 ? olculer[2] : "";
-                string p4 = olculer.Length > 3 ? olculer[3] : "";
+                // Dinamik satır oluştur
+                int rowIndex = dgvKonsolide.Rows.Add();
+                DataGridViewRow newRow = dgvKonsolide.Rows[rowIndex];
+                newRow.Cells["Firma"].Value = firma;
+                newRow.Cells["Adres"].Value = adres;
 
-                dgvKonsolide.Rows.Add(firma, adres, p1, p2, p3, p4, $"{adet} PALET");
+                // Kaç tane palet varsa o kadar hücreyi doldur
+                for (int i = 1; i <= maxPalet; i++)
+                {
+                    newRow.Cells[$"Palet{i}"].Value = olculer.Length >= i ? olculer[i - 1] : "";
+                }
+                newRow.Cells["Adet"].Value = $"{adet} PALET";
             }
 
             frmRapor.Controls.Add(dgvKonsolide);
@@ -8098,12 +8155,12 @@ namespace TamgaApp
                 html.AppendLine("</style></head><body>");
 
                 html.AppendLine("<table><tr>");
-                html.AppendLine("<th style='width: 20%;'>FİRMA</th>");
-                html.AppendLine("<th style='width: 30%;'>ADRES</th>");
-                html.AppendLine("<th>1. PALET DESİ</th>");
-                html.AppendLine("<th>2. PALET DESİ</th>");
-                html.AppendLine("<th>3. PALET DESİ</th>");
-                html.AppendLine("<th>4. PALET DESİ</th>");
+                html.AppendLine("<th style='width: 25%;'>FİRMA</th>");
+                html.AppendLine("<th style='width: 35%;'>ADRES</th>");
+
+                // 🌟 DİNAMİK BAŞLIKLAR (Sadece ihtiyaç olan kadar PALET DESİ yazar)
+                for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>{i}. PALET DESİ</th>");
+
                 html.AppendLine("<th>PALET ADETİ</th>");
                 html.AppendLine("</tr>");
 
@@ -8112,20 +8169,20 @@ namespace TamgaApp
                     html.AppendLine("<tr>");
                     html.AppendLine($"<td><b>{r.Cells["Firma"].Value}</b></td>");
                     html.AppendLine($"<td class='adres-hucresi'>{r.Cells["Adres"].Value}</td>");
-                    html.AppendLine($"<td>{r.Cells["Palet1"].Value}</td>");
-                    html.AppendLine($"<td>{r.Cells["Palet2"].Value}</td>");
-                    html.AppendLine($"<td>{r.Cells["Palet3"].Value}</td>");
-                    html.AppendLine($"<td>{r.Cells["Palet4"].Value}</td>");
+
+                    // 🌟 DİNAMİK HÜCRELER
+                    for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
+
                     html.AppendLine($"<td class='sari-bg'>{r.Cells["Adet"].Value}</td>");
                     html.AppendLine("</tr>");
                 }
 
-                // Alt Kısım: Şoför Bilgileri Tablosu
+                // 🌟 ŞOFÖR BİLGİLERİNİ KUTUDAN ALIP YAZDIRIYORUZ
                 html.AppendLine("</table>");
                 html.AppendLine("<table class='sofor-tablo'>");
-                html.AppendLine("<tr><th>ŞOFÖR</th><td>: </td></tr>");
-                html.AppendLine("<tr><th>PLAKA</th><td>: </td></tr>");
-                html.AppendLine("<tr><th>TELEFON</th><td>: </td></tr>");
+                html.AppendLine($"<tr><th>ŞOFÖR</th><td>: {txtSofor.Text.Trim()}</td></tr>");
+                html.AppendLine($"<tr><th>PLAKA</th><td>: {txtPlaka.Text.Trim()}</td></tr>");
+                html.AppendLine($"<tr><th>TELEFON</th><td>: {txtTelefon.Text.Trim()}</td></tr>");
                 html.AppendLine("</table>");
                 html.AppendLine("</body></html>");
 
@@ -8150,8 +8207,10 @@ namespace TamgaApp
                 html.AppendLine("<table><tr>");
                 html.AppendLine("<th style='width: 45%;'>MÜŞTERİ ADI</th>");
                 html.AppendLine("<th style='width: 15%;'>PALET ADETİ</th>");
-                html.AppendLine("<th style='width: 20%;'>DESİ</th>");
-                html.AppendLine("<th style='width: 20%;'>DESİ</th>");
+
+                // 🌟 DİNAMİK DESİ BAŞLIKLARI (Kaç palet varsa o kadar DESİ sütunu koyar. Boş sütun tarih oldu!)
+                for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>DESİ</th>");
+
                 html.AppendLine("</tr>");
 
                 foreach (DataGridViewRow r in dgvKonsolide.Rows)
@@ -8160,12 +8219,9 @@ namespace TamgaApp
                     html.AppendLine($"<td class='sol-hizala'>{r.Cells["Firma"].Value}</td>");
                     html.AppendLine($"<td>{r.Cells["Adet"].Value}</td>");
 
-                    // Görseldeki gibi Desi 1 ve Desi 2'yi yan yana, eğer yoksa boş bırakarak yazıyoruz
-                    string d1 = r.Cells["Palet1"].Value.ToString();
-                    string d2 = r.Cells["Palet2"].Value.ToString();
+                    // 🌟 DİNAMİK DESİ HÜCRELERİ
+                    for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
 
-                    html.AppendLine($"<td>{d1}</td>");
-                    html.AppendLine($"<td>{d2}</td>");
                     html.AppendLine("</tr>");
                 }
 
@@ -8198,14 +8254,10 @@ namespace TamgaApp
             frmYazdir.ShowDialog();
         }
 
-        private void btnAmbar_Click(object sender, EventArgs e)
-        {
-            AmbarRaporlamaEkraniniAc();
-        }
-
         #endregion
 
         #endregion
 
+        
     }
 }

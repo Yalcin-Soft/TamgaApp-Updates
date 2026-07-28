@@ -338,6 +338,7 @@ namespace TamgaApp
             this.dgvPaletler = new System.Windows.Forms.DataGridView();
             this.dgvAmbarSecilenFirmalar = new System.Windows.Forms.DataGridView();
             this.panel4 = new System.Windows.Forms.Panel();
+            this.btnAmbar = new System.Windows.Forms.Button();
             this.btnZarfHafiza = new System.Windows.Forms.Button();
             this.btnManuelAdresEkle = new System.Windows.Forms.Button();
             this.btnAmbarAra = new System.Windows.Forms.Button();
@@ -351,7 +352,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnAmbar = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -3781,6 +3781,17 @@ namespace TamgaApp
             this.panel4.Size = new System.Drawing.Size(1763, 59);
             this.panel4.TabIndex = 28;
             // 
+            // btnAmbar
+            // 
+            this.btnAmbar.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbar.Location = new System.Drawing.Point(1643, 5);
+            this.btnAmbar.Name = "btnAmbar";
+            this.btnAmbar.Size = new System.Drawing.Size(112, 46);
+            this.btnAmbar.TabIndex = 27;
+            this.btnAmbar.Text = "AMBAR";
+            this.btnAmbar.UseVisualStyleBackColor = true;
+            this.btnAmbar.Click += new System.EventHandler(this.btnAmbar_Click);
+            // 
             // btnZarfHafiza
             // 
             this.btnZarfHafiza.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
@@ -3904,17 +3915,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Name = "cmbPaletSayisi";
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
-            // 
-            // btnAmbar
-            // 
-            this.btnAmbar.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbar.Location = new System.Drawing.Point(1643, 5);
-            this.btnAmbar.Name = "btnAmbar";
-            this.btnAmbar.Size = new System.Drawing.Size(112, 46);
-            this.btnAmbar.TabIndex = 27;
-            this.btnAmbar.Text = "AMBAR";
-            this.btnAmbar.UseVisualStyleBackColor = true;
-            this.btnAmbar.Click += new System.EventHandler(this.btnAmbar_Click);
             // 
             // MainForm
             // 
