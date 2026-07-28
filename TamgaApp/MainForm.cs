@@ -7622,47 +7622,120 @@ namespace TamgaApp
 
         #region 📦 25. AMBAR YÖNETİMİ (PARSİYEL YÜKLEME) SİSTEMİ
 
-        // 🌟 1. HAFIZA BEYNİ: Tüm ambarı arka planda tutacak ortak dictionary (Firma Adı -> O firmanın JSON sevkiyat verisi)
+        // 🌟 1. HAFIZA BEYNİ VE KALICI DOSYA YOLU (Format atılana kadar silinmez)
         Dictionary<string, string> AmbarHafizasi = new Dictionary<string, string>();
+        string AmbarDosyaYolu = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "AmbarAraci.json");
 
-        // 🌟 2. AMBARA KAYDET BUTONU: Okutulan malları kamyona (hafızaya) atar
+        // 🌟 1.1 AMBARI DİSKTEN OKUMA MOTORU (Uygulama kapansa bile eskiyi getirir)
+        private void AmbarHafizasiniYukle()
+        {
+            if (System.IO.File.Exists(AmbarDosyaYolu))
+            {
+                try
+                {
+                    string json = System.IO.File.ReadAllText(AmbarDosyaYolu);
+                    AmbarHafizasi = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(json) ?? new Dictionary<string, string>();
+                }
+                catch { AmbarHafizasi = new Dictionary<string, string>(); }
+            }
+        }
+
+        // 🌟 1.2 AMBARI DİSKE MÜHÜRLEME MOTORU (Elektrik gitse bile silinmez)
+        private void AmbarHafizasiniKaydet()
+        {
+            try
+            {
+                string klasor = System.IO.Path.GetDirectoryName(AmbarDosyaYolu);
+                if (!System.IO.Directory.Exists(klasor)) System.IO.Directory.CreateDirectory(klasor);
+
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(AmbarHafizasi, Newtonsoft.Json.Formatting.Indented);
+                System.IO.File.WriteAllText(AmbarDosyaYolu, json);
+            }
+            catch { }
+        }
+
+        // 🌟 2. AMBARA KAYDET BUTONU: Okutulan malları kamyona kalıcı atar ve ekranı temizler
         private void btnAmbarKaydet_Click(object sender, EventArgs e)
         {
-            string seciliFirma = cmbMusteri.Text; // Kendi combobox ismine göre düzelt
+            AmbarHafizasiniYukle(); // Önce diskteki eski kamyonu getir ki üstüne binmesin
+
+            string seciliFirma = cmbMusteri.Text;
             if (string.IsNullOrEmpty(seciliFirma))
             {
                 MessageBox.Show("Lütfen önce bir firma seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // TODO: Mevcut palet matrisini JSON'a çevir (Eski Askıya Al kodundaki Serialize kısmını buraya kopyalayacaksın)
-            string jsonVeri = "Buraya_JSON_Cevirme_Kodun_Gelecek";
-
-            // Ambar aracında bu firma varsa üzerine yaz (güncelle), yoksa yeni kayıt olarak ekle
-            if (AmbarHafizasi.ContainsKey(seciliFirma))
+            if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
             {
-                AmbarHafizasi[seciliFirma] = jsonVeri;
-            }
-            else
-            {
-                AmbarHafizasi.Add(seciliFirma, jsonVeri);
+                MessageBox.Show("Ambara eklenecek açık bir sevkiyat yok!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            MessageBox.Show($"{seciliFirma} firmasının ürünleri Ambar Aracına yüklendi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // Ekrandaki tüm veriyi "YarimSevkiyatHafizasi" kalıbında topla
+            YarimSevkiyatHafizasi hafiza = new YarimSevkiyatHafizasi
+            {
+                MusteriAdi = txtMusteriAdi.Text,
+                BelgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>()),
+                SevkMusteri = txtSevkMusteri.Text,
+                PaletSayisi = cmbSevkPaletSayisi.SelectedIndex != -1 ? Convert.ToInt32(cmbSevkPaletSayisi.SelectedItem) : 0,
+                KayitTarihi = DateTime.Now
+            };
 
-            // TODO: Ekranı temizleme metodunu buraya çağır ki diğer firmaya geçebilesin
+            // Sol tabloyu topla
+            foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+            {
+                if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
+
+                string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
+                string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+
+                int okutulan = 0;
+                if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
+
+                if (!hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
+                    hafiza.AnaOkutulanlar.Add(benzersizAnahtar, okutulan);
+            }
+
+            // Sağ tabloyu topla
+            for (int i = 0; i < dgvPaletMatrisi.Rows.Count; i++)
+            {
+                hafiza.PaletMatrisiDurumu[i] = new Dictionary<int, string>();
+                for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+                {
+                    if (dgvPaletMatrisi.Rows[i].Cells[j].Value != null)
+                        hafiza.PaletMatrisiDurumu[i][j] = dgvPaletMatrisi.Rows[i].Cells[j].Value.ToString();
+                }
+            }
+
+            hafiza.PaletBarkodlari = aktifPaletBarkodlari;
+
+            // JSON'a Çevir
+            string jsonVeri = Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented);
+
+            // Ambara Ekle veya Güncelle
+            if (AmbarHafizasi.ContainsKey(seciliFirma)) AmbarHafizasi[seciliFirma] = jsonVeri;
+            else AmbarHafizasi.Add(seciliFirma, jsonVeri);
+
+            AmbarHafizasiniKaydet(); // 🌟 YAPILAN İŞLEMİ DİSKE MÜHÜRLE!
+
+            MessageBox.Show($"{seciliFirma} firmasının ürünleri Ambar Aracına KALICI olarak yüklendi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            btnSevkTemizle_Click(null, null); // Ekranı temizle
         }
 
         // 🌟 3. AMBAR GETİR BUTONU: Ambardaki malı geri ekrana (palet matrisine) dizer
         private void btnAmbarGetir_Click(object sender, EventArgs e)
         {
+            AmbarHafizasiniYukle(); // Diskten oku
+
             if (AmbarHafizasi.Count == 0)
             {
                 MessageBox.Show("Ambar aracı şu an boş! Getirilecek herhangi bir firma bulunmuyor.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Seçim ekranı için dinamik ve şık bir form oluşturuyoruz
             Form frmSecim = new Form
             {
                 Text = "🔄 Ambardan Geri Getir",
@@ -7672,21 +7745,16 @@ namespace TamgaApp
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false,
-                Icon = this.Icon // 🌟 İKON BURAYA EKLENDİ
+                Icon = this.Icon
             };
 
             Label lblBilgi = new Label { Text = "Ekrana geri getirmek istediğiniz firmayı seçin:", Location = new Point(20, 15), Size = new Size(340, 20), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
             ListBox lstAmbardakiFirmalar = new ListBox { Location = new Point(20, 40), Size = new Size(340, 200), Font = new Font("Segoe UI", 12) };
 
-            // Ambardaki (hafızadaki) firmaları listeye doldur
-            foreach (var firma in AmbarHafizasi.Keys)
-            {
-                lstAmbardakiFirmalar.Items.Add(firma);
-            }
+            foreach (var firma in AmbarHafizasi.Keys) lstAmbardakiFirmalar.Items.Add(firma);
 
             Button btnGetir = new Button { Text = "⬇️ Seçili Firmayı Ekrana Getir", Location = new Point(20, 250), Size = new Size(340, 45), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            // Seçili firmayı getirme ve ekrana dizme işlemi
             btnGetir.Click += (s, ev) =>
             {
                 if (lstAmbardakiFirmalar.SelectedItem == null)
@@ -7698,62 +7766,132 @@ namespace TamgaApp
                 string seciliFirma = lstAmbardakiFirmalar.SelectedItem.ToString();
                 string geriGelenJson = AmbarHafizasi[seciliFirma];
 
-                // TODO: JSON'u çözüp ekrana dizme (Deserialize) kodunu buraya kopyalayacaksın
-                // (Eski sistemdeki 'Yarım Kalanı Getir' mantığını buraya yedireceksin)
+                try
+                {
+                    YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(geriGelenJson);
+                    if (hafiza == null) return;
 
-                // İstersen getirilen firmayı ambardan (hafızadan) anında silmek için bu alttaki yorum satırını açabilirsin
-                // AmbarHafizasi.Remove(seciliFirma); 
+                    int musteriIndex = -1;
+                    for (int i = 0; i < cmbMusteri.Items.Count; i++)
+                    {
+                        if (cmbMusteri.Items[i].ToString().Trim().Equals(hafiza.MusteriAdi.Trim(), StringComparison.OrdinalIgnoreCase))
+                        {
+                            musteriIndex = i; break;
+                        }
+                    }
 
-                frmSecim.Close(); // İşlem bitince mini pencereyi kapat
-                MessageBox.Show($"{seciliFirma} firması ambardan masaya indirildi. İşleme devam edebilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    if (musteriIndex >= 0) cmbMusteri.SelectedIndex = musteriIndex;
+                    else
+                    {
+                        cmbMusteri.Items.Add(hafiza.MusteriAdi);
+                        cmbMusteri.SelectedIndex = cmbMusteri.Items.Count - 1;
+                    }
+
+                    txtMusteriAdi.Text = hafiza.MusteriAdi;
+                    txtSevkMusteri.Text = hafiza.SevkMusteri;
+                    cmbSevkPaletSayisi.SelectedItem = hafiza.PaletSayisi.ToString();
+
+                    string[] kaydedilenBelgeler = hafiza.BelgeNo.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (clbBelgeNo.Items.Count == 0) foreach (string b in kaydedilenBelgeler) clbBelgeNo.Items.Add(b);
+
+                    foreach (string belge in kaydedilenBelgeler)
+                    {
+                        for (int i = 0; i < clbBelgeNo.Items.Count; i++)
+                        {
+                            if (clbBelgeNo.Items[i].ToString().IndexOf(belge, StringComparison.OrdinalIgnoreCase) >= 0) clbBelgeNo.SetItemChecked(i, true);
+                        }
+                    }
+
+                    btnSevkAra_Click(null, null);
+
+                    foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                    {
+                        if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
+
+                        string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
+                        string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                        string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+
+                        if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
+                        {
+                            int eskiOkutulan = hafiza.AnaOkutulanlar[benzersizAnahtar];
+                            int siparisAdedi = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+
+                            row.Cells["Okutulan"].Value = eskiOkutulan;
+
+                            if (eskiOkutulan >= siparisAdedi) row.DefaultCellStyle.BackColor = Color.LightGreen;
+                            else if (eskiOkutulan > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
+                            else row.DefaultCellStyle.BackColor = Color.White;
+                        }
+                    }
+
+                    dgvPaletMatrisi.Rows.Clear();
+                    int maxSatirIndex = hafiza.PaletMatrisiDurumu.Keys.Count > 0 ? hafiza.PaletMatrisiDurumu.Keys.Max() : -1;
+                    for (int i = 0; i <= maxSatirIndex; i++) dgvPaletMatrisi.Rows.Add();
+
+                    foreach (var satirKvp in hafiza.PaletMatrisiDurumu)
+                    {
+                        int satirIndex = satirKvp.Key;
+                        foreach (var sutunKvp in satirKvp.Value)
+                        {
+                            int sutunIndex = sutunKvp.Key;
+                            dgvPaletMatrisi.Rows[satirIndex].Cells[sutunIndex].Value = sutunKvp.Value;
+                        }
+                    }
+
+                    aktifPaletBarkodlari = hafiza.PaletBarkodlari ?? new Dictionary<string, string>();
+
+                    frmSecim.Close();
+                    MessageBox.Show($"{seciliFirma} firması ambardan masaya indirildi. İşleme devam edebilirsiniz.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Ambar verisi çözülürken hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             };
 
             frmSecim.Controls.Add(lblBilgi);
             frmSecim.Controls.Add(lstAmbardakiFirmalar);
             frmSecim.Controls.Add(btnGetir);
-
             frmSecim.ShowDialog();
         }
 
         // 🌟 4. AMBAR GÖRÜNTÜLE BUTONU: Kamyonun içini gösteren yönetim paneli
         private void btnAmbarGoruntule_Click(object sender, EventArgs e)
         {
-            // Yönetim Paneli için yepyeni bir form (pencere) oluşturuyoruz
+            AmbarHafizasiniYukle(); // Diskten güncel durumu çek
+
             Form frmAmbar = new Form
             {
                 Text = "🚛 Ambar Aracı Yönetim Paneli",
                 Size = new Size(700, 500),
                 StartPosition = FormStartPosition.CenterScreen,
                 BackColor = Color.WhiteSmoke,
-                Icon = this.Icon // 🌟 İKON BURAYA EKLENDİ
+                Icon = this.Icon
             };
 
-            // Ambardaki firmaları göstereceğimiz liste kutusu
             ListBox lstAmbardakiFirmalar = new ListBox { Location = new Point(20, 20), Size = new Size(300, 400), Font = new Font("Segoe UI", 12) };
 
-            // Dictionary'deki (AmbarHafizasi) tüm firmaları listeye dolduruyoruz
-            foreach (var firma in AmbarHafizasi.Keys)
-            {
-                lstAmbardakiFirmalar.Items.Add(firma);
-            }
+            foreach (var firma in AmbarHafizasi.Keys) lstAmbardakiFirmalar.Items.Add(firma);
 
-            // Sil ve Tamamla butonlarını dinamik olarak oluşturuyoruz
             Button btnSil = new Button { Text = "❌ Seçileni Ambardan Sil", Location = new Point(350, 50), Size = new Size(300, 50), BackColor = Color.DarkRed, ForeColor = Color.White };
             Button btnTamamla = new Button { Text = "✅ Ambarı Tamamla (Toplu Sevk)", Location = new Point(350, 120), Size = new Size(300, 70), BackColor = Color.DarkGreen, ForeColor = Color.White };
 
-            // ❌ SİL BUTONU İŞLEMİ (Kamyondan malı indirir)
+            // ❌ SİL BUTONU İŞLEMİ
             btnSil.Click += (s, ev) =>
             {
                 if (lstAmbardakiFirmalar.SelectedItem != null)
                 {
                     string silinecekFirma = lstAmbardakiFirmalar.SelectedItem.ToString();
-                    AmbarHafizasi.Remove(silinecekFirma); // Arka plan hafızasından sil
-                    lstAmbardakiFirmalar.Items.Remove(silinecekFirma); // Ekrandaki listeden sil
-                    MessageBox.Show($"{silinecekFirma} firmasının malları ambardan indirildi (Sipariş geri alındı)!", "Bilgi");
+                    AmbarHafizasi.Remove(silinecekFirma);
+                    AmbarHafizasiniKaydet(); // 🌟 SİLİNCE DİSKE DE MÜHÜRLE
+
+                    lstAmbardakiFirmalar.Items.Remove(silinecekFirma);
+                    MessageBox.Show($"{silinecekFirma} firmasının malları ambardan tamamen indirildi!", "Bilgi");
                 }
             };
 
-            // ✅ AMBAR TAMAMLA BUTONU İŞLEMİ (Kamyonu yola çıkarır)
+            // ✅ AMBAR TAMAMLA BUTONU İŞLEMİ
             btnTamamla.Click += (s, ev) =>
             {
                 if (AmbarHafizasi.Count == 0)
@@ -7765,15 +7903,16 @@ namespace TamgaApp
                 DialogResult onay = MessageBox.Show("Ambardaki TÜM firmaların sevkiyatı kapatılıp arşive gönderilecek. Emin misiniz?", "Ambar Çıkışı", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (onay == DialogResult.Yes)
                 {
-                    // TODO: BURAYA SQL GÜNCELLEME KODUN GELECEK (Döngü ile listedeki tüm firmaları SQL'de sevk etme işlemi)
+                    // TODO: BURAYA SQL GÜNCELLEME KODUN GELECEK
 
-                    AmbarHafizasi.Clear(); // Kamyon yola çıktığı için ambarı tamamen boşalt
-                    frmAmbar.Close(); // Yönetim penceresini kapat
+                    AmbarHafizasi.Clear();
+                    AmbarHafizasiniKaydet(); // 🌟 KAMYON GİDİNCE DOSYAYI SIFIRLA
+
+                    frmAmbar.Close();
                     MessageBox.Show("Kamyon yola çıktı! Tüm kayıtlar başarıyla sevk edildi.", "Başarılı");
                 }
             };
 
-            // Oluşturulan listeyi ve butonları forma ekle ve formu ekranda göster
             frmAmbar.Controls.Add(lstAmbardakiFirmalar);
             frmAmbar.Controls.Add(btnSil);
             frmAmbar.Controls.Add(btnTamamla);
