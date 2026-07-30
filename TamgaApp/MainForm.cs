@@ -3243,11 +3243,12 @@ namespace TamgaApp
 
                             // 🌟 3. ADIM: ARAYÜZÜ (UI) HATASIZ TEMİZLE
                             tvArsiv.Nodes.Remove(tvArsiv.SelectedNode); // Ağaçtan sil
-
-                            // İŞTE ÇÖZÜM: Önce veri kaynağını (DataSource) koparıyoruz, sonra siliyoruz!
                             dgvDetay.DataSource = null;
                             dgvDetay.Rows.Clear();
                             dgvDetay.Columns.Clear();
+
+                            // 🌟 4. ADIM: ANA EKRANI OTOMATİK YENİLE! (Müşteri Kutusunu Geri Doldurur)
+                            btnSiparisYenile_Click(null, null);
                         }
                     }
                     catch (Exception ex)
@@ -3932,28 +3933,7 @@ namespace TamgaApp
         // Kullanıcı "Ebatlar" hücresine veri girdiğinde veya değiştirdiğinde anında tetiklenir ve Desi'yi hesaplar.
         private void dgvPaletler_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            if (e.ColumnIndex == 1 && e.RowIndex >= 0)
-            {
-                string ebatMetni = dgvPaletler.Rows[e.RowIndex].Cells[1].Value?.ToString().Trim();
-
-                if (!string.IsNullOrWhiteSpace(ebatMetni))
-                {
-                    // ✨ AKILLI YARDIMCI: Kullanıcı üşenip "080120150" yazarsa 
-                    // sistem bunu otomatik olarak "080*120*150" şekline çevirir.
-                    if (ebatMetni.Length == 9 && !ebatMetni.Contains("*"))
-                    {
-                        ebatMetni = $"{ebatMetni.Substring(0, 3)}*{ebatMetni.Substring(3, 3)}*{ebatMetni.Substring(6, 3)}";
-                        dgvPaletler.Rows[e.RowIndex].Cells[1].Value = ebatMetni;
-                        return; // Value değiştiği için bu metot tekrar tetiklenecek, o yüzden işlemi burada kes
-                    }
-
-                    // Doğru formatlı metni Desi hesaplama çekirdeğine yolla
-                    double desi = DesiHesapla(ebatMetni);
-
-                    // Çıkan sonucu küsuratsız yuvarlayıp "Ds." takısı ile hücreye yaz
-                    dgvPaletler.Rows[e.RowIndex].Cells[2].Value = Math.Round(desi, 0) + " Ds.";
-                }
-            }
+            
         }
         #endregion
 
@@ -7637,7 +7617,6 @@ namespace TamgaApp
                         // 🌟 1. DURUM: Araya herhangi bir işaret konduysa (*, x, - veya boşluk)
                         if (girdi.Contains("*") || girdi.Contains("x") || girdi.Contains(" ") || girdi.Contains("-"))
                         {
-                            // Bütün garip işaretleri standarda (*) çevir ve böl
                             girdi = girdi.Replace("x", "*").Replace(" ", "*").Replace("-", "*");
                             string[] parcalar = girdi.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
 
@@ -7652,33 +7631,56 @@ namespace TamgaApp
                                 dgvPaletler.Rows[e.RowIndex].Cells[1].Value = $"{en}*{boy}*{yukseklik}";
                             }
                         }
-                        // 🌟 2. DURUM: Dümdüz bitişik rakam yazıldıysa (Örn: 65120150, 80120150)
+                        // 🌟 2. DURUM: Dümdüz bitişik rakam yazıldıysa (Örn: 6510012, 80120150)
                         else
                         {
-                            // Sadece rakamları al (Yanlışlıkla harf girdiyse sistemi çökertmemek için)
                             string sadeceRakam = new string(girdi.Where(char.IsDigit).ToArray());
-
                             double en = 0, boy = 0, yuk = 0;
 
-                            if (sadeceRakam.Length == 9) // Örn: 100 120 150
+                            if (sadeceRakam.Length == 9) // Örn: 100120150 -> 100*120*150
                             {
                                 en = Convert.ToDouble(sadeceRakam.Substring(0, 3));
                                 boy = Convert.ToDouble(sadeceRakam.Substring(3, 3));
                                 yuk = Convert.ToDouble(sadeceRakam.Substring(6, 3));
                             }
-                            else if (sadeceRakam.Length == 8) // Örn: 80 120 150 (80x120x150)
+                            else if (sadeceRakam.Length == 8) // İKİ İHTİMAL VAR
                             {
-                                en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
-                                boy = Convert.ToDouble(sadeceRakam.Substring(2, 3));
-                                yuk = Convert.ToDouble(sadeceRakam.Substring(5, 3));
+                                if (sadeceRakam.Substring(3, 3) == "100" || sadeceRakam.Substring(3, 3) == "120") // Örn: 10012015 -> 100*120*15
+                                {
+                                    en = Convert.ToDouble(sadeceRakam.Substring(0, 3));
+                                    boy = Convert.ToDouble(sadeceRakam.Substring(3, 3));
+                                    yuk = Convert.ToDouble(sadeceRakam.Substring(6, 2));
+                                }
+                                else if (sadeceRakam.Substring(2, 3) == "100" || sadeceRakam.Substring(2, 3) == "120") // Örn: 80120150 -> 80*120*150
+                                {
+                                    en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
+                                    boy = Convert.ToDouble(sadeceRakam.Substring(2, 3));
+                                    yuk = Convert.ToDouble(sadeceRakam.Substring(5, 3));
+                                }
+                                else // Örn: 12080150 -> 120*80*150
+                                {
+                                    en = Convert.ToDouble(sadeceRakam.Substring(0, 3));
+                                    boy = Convert.ToDouble(sadeceRakam.Substring(3, 2));
+                                    yuk = Convert.ToDouble(sadeceRakam.Substring(5, 3));
+                                }
                             }
-                            else if (sadeceRakam.Length == 7) // Örn: 65 80 150 (65x80x150) -> İŞTE EKSİK OLAN BUYDU!
+                            else if (sadeceRakam.Length == 7) // İKİ İHTİMAL VAR
                             {
-                                en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
-                                boy = Convert.ToDouble(sadeceRakam.Substring(2, 2));
-                                yuk = Convert.ToDouble(sadeceRakam.Substring(4, 3));
+                                // 🌟 İŞTE SENİN HATAYI ÇÖZEN YER: Ortadaki rakam 100 veya 120 ise anla ki bu 65x100x12'dir!
+                                if (sadeceRakam.Substring(2, 3) == "100" || sadeceRakam.Substring(2, 3) == "120")
+                                {
+                                    en = Convert.ToDouble(sadeceRakam.Substring(0, 2)); // 65
+                                    boy = Convert.ToDouble(sadeceRakam.Substring(2, 3)); // 100
+                                    yuk = Convert.ToDouble(sadeceRakam.Substring(5, 2)); // 12
+                                }
+                                else // Ortası 100 değilse anla ki bu 65x80x150'dir!
+                                {
+                                    en = Convert.ToDouble(sadeceRakam.Substring(0, 2)); // 65
+                                    boy = Convert.ToDouble(sadeceRakam.Substring(2, 2)); // 80
+                                    yuk = Convert.ToDouble(sadeceRakam.Substring(4, 3)); // 150
+                                }
                             }
-                            else if (sadeceRakam.Length == 6) // Örn: 65 80 80 (65x80x80)
+                            else if (sadeceRakam.Length == 6) // Örn: 658080 -> 65*80*80
                             {
                                 en = Convert.ToDouble(sadeceRakam.Substring(0, 2));
                                 boy = Convert.ToDouble(sadeceRakam.Substring(2, 2));
@@ -7688,7 +7690,6 @@ namespace TamgaApp
                             if (en > 0 && boy > 0 && yuk > 0)
                             {
                                 desi = (en * boy * yuk) / 3000.0;
-                                // Sistemi anladığı formata geri yapıştır (Örn: 65*80*150)
                                 dgvPaletler.Rows[e.RowIndex].Cells[1].Value = $"{en}*{boy}*{yuk}";
                             }
                         }
@@ -7696,7 +7697,7 @@ namespace TamgaApp
                         // 🌟 SONUÇ: Desi başarıyla hesaplandıysa yuvarla ve yan hücreye çak!
                         if (desi > 0)
                         {
-                            dgvPaletler.Rows[e.RowIndex].Cells[2].Value = Math.Round(desi, 0) + " Ds."; // Tam sayı istersen 0, küsurat istersen 2 yapabilirsin
+                            dgvPaletler.Rows[e.RowIndex].Cells[2].Value = Math.Round(desi, 0) + " Ds.";
                         }
                     }
                     catch
@@ -7752,6 +7753,8 @@ namespace TamgaApp
             }
         }
         #endregion
+
+        // =========================================================================================
 
         #region ⚙️21. AYARLAR EKRANI BUTON İŞLEMLERİ
 
