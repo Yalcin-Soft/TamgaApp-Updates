@@ -4967,11 +4967,11 @@ namespace TamgaApp
                 hedefSatir.DefaultCellStyle.BackColor = Color.LightYellow;
             }
 
-            // 4. PALETE SEÇİLEN MİKTAR KADAR EKLEME MANTIĞI
+            // 🌟 4. PALETE SEÇİLEN MİKTAR KADAR EKLEME MANTIĞI (DÜZELTİLDİ: Barkod yerine Malzeme Kodu eklendi)
             int aktifPaletSutunIndex = cmbAktifPalet.SelectedIndex;
             string urunAdi = hedefSatir.Cells["Malzeme Adı"].Value.ToString();
             string aitOlduguBelge = hedefSatir.Cells["Belge No"].Value.ToString();
-            string tablodakiBarkod = hedefSatir.Cells["Barkod"].Value.ToString().Trim();
+            string malzemeKodu = hedefSatir.Cells["Malzeme Kodu"].Value.ToString().Trim();
 
             bool paletSutunundaVarMi = false;
 
@@ -4980,7 +4980,7 @@ namespace TamgaApp
                 if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null)
                 {
                     string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
-                    if (hucreMetni.Contains(tablodakiBarkod) && hucreMetni.Contains(aitOlduguBelge))
+                    if (hucreMetni.Contains(malzemeKodu) && hucreMetni.Contains(aitOlduguBelge))
                     {
                         string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
                         if (parcalar.Length == 2)
@@ -5001,7 +5001,7 @@ namespace TamgaApp
                 {
                     if (paletSatiri.Cells[aktifPaletSutunIndex].Value == null || string.IsNullOrWhiteSpace(paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString()))
                     {
-                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: {eklenecekMiktar}";
+                        paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{malzemeKodu} - {urunAdi} ({aitOlduguBelge}) | Adet: {eklenecekMiktar}";
                         bosHucreBulundu = true; break;
                     }
                 }
@@ -5009,7 +5009,7 @@ namespace TamgaApp
                 if (!bosHucreBulundu)
                 {
                     int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
-                    dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: {eklenecekMiktar}";
+                    dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{malzemeKodu} - {urunAdi} ({aitOlduguBelge}) | Adet: {eklenecekMiktar}";
                 }
             }
 
@@ -5543,16 +5543,16 @@ namespace TamgaApp
                     }
                     else hedefSatir.DefaultCellStyle.BackColor = Color.LightYellow;
 
-                    // Palete Ekleme İşlemi
+                    // 🌟 PALETE EKLEME İŞLEMİ (DÜZELTİLDİ: Barkod yerine Malzeme Kodu eklendi)
                     string urunAdi = hedefSatir.Cells["Malzeme Adı"].Value.ToString();
                     string aitOlduguBelge = hedefSatir.Cells["Belge No"].Value.ToString();
-                    string tablodakiBarkod = hedefSatir.Cells["Barkod"].Value.ToString().Trim();
+                    string malzemeKodu = hedefSatir.Cells["Malzeme Kodu"].Value.ToString().Trim();
 
                     bool paletSutunundaVarMi = false;
 
                     foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
                     {
-                        if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null && paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString().Contains(tablodakiBarkod) && paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString().Contains(aitOlduguBelge))
+                        if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null && paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString().Contains(malzemeKodu) && paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString().Contains(aitOlduguBelge))
                         {
                             string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
                             string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
@@ -5572,7 +5572,7 @@ namespace TamgaApp
                         {
                             if (paletSatiri.Cells[aktifPaletSutunIndex].Value == null || string.IsNullOrWhiteSpace(paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString()))
                             {
-                                paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
+                                paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{malzemeKodu} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
                                 bosHucreBulundu = true; break;
                             }
                         }
@@ -5580,7 +5580,7 @@ namespace TamgaApp
                         if (!bosHucreBulundu)
                         {
                             int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
-                            dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{tablodakiBarkod} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
+                            dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[aktifPaletSutunIndex].Value = $"{malzemeKodu} - {urunAdi} ({aitOlduguBelge}) | Adet: 1";
                         }
                     }
                 }
