@@ -4439,6 +4439,14 @@ namespace TamgaApp
         // Kullanıcı bir "Müşteri" seçtiğinde, sadece o müşteriye ait Belge Numaralarını altındaki kutuya doldurur.
         private void cmbMusteri_SelectedIndexChanged(object sender, EventArgs e)
         {
+
+            // 🌟 MÜŞTERİ SEÇİLİR SEÇİLMEZ PALET SAYISINI OTOMATİK "1" YAP
+            if (cmbSevkPaletSayisi.Items.Count > 0)
+            {
+                cmbSevkPaletSayisi.SelectedIndex = 0; // Listenin en başındaki (1) değerini seçer
+                // veya alternatif garanti yöntem: cmbSevkPaletSayisi.SelectedItem = "1";
+            }
+
             if (cmbMusteri.SelectedItem == null) return;
 
             string secilenMusteri = cmbMusteri.SelectedItem.ToString().Trim();
@@ -5919,26 +5927,191 @@ namespace TamgaApp
         // O anki sevkiyatta erken basılan palet barkodlarını hafızada tutar (Palet No -> EAN13)
         private Dictionary<string, string> aktifPaletBarkodlari = new Dictionary<string, string>();
 
-        // Seçilen palet sayısı kadar ambar palet matrisinde dinamik sütun (Palet 1, Palet 2...) inşa eder.
+       // 🌟 AKILLI PALET SAYISI DEĞİŞTİRME MOTORU (Veri Kaybını Önler)
+
         private void cmbSevkPaletSayisi_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (cmbSevkPaletSayisi.SelectedItem == null) return;
+            if (cmbSevkPaletSayisi.SelectedIndex == -1) return;
 
-            int paletSayisi = Convert.ToInt32(cmbSevkPaletSayisi.SelectedItem.ToString());
+            int yeniPaletSayisi = Convert.ToInt32(cmbSevkPaletSayisi.SelectedItem);
+            int mevcutPaletSayisi = dgvPaletMatrisi.Columns.Count;
 
-            dgvPaletMatrisi.Columns.Clear();
-            dgvPaletMatrisi.Rows.Clear();
-            cmbAktifPalet.Items.Clear();
-
-            for (int i = 1; i <= paletSayisi; i++)
+            // 1. EĞER MATRİS HİÇ YOKSA (İLK AÇILIŞ), DİREKT OLUŞTUR
+            if (mevcutPaletSayisi == 0)
             {
-                string paletAdi = $"{i}. Palet";
-                dgvPaletMatrisi.Columns.Add($"Palet_{i}", paletAdi);
-                cmbAktifPalet.Items.Add(paletAdi);
+                for (int i = 1; i <= yeniPaletSayisi; i++)
+                {
+                    dgvPaletMatrisi.Columns.Add($"Palet{i}", $"{i}. Palet");
+                    cmbAktifPalet.Items.Add($"{i}. Palet");
+                }
+                if (cmbAktifPalet.Items.Count > 0) cmbAktifPalet.SelectedIndex = 0;
+                return;
             }
 
-            if (cmbAktifPalet.Items.Count > 0) cmbAktifPalet.SelectedIndex = 0;
+            // Sayı değişmediyse hiçbir şey yapma
+            if (yeniPaletSayisi == mevcutPaletSayisi) return;
+
+            // 2. PALET SAYISI ARTTIYSA (Örn: 1'den 3'e) -> Sadece yeni sütun ekle, veriye dokunma!
+            if (yeniPaletSayisi > mevcutPaletSayisi)
+            {
+                for (int i = mevcutPaletSayisi + 1; i <= yeniPaletSayisi; i++)
+                {
+                    dgvPaletMatrisi.Columns.Add($"Palet{i}", $"{i}. Palet");
+                    cmbAktifPalet.Items.Add($"{i}. Palet");
+                }
+                return;
+            }
+
+            // 3. PALET SAYISI AZALDIYSA (Örn: 3'ten 1'e) -> Silinecek sütunlarda veri var mı kontrol et!
+            List<DataGridViewCell> doluHucreler = new List<DataGridViewCell>();
+            for (int i = yeniPaletSayisi; i < mevcutPaletSayisi; i++)
+            {
+                foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
+                {
+                    if (row.Cells[i].Value != null && !string.IsNullOrWhiteSpace(row.Cells[i].Value.ToString()))
+                    {
+                        doluHucreler.Add(row.Cells[i]); // İptal edilen paletteki dolu ürünleri hafızaya al
+                    }
+                }
+            }
+
+            // EĞER SİLİNECEK PALETLERDE ÜRÜN VARSA, PATRONA NE YAPACAĞINI SOR
+            if (doluHucreler.Count > 0)
+            {
+                Form frmSoru = new Form
+                {
+                    Text = "⚠️ Dikkat: Dolu Paletler Siliniyor!",
+                    Size = new Size(460, 310),
+                    StartPosition = FormStartPosition.CenterParent,
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    MaximizeBox = false,
+                    MinimizeBox = false,
+                    BackColor = Color.WhiteSmoke,
+                    Icon = this.Icon
+                };
+
+                Label lblUyari = new Label
+                {
+                    Text = $"İptal etmek istediğiniz paletlerde toplam {doluHucreler.Count} adet okutulmuş satır bulunuyor.\nBu ürünlere ne yapılsın?",
+                    Location = new Point(20, 20),
+                    Size = new Size(400, 45),
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    ForeColor = Color.DarkRed
+                };
+
+                RadioButton rbSil = new RadioButton { Text = "🗑️ Ürünleri tamamen SİL (Sol tablodaki okutulandan düşer)", Location = new Point(30, 75), Size = new Size(400, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold), Checked = true };
+                RadioButton rbAktar = new RadioButton { Text = "📦 Ürünleri sağ kalan başka bir palete AKTAR", Location = new Point(30, 110), Size = new Size(400, 25), Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+
+                ComboBox cmbHedefPalet = new ComboBox { Location = new Point(60, 140), Size = new Size(200, 25), DropDownStyle = ComboBoxStyle.DropDownList, Enabled = false, Font = new Font("Segoe UI", 10) };
+                for (int i = 1; i <= yeniPaletSayisi; i++) cmbHedefPalet.Items.Add($"{i}. Palet");
+                if (cmbHedefPalet.Items.Count > 0) cmbHedefPalet.SelectedIndex = 0;
+
+                rbAktar.CheckedChanged += (s, ev) => { cmbHedefPalet.Enabled = rbAktar.Checked; };
+
+                Button btnOnayla = new Button { Text = "✅ UYGULA", Location = new Point(20, 200), Size = new Size(400, 45), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand };
+
+                btnOnayla.Click += (s, ev) =>
+                {
+                    if (rbAktar.Checked)
+                    {
+                        // 🌟 AKTARMA İŞLEMİ: Silinen palettekileri seçili yeni palete taşır
+                        int hedefSutunIndex = cmbHedefPalet.SelectedIndex;
+                        foreach (var hucre in doluHucreler)
+                        {
+                            bool yerlestirildi = false;
+                            foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
+                            {
+                                if (row.Cells[hedefSutunIndex].Value == null || string.IsNullOrWhiteSpace(row.Cells[hedefSutunIndex].Value.ToString()))
+                                {
+                                    row.Cells[hedefSutunIndex].Value = hucre.Value;
+                                    yerlestirildi = true;
+                                    break;
+                                }
+                            }
+                            if (!yerlestirildi)
+                            {
+                                int yeniSatirIndex = dgvPaletMatrisi.Rows.Add();
+                                dgvPaletMatrisi.Rows[yeniSatirIndex].Cells[hedefSutunIndex].Value = hucre.Value;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // 🌟 SİLME İŞLEMİ: Ana tablodan (dgvMalzemeler) iptal edilenlerin adetini düşer
+                        foreach (var hucre in doluHucreler)
+                        {
+                            string hamVeri = hucre.Value.ToString();
+                            string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+
+                            if (parcalar.Length == 2)
+                            {
+                                string urunVeBelge = parcalar[0];
+                                int iptalAdet = 0;
+                                int.TryParse(parcalar[1], out iptalAdet);
+
+                                string malzemeKodu = urunVeBelge;
+                                int parantezIndex = urunVeBelge.LastIndexOf('(');
+                                if (parantezIndex > 0) malzemeKodu = urunVeBelge.Substring(0, parantezIndex).Trim();
+
+                                foreach (DataGridViewRow anaRow in dgvMalzemeler.Rows)
+                                {
+                                    if (anaRow.IsNewRow || anaRow.Cells["Malzeme Kodu"].Value == null) continue;
+
+                                    if (anaRow.Cells["Malzeme Kodu"].Value.ToString().Trim() == malzemeKodu)
+                                    {
+                                        int okutulan = 0;
+                                        if (anaRow.Cells["Okutulan"].Value != null) int.TryParse(anaRow.Cells["Okutulan"].Value.ToString(), out okutulan);
+
+                                        okutulan -= iptalAdet; // Adeti geri al
+                                        if (okutulan < 0) okutulan = 0;
+                                        anaRow.Cells["Okutulan"].Value = okutulan;
+
+                                        // Renkleri yeniden ayarla
+                                        int siparisAdedi = Convert.ToInt32(anaRow.Cells["Sipariş Adedi"].Value);
+                                        if (okutulan >= siparisAdedi) anaRow.DefaultCellStyle.BackColor = Color.LightGreen;
+                                        else if (okutulan > 0) anaRow.DefaultCellStyle.BackColor = Color.LightYellow;
+                                        else anaRow.DefaultCellStyle.BackColor = Color.White;
+
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    SutunlariTemizle(mevcutPaletSayisi, yeniPaletSayisi);
+                    frmSoru.Close();
+                };
+
+                frmSoru.Controls.Add(lblUyari);
+                frmSoru.Controls.Add(rbSil);
+                frmSoru.Controls.Add(rbAktar);
+                frmSoru.Controls.Add(cmbHedefPalet);
+                frmSoru.Controls.Add(btnOnayla);
+                frmSoru.ShowDialog();
+            }
+            else
+            {
+                // Silinecek paletler zaten BOŞ ise hiç sormadan direkt sil
+                SutunlariTemizle(mevcutPaletSayisi, yeniPaletSayisi);
+            }
         }
+
+        // 🌟 YARDIMCI METOT: Fazla sütunları matristen ve combobox'tan güvenle siler
+        private void SutunlariTemizle(int mevcutSayi, int yeniSayi)
+        {
+            for (int i = mevcutSayi - 1; i >= yeniSayi; i--)
+            {
+                dgvPaletMatrisi.Columns.RemoveAt(i);
+                cmbAktifPalet.Items.RemoveAt(i);
+            }
+            // Aktif palet, silinen bir paletse, son kalan palete geri dön
+            if (cmbAktifPalet.SelectedIndex >= yeniSayi)
+            {
+                cmbAktifPalet.SelectedIndex = yeniSayi - 1;
+            }
+        }
+        
 
         // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (ŞİŞKİN TASARIM VE KODLU)
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
@@ -6871,6 +7044,194 @@ namespace TamgaApp
             frmManuel.ShowDialog();
         }
 
+        // 🗂️ ZARF HAFIZA VE SEVKİYAT ARŞİVİ MOTORU (İLAVE EKLEME DESTEKLİ)
+
+        // 🌟 1. HAFIZA BEYNİ VE KALICI DOSYA YOLU (Format atılana kadar silinmez)
+        Dictionary<string, string> ZarfHafizasi = new Dictionary<string, string>();
+        string ZarfHafizaYolu = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "ZarfArsivi.json");
+
+        private void ZarfHafizasiniYukle()
+        {
+            if (System.IO.File.Exists(ZarfHafizaYolu))
+            {
+                try { ZarfHafizasi = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(System.IO.File.ReadAllText(ZarfHafizaYolu)) ?? new Dictionary<string, string>(); }
+                catch { ZarfHafizasi = new Dictionary<string, string>(); }
+            }
+        }
+
+        private void ZarfHafizasiniKaydet()
+        {
+            try
+            {
+                string klasor = System.IO.Path.GetDirectoryName(ZarfHafizaYolu);
+                if (!System.IO.Directory.Exists(klasor)) System.IO.Directory.CreateDirectory(klasor);
+                System.IO.File.WriteAllText(ZarfHafizaYolu, Newtonsoft.Json.JsonConvert.SerializeObject(ZarfHafizasi, Newtonsoft.Json.Formatting.Indented));
+            }
+            catch { }
+        }
+
+        // 🌟 2. HAFIZA BUTONUNA BASINCA AÇILACAK OLAN ANA PENCERE
+        private void btnHafiza_Click(object sender, EventArgs e)
+        {
+            ZarfHafizasiniYukle(); // Önce diskteki eski kayıtları çek
+
+            Form frmHafiza = new Form
+            {
+                Text = "📂 Zarf Hafıza ve Sevkiyat Arşivi",
+                Size = new Size(550, 480),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.WhiteSmoke,
+                Icon = this.Icon
+            };
+
+            // SOL TARAF: Kayıtlı Liste
+            Label lblListe = new Label { Text = "Kayıtlı Sevkiyatlar / Ölçüler:", Location = new Point(20, 15), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            ListBox lstKayitlar = new ListBox { Location = new Point(20, 40), Size = new Size(220, 370), Font = new Font("Segoe UI", 10) };
+            foreach (var kayit in ZarfHafizasi.Keys) lstKayitlar.Items.Add(kayit);
+
+            // SAĞ TARAF: Kontrol Paneli
+            Label lblYeniAd = new Label { Text = "Yeni Kayıt Adı (Firma/Ölçü vb.):", Location = new Point(260, 15), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtYeniKayitAd = new TextBox { Location = new Point(260, 40), Size = new Size(250, 25), Font = new Font("Segoe UI", 10) };
+
+            Button btnKaydet = new Button { Text = "💾 Yeni Kayıt Olarak Kaydet", Location = new Point(260, 80), Size = new Size(250, 45), BackColor = Color.Orange, ForeColor = Color.Black, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            // 🌟 İŞTE İSTEDİĞİN O YENİ AKILLI BUTON 🌟
+            Button btnUstuneEkle = new Button { Text = "➕ Seçili Kayıta İlave Ekle", Location = new Point(260, 140), Size = new Size(250, 45), BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            Button btnYukle = new Button { Text = "⬇️ Seçili Kaydı Ekrana Yükle", Location = new Point(260, 220), Size = new Size(250, 45), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnSil = new Button { Text = "❌ Seçili Kaydı Sil", Location = new Point(260, 280), Size = new Size(250, 45), BackColor = Color.DarkRed, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnKapat = new Button { Text = "Kapat", Location = new Point(260, 365), Size = new Size(250, 45), BackColor = Color.LightGray, ForeColor = Color.Black, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            // Olaylar (Events)
+            btnKapat.Click += (s, ev) => frmHafiza.Close();
+
+            lstKayitlar.SelectedIndexChanged += (s, ev) =>
+            {
+                if (lstKayitlar.SelectedItem != null) txtYeniKayitAd.Text = lstKayitlar.SelectedItem.ToString();
+            };
+
+            // ✅ İŞLEM 1: SIFIRDAN YENİ KAYIT
+            btnKaydet.Click += (s, ev) =>
+            {
+                string ad = txtYeniKayitAd.Text.Trim();
+                if (string.IsNullOrEmpty(ad)) { MessageBox.Show("Lütfen bir kayıt adı girin!"); return; }
+                if (dgvAmbarSonListe.Rows.Count == 0) { MessageBox.Show("Kaydedilecek veri yok!"); return; }
+
+                var liste = new List<Dictionary<string, string>>();
+                foreach (DataGridViewRow r in dgvAmbarSonListe.Rows)
+                {
+                    if (r.IsNewRow) continue;
+                    var satir = new Dictionary<string, string>();
+                    for (int i = 0; i < dgvAmbarSonListe.Columns.Count; i++) satir[dgvAmbarSonListe.Columns[i].Name] = r.Cells[i].Value?.ToString() ?? "";
+                    liste.Add(satir);
+                }
+
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(liste, Newtonsoft.Json.Formatting.Indented);
+                if (ZarfHafizasi.ContainsKey(ad)) ZarfHafizasi[ad] = json;
+                else { ZarfHafizasi.Add(ad, json); lstKayitlar.Items.Add(ad); }
+
+                ZarfHafizasiniKaydet();
+                MessageBox.Show($"'{ad}' başarıyla kaydedildi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            // 🌟 YENİ İŞLEM 2: SEÇİLİ KAYDIN ÜSTÜNE İLAVE ETME (MERGE) MOTORU 🌟
+            btnUstuneEkle.Click += (s, ev) =>
+            {
+                if (lstKayitlar.SelectedItem == null)
+                {
+                    MessageBox.Show("Lütfen üzerine ekleme yapmak istediğiniz arşivi (rotayı) soldan seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                if (dgvAmbarSonListe.Rows.Count == 0 || (dgvAmbarSonListe.Rows.Count == 1 && dgvAmbarSonListe.Rows[0].IsNewRow))
+                {
+                    MessageBox.Show("Ekranda ilave edilecek yeni veri yok! Lütfen önce listeye firma/palet ekleyin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string seciliKayit = lstKayitlar.SelectedItem.ToString();
+                string eskiJson = ZarfHafizasi[seciliKayit];
+
+                try
+                {
+                    // Eski paketi aç
+                    var mevcutListe = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(eskiJson) ?? new List<Dictionary<string, string>>();
+
+                    // Ekrana girilen yeni paketleri topla ve eskisinin üstüne ekle
+                    int eklenenAdet = 0;
+                    foreach (DataGridViewRow r in dgvAmbarSonListe.Rows)
+                    {
+                        if (r.IsNewRow) continue;
+                        var satir = new Dictionary<string, string>();
+                        for (int i = 0; i < dgvAmbarSonListe.Columns.Count; i++) satir[dgvAmbarSonListe.Columns[i].Name] = r.Cells[i].Value?.ToString() ?? "";
+
+                        mevcutListe.Add(satir); // Eski listeye yeni satırı gömüyoruz
+                        eklenenAdet++;
+                    }
+
+                    // Güncellenmiş dev listeyi tekrar paketle ve diske mühürle
+                    ZarfHafizasi[seciliKayit] = Newtonsoft.Json.JsonConvert.SerializeObject(mevcutListe, Newtonsoft.Json.Formatting.Indented);
+                    ZarfHafizasiniKaydet();
+
+                    MessageBox.Show($"{eklenenAdet} adet yeni palet/firma '{seciliKayit}' arşivinin içine başarıyla eklendi!", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("İlave işlemi sırasında hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            // ✅ İŞLEM 3: EKRANA GERİ YÜKLE
+            btnYukle.Click += (s, ev) =>
+            {
+                if (lstKayitlar.SelectedItem == null) { MessageBox.Show("Lütfen yüklenecek bir kayıt seçin!"); return; }
+                string secili = lstKayitlar.SelectedItem.ToString();
+
+                try
+                {
+                    var liste = Newtonsoft.Json.JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(ZarfHafizasi[secili]);
+                    dgvAmbarSonListe.Rows.Clear(); // Ekranı temizle
+
+                    foreach (var satir in liste)
+                    {
+                        int index = dgvAmbarSonListe.Rows.Add();
+                        foreach (var kvp in satir)
+                        {
+                            if (dgvAmbarSonListe.Columns.Contains(kvp.Key))
+                                dgvAmbarSonListe.Rows[index].Cells[kvp.Key].Value = kvp.Value;
+                        }
+                    }
+                    MessageBox.Show($"'{secili}' arşivi masaya indirildi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    frmHafiza.Close();
+                }
+                catch { MessageBox.Show("Kayıt çözülürken hata oluştu!"); }
+            };
+
+            // ✅ İŞLEM 4: SİL
+            btnSil.Click += (s, ev) =>
+            {
+                if (lstKayitlar.SelectedItem == null) return;
+                string secili = lstKayitlar.SelectedItem.ToString();
+                if (MessageBox.Show($"'{secili}' kaydı tamamen silinecek. Emin misiniz?", "Onay", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    ZarfHafizasi.Remove(secili);
+                    ZarfHafizasiniKaydet();
+                    lstKayitlar.Items.Remove(secili);
+                    txtYeniKayitAd.Clear();
+                }
+            };
+
+            frmHafiza.Controls.Add(lblListe); frmHafiza.Controls.Add(lstKayitlar);
+            frmHafiza.Controls.Add(lblYeniAd); frmHafiza.Controls.Add(txtYeniKayitAd);
+            frmHafiza.Controls.Add(btnKaydet); frmHafiza.Controls.Add(btnUstuneEkle);
+            frmHafiza.Controls.Add(btnYukle); frmHafiza.Controls.Add(btnSil); frmHafiza.Controls.Add(btnKapat);
+
+            frmHafiza.ShowDialog();
+        }
+
+        
         #endregion
 
         // =========================================================================================
@@ -8038,14 +8399,23 @@ namespace TamgaApp
                 return;
             }
 
-            // 🌟 1. DİNAMİK PALET SAYISINI BUL (En fazla paleti olan firmayı tespit et)
+            // 🌟 1. DİNAMİK PALET SAYISINI BUL (SANA İTAAT EDEN ZIRHLI MOTOR)
             int maxPalet = 1;
             foreach (DataGridViewRow row in dgvAmbarSonListe.Rows)
             {
                 if (row.IsNewRow) continue;
-                string olculerHam = row.Cells[7].Value?.ToString() ?? "";
 
-                // Kaç satır ölçü yazıldıysa, o firmanın o kadar paleti vardır
+                // 1. ÖNCELİK: Senin seçtiğin "Palet Sayısı" (Hücre 6) içindeki rakama bak
+                string adetMetni = row.Cells[6].Value?.ToString() ?? "1";
+                adetMetni = adetMetni.Replace("PALET", "").Trim();
+
+                if (int.TryParse(adetMetni, out int pSayisi))
+                {
+                    if (pSayisi > maxPalet) maxPalet = pSayisi;
+                }
+
+                // 2. ÖNCELİK (Garanti Zırhı): Ölçüler hücresinde alt alta kaç satır var onu say
+                string olculerHam = row.Cells[7].Value?.ToString() ?? "";
                 int pCount = olculerHam.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
                 if (pCount > maxPalet) maxPalet = pCount;
             }
@@ -8063,8 +8433,19 @@ namespace TamgaApp
             // 3. Üst Kontrol Paneli (Şoför Bilgileri ve Butonların duracağı yer)
             Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.FromArgb(45, 52, 54) };
 
-            Button btnAmbarRapor = new Button { Text = "📄 AMBAR RAPORU YAZDIR (Geniş Format)", Location = new Point(20, 15), Size = new Size(350, 45), BackColor = Color.Gold, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
-            Button btnSevkKontrol = new Button { Text = "📋 SEVK KONTROL RAPORU YAZDIR (Dar Format)", Location = new Point(400, 15), Size = new Size(380, 45), BackColor = Color.White, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnAmbarRapor = new Button { Text = "📄 AMBAR RAPORU (Geniş)", Location = new Point(20, 15), Size = new Size(300, 45), BackColor = Color.Gold, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnSevkKontrol = new Button { Text = "📋 SEVK KONTROL RAPORU (Dar)", Location = new Point(340, 15), Size = new Size(300, 45), BackColor = Color.White, ForeColor = Color.Black, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+
+            // 🌟 YENİ: EXCEL KAYDETME SEÇENEĞİ (CHECKBOX)
+            CheckBox chkExcelKaydet = new CheckBox
+            {
+                Text = "📊 Raporu Excel Olarak Kaydet",
+                Location = new Point(660, 25),
+                AutoSize = true,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
 
             // 🌟 ŞOFÖR, PLAKA, TELEFON KUTULARI
             Label lblSofor = new Label { Text = "Şoför:", Location = new Point(20, 72), AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
@@ -8078,6 +8459,7 @@ namespace TamgaApp
 
             pnlUst.Controls.Add(btnAmbarRapor);
             pnlUst.Controls.Add(btnSevkKontrol);
+            pnlUst.Controls.Add(chkExcelKaydet); // Excel kutusunu panele ekledik
             pnlUst.Controls.Add(lblSofor); pnlUst.Controls.Add(txtSofor);
             pnlUst.Controls.Add(lblPlaka); pnlUst.Controls.Add(txtPlaka);
             pnlUst.Controls.Add(lblTelefon); pnlUst.Controls.Add(txtTelefon);
@@ -8125,7 +8507,6 @@ namespace TamgaApp
                 newRow.Cells["Firma"].Value = firma;
                 newRow.Cells["Adres"].Value = adres;
 
-                // Kaç tane palet varsa o kadar hücreyi doldur
                 for (int i = 1; i <= maxPalet; i++)
                 {
                     newRow.Cells[$"Palet{i}"].Value = olculer.Length >= i ? olculer[i - 1] : "";
@@ -8158,7 +8539,6 @@ namespace TamgaApp
                 html.AppendLine("<th style='width: 25%;'>FİRMA</th>");
                 html.AppendLine("<th style='width: 35%;'>ADRES</th>");
 
-                // 🌟 DİNAMİK BAŞLIKLAR (Sadece ihtiyaç olan kadar PALET DESİ yazar)
                 for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>{i}. PALET DESİ</th>");
 
                 html.AppendLine("<th>PALET ADETİ</th>");
@@ -8170,14 +8550,12 @@ namespace TamgaApp
                     html.AppendLine($"<td><b>{r.Cells["Firma"].Value}</b></td>");
                     html.AppendLine($"<td class='adres-hucresi'>{r.Cells["Adres"].Value}</td>");
 
-                    // 🌟 DİNAMİK HÜCRELER
                     for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
 
                     html.AppendLine($"<td class='sari-bg'>{r.Cells["Adet"].Value}</td>");
                     html.AppendLine("</tr>");
                 }
 
-                // 🌟 ŞOFÖR BİLGİLERİNİ KUTUDAN ALIP YAZDIRIYORUZ
                 html.AppendLine("</table>");
                 html.AppendLine("<table class='sofor-tablo'>");
                 html.AppendLine($"<tr><th>ŞOFÖR</th><td>: {txtSofor.Text.Trim()}</td></tr>");
@@ -8186,7 +8564,24 @@ namespace TamgaApp
                 html.AppendLine("</table>");
                 html.AppendLine("</body></html>");
 
-                await HtmlYaziciMotorunuCalistir(html.ToString(), "Ambar Raporu");
+                // 🌟 EXCEL KAYIT YÖNLENDİRMESİ 🌟
+                if (chkExcelKaydet.Checked)
+                {
+                    using (SaveFileDialog sfd = new SaveFileDialog { Filter = "Excel Dosyası|*.xls", FileName = $"Ambar_Raporu_{DateTime.Now:ddMMyyyy_HHmm}.xls" })
+                    {
+                        if (sfd.ShowDialog() == DialogResult.OK)
+                        {
+                            string excelHtml = html.ToString().Replace("<html>", "<html xmlns:x=\"urn:schemas-microsoft-com:office:excel\">");
+                            System.IO.File.WriteAllText(sfd.FileName, excelHtml, new System.Text.UTF8Encoding(true));
+                            MessageBox.Show("Rapor Excel formatında başarıyla kaydedildi!", "Excel'e Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
+                        }
+                    }
+                }
+                else
+                {
+                    await HtmlYaziciMotorunuCalistir(html.ToString(), "Ambar Raporu");
+                }
             };
 
             // ====================================================================
@@ -8200,7 +8595,7 @@ namespace TamgaApp
                 html.AppendLine("body { font-family: 'Times New Roman', serif; font-size: 13px; }");
                 html.AppendLine("table { width: 100%; border-collapse: collapse; }");
                 html.AppendLine("th, td { border: 1.5px solid black; padding: 6px; text-align: center; }");
-                html.AppendLine("th { font-weight: bold; font-size: 14px; }");
+                html.AppendLine("th { font-weight: bold; font-size: 14px; background-color: #F0F0F0; }");
                 html.AppendLine(".sol-hizala { text-align: left; font-weight: bold; }");
                 html.AppendLine("</style></head><body>");
 
@@ -8208,7 +8603,6 @@ namespace TamgaApp
                 html.AppendLine("<th style='width: 45%;'>MÜŞTERİ ADI</th>");
                 html.AppendLine("<th style='width: 15%;'>PALET ADETİ</th>");
 
-                // 🌟 DİNAMİK DESİ BAŞLIKLARI (Kaç palet varsa o kadar DESİ sütunu koyar. Boş sütun tarih oldu!)
                 for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>DESİ</th>");
 
                 html.AppendLine("</tr>");
@@ -8219,7 +8613,6 @@ namespace TamgaApp
                     html.AppendLine($"<td class='sol-hizala'>{r.Cells["Firma"].Value}</td>");
                     html.AppendLine($"<td>{r.Cells["Adet"].Value}</td>");
 
-                    // 🌟 DİNAMİK DESİ HÜCRELERİ
                     for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
 
                     html.AppendLine("</tr>");
@@ -8227,7 +8620,24 @@ namespace TamgaApp
 
                 html.AppendLine("</table></body></html>");
 
-                await HtmlYaziciMotorunuCalistir(html.ToString(), "Sevk Kontrol Raporu");
+                // 🌟 EXCEL KAYIT YÖNLENDİRMESİ 🌟
+                if (chkExcelKaydet.Checked)
+                {
+                    using (SaveFileDialog sfd = new SaveFileDialog { Filter = "Excel Dosyası|*.xls", FileName = $"Sevk_Kontrol_{DateTime.Now:ddMMyyyy_HHmm}.xls" })
+                    {
+                        if (sfd.ShowDialog() == DialogResult.OK)
+                        {
+                            string excelHtml = html.ToString().Replace("<html>", "<html xmlns:x=\"urn:schemas-microsoft-com:office:excel\">");
+                            System.IO.File.WriteAllText(sfd.FileName, excelHtml, new System.Text.UTF8Encoding(true));
+                            MessageBox.Show("Sevk Kontrol Excel formatında başarıyla kaydedildi!", "Excel'e Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
+                        }
+                    }
+                }
+                else
+                {
+                    await HtmlYaziciMotorunuCalistir(html.ToString(), "Sevk Kontrol Raporu");
+                }
             };
 
             frmRapor.ShowDialog();
