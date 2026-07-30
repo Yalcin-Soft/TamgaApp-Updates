@@ -7231,7 +7231,7 @@ namespace TamgaApp
             frmHafiza.ShowDialog();
         }
 
-        
+
         #endregion
 
         // =========================================================================================
@@ -7273,13 +7273,19 @@ namespace TamgaApp
             TextBox txtYeniKayitAdi = new TextBox { Left = 260, Top = 40, Width = 200, Font = new Font("Segoe UI", 10) };
 
             Button btnAskijaAl = new Button { Text = "Mevcut Ekranı Kaydet", Left = 260, Top = 75, Width = 200, Height = 40, BackColor = Color.Orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
-            Button btnDevamEt = new Button { Text = "Seçili Kaydı Ekrana Yükle", Left = 260, Top = 160, Width = 200, Height = 45, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            // 🌟 İŞTE KAYIP BUTON BURADA! 🌟
+            Button btnUstuneEkle = new Button { Text = "➕ Seçili Kayıta İlave Ekle", Left = 260, Top = 120, Width = 200, Height = 40, BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            Button btnDevamEt = new Button { Text = "Seçili Kaydı Ekrana Yükle", Left = 260, Top = 165, Width = 200, Height = 45, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
             Button btnTemizle = new Button { Text = "Seçili Kaydı Sil", Left = 260, Top = 215, Width = 200, Height = 35, BackColor = Color.DarkRed, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
             Button btnKapat = new Button { Text = "Kapat", Left = 260, Top = 310, Width = 200, Height = 35, Cursor = Cursors.Hand };
 
             frmHafiza.Controls.Add(lblListe); frmHafiza.Controls.Add(lstKayitlar);
             frmHafiza.Controls.Add(lblYeni); frmHafiza.Controls.Add(txtYeniKayitAdi);
-            frmHafiza.Controls.Add(btnAskijaAl); frmHafiza.Controls.Add(btnDevamEt);
+            frmHafiza.Controls.Add(btnAskijaAl);
+            frmHafiza.Controls.Add(btnUstuneEkle); // Panele Eklendi
+            frmHafiza.Controls.Add(btnDevamEt);
             frmHafiza.Controls.Add(btnTemizle); frmHafiza.Controls.Add(btnKapat);
 
             // 3. AKSİYON: YENİ KAYIT (SÜTUN BAŞLIKLARIYLA BERABER KAYDEDER)
@@ -7335,6 +7341,53 @@ namespace TamgaApp
                 catch (Exception ex) { MessageBox.Show("Hata:\n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             };
 
+            // 🌟 YENİ AKSİYON: SEÇİLİ KAYDIN ÜSTÜNE İLAVE ETME (APPEND) 🌟
+            btnUstuneEkle.Click += (s, args) =>
+            {
+                if (lstKayitlar.SelectedIndex == -1)
+                {
+                    MessageBox.Show("Lütfen üzerine ekleme yapmak istediğiniz arşivi soldan seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string seciliDosya = System.IO.Path.Combine(klasorYolu, lstKayitlar.SelectedItem.ToString() + ".txt");
+
+                try
+                {
+                    List<string> eklenecekVeriler = new List<string>();
+
+                    // Ekranda yeni girilen verileri toplayan metod (Başlıkları atlar)
+                    void TablodanYeniVeriAl(DataGridView dgv, string etiket)
+                    {
+                        foreach (DataGridViewRow satir in dgv.Rows)
+                        {
+                            if (satir.IsNewRow) continue;
+                            List<string> hucreler = new List<string>();
+                            for (int i = 0; i < satir.Cells.Count; i++) hucreler.Add(satir.Cells[i].Value?.ToString() ?? "");
+                            eklenecekVeriler.Add($"{etiket}|" + string.Join("|", hucreler));
+                        }
+                    }
+
+                    TablodanYeniVeriAl(dgvAmbarSecilenFirmalar, "SECILEN");
+                    TablodanYeniVeriAl(dgvPaletler, "PALET");
+                    TablodanYeniVeriAl(dgvAmbarSonListe, "SONLISTE");
+
+                    if (eklenecekVeriler.Count == 0)
+                    {
+                        MessageBox.Show("Ekranda ilave edilecek yeni veri yok! Lütfen önce tablolara veri ekleyin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    // Txt dosyasının en altına sadece verileri ilave et (Böylece yüklendiğinde eski kayıtların altına dizilirler)
+                    System.IO.File.AppendAllLines(seciliDosya, eklenecekVeriler);
+
+                    // İşlem bitince ekranı temizle
+                    dgvAmbarSecilenFirmalar.Rows.Clear(); dgvPaletler.Rows.Clear(); dgvAmbarSonListe.Rows.Clear();
+                    MessageBox.Show("Yeni kayıtlar başarıyla seçili arşivin içine ilave edildi!", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex) { MessageBox.Show("İlave işlemi sırasında hata oluştu:\n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            };
+
             // 4. AKSİYON: GERİ YÜKLE (ORİJİNAL BAŞLIKLARI VE FORMATI KORUYARAK)
             btnDevamEt.Click += (s, args) =>
             {
@@ -7364,7 +7417,6 @@ namespace TamgaApp
                                                  tabloAdi == "HEADER_PALET" ? dgvPaletler : dgvAmbarSonListe;
 
                             // SADECE tablonun gerçekten hiç sütunu yoksa (Örn: Program ilk açıldığında bir bug olduysa) yeni sütun çiz.
-                            // Aksi halde var olan formatı (Gizli ID vs.) bozmamak için bu adımı pas geç!
                             if (hedef.ColumnCount == 0)
                             {
                                 for (int i = 0; i < eklenecekVeri.Length; i++) hedef.Columns.Add($"col{i}", eklenecekVeri[i]);
@@ -7402,10 +7454,6 @@ namespace TamgaApp
             btnKapat.Click += (s, args) => { frmHafiza.Close(); };
             frmHafiza.ShowDialog();
         }
-
-
-
-
 
         #endregion
 
