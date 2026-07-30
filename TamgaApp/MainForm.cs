@@ -7273,22 +7273,18 @@ namespace TamgaApp
             TextBox txtYeniKayitAdi = new TextBox { Left = 260, Top = 40, Width = 200, Font = new Font("Segoe UI", 10) };
 
             Button btnAskijaAl = new Button { Text = "Mevcut Ekranı Kaydet", Left = 260, Top = 75, Width = 200, Height = 40, BackColor = Color.Orange, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
-
-            // 🌟 İŞTE KAYIP BUTON BURADA! 🌟
             Button btnUstuneEkle = new Button { Text = "➕ Seçili Kayıta İlave Ekle", Left = 260, Top = 120, Width = 200, Height = 40, BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
-
             Button btnDevamEt = new Button { Text = "Seçili Kaydı Ekrana Yükle", Left = 260, Top = 165, Width = 200, Height = 45, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
             Button btnTemizle = new Button { Text = "Seçili Kaydı Sil", Left = 260, Top = 215, Width = 200, Height = 35, BackColor = Color.DarkRed, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand };
             Button btnKapat = new Button { Text = "Kapat", Left = 260, Top = 310, Width = 200, Height = 35, Cursor = Cursors.Hand };
 
             frmHafiza.Controls.Add(lblListe); frmHafiza.Controls.Add(lstKayitlar);
             frmHafiza.Controls.Add(lblYeni); frmHafiza.Controls.Add(txtYeniKayitAdi);
-            frmHafiza.Controls.Add(btnAskijaAl);
-            frmHafiza.Controls.Add(btnUstuneEkle); // Panele Eklendi
+            frmHafiza.Controls.Add(btnAskijaAl); frmHafiza.Controls.Add(btnUstuneEkle);
             frmHafiza.Controls.Add(btnDevamEt);
             frmHafiza.Controls.Add(btnTemizle); frmHafiza.Controls.Add(btnKapat);
 
-            // 3. AKSİYON: YENİ KAYIT (SÜTUN BAŞLIKLARIYLA BERABER KAYDEDER)
+            // 3. AKSİYON: YENİ KAYIT (ŞİFRELİ KAYIT MOTORU)
             btnAskijaAl.Click += (s, args) =>
             {
                 string kayitAdi = txtYeniKayitAdi.Text.Trim();
@@ -7305,22 +7301,25 @@ namespace TamgaApp
                 {
                     List<string> askidakiVeriler = new List<string>();
 
-                    // Ortak Kayıt Metodu
                     void TabloyuKaydet(DataGridView dgv, string etiket)
                     {
                         if (dgv.Columns.Count > 0)
                         {
-                            // 🌟 YENİ: Sütun başlıklarını kaydet
                             List<string> basliklar = new List<string>();
                             foreach (DataGridViewColumn col in dgv.Columns) basliklar.Add(col.HeaderText);
                             askidakiVeriler.Add($"HEADER_{etiket}|" + string.Join("|", basliklar));
 
-                            // Satırları kaydet
                             foreach (DataGridViewRow satir in dgv.Rows)
                             {
                                 if (satir.IsNewRow) continue;
                                 List<string> hucreler = new List<string>();
-                                for (int i = 0; i < satir.Cells.Count; i++) hucreler.Add(satir.Cells[i].Value?.ToString() ?? "");
+                                for (int i = 0; i < satir.Cells.Count; i++)
+                                {
+                                    // 🌟 SATIR ATLATMA ZIRHI: txt dosyasını bozmaması için \n karakterlerini şifreliyoruz
+                                    string hucreDegeri = satir.Cells[i].Value?.ToString() ?? "";
+                                    hucreDegeri = hucreDegeri.Replace("\r", "").Replace("\n", "[YENISATIR]");
+                                    hucreler.Add(hucreDegeri);
+                                }
                                 askidakiVeriler.Add($"{etiket}|" + string.Join("|", hucreler));
                             }
                         }
@@ -7341,7 +7340,7 @@ namespace TamgaApp
                 catch (Exception ex) { MessageBox.Show("Hata:\n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             };
 
-            // 🌟 YENİ AKSİYON: SEÇİLİ KAYDIN ÜSTÜNE İLAVE ETME (APPEND) 🌟
+            // 🌟 İLAVE ETME (ŞİFRELİ) 🌟
             btnUstuneEkle.Click += (s, args) =>
             {
                 if (lstKayitlar.SelectedIndex == -1)
@@ -7356,14 +7355,19 @@ namespace TamgaApp
                 {
                     List<string> eklenecekVeriler = new List<string>();
 
-                    // Ekranda yeni girilen verileri toplayan metod (Başlıkları atlar)
                     void TablodanYeniVeriAl(DataGridView dgv, string etiket)
                     {
                         foreach (DataGridViewRow satir in dgv.Rows)
                         {
                             if (satir.IsNewRow) continue;
                             List<string> hucreler = new List<string>();
-                            for (int i = 0; i < satir.Cells.Count; i++) hucreler.Add(satir.Cells[i].Value?.ToString() ?? "");
+                            for (int i = 0; i < satir.Cells.Count; i++)
+                            {
+                                // 🌟 SATIR ATLATMA ZIRHI
+                                string hucreDegeri = satir.Cells[i].Value?.ToString() ?? "";
+                                hucreDegeri = hucreDegeri.Replace("\r", "").Replace("\n", "[YENISATIR]");
+                                hucreler.Add(hucreDegeri);
+                            }
                             eklenecekVeriler.Add($"{etiket}|" + string.Join("|", hucreler));
                         }
                     }
@@ -7378,17 +7382,15 @@ namespace TamgaApp
                         return;
                     }
 
-                    // Txt dosyasının en altına sadece verileri ilave et (Böylece yüklendiğinde eski kayıtların altına dizilirler)
                     System.IO.File.AppendAllLines(seciliDosya, eklenecekVeriler);
 
-                    // İşlem bitince ekranı temizle
                     dgvAmbarSecilenFirmalar.Rows.Clear(); dgvPaletler.Rows.Clear(); dgvAmbarSonListe.Rows.Clear();
                     MessageBox.Show("Yeni kayıtlar başarıyla seçili arşivin içine ilave edildi!", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex) { MessageBox.Show("İlave işlemi sırasında hata oluştu:\n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error); }
             };
 
-            // 4. AKSİYON: GERİ YÜKLE (ORİJİNAL BAŞLIKLARI VE FORMATI KORUYARAK)
+            // 4. AKSİYON: GERİ YÜKLE (ŞİFRE ÇÖZÜCÜ EKLENDİ)
             btnDevamEt.Click += (s, args) =>
             {
                 if (lstKayitlar.SelectedIndex == -1) return;
@@ -7398,7 +7400,6 @@ namespace TamgaApp
                 {
                     string[] askidakiVeriler = System.IO.File.ReadAllLines(seciliDosya);
 
-                    // SADECE satırları temizle! (Columns.Clear YAPMIYORUZ ki gizli ID sütunları bozulmasın)
                     dgvAmbarSecilenFirmalar.Rows.Clear();
                     dgvPaletler.Rows.Clear();
                     dgvAmbarSonListe.Rows.Clear();
@@ -7408,21 +7409,23 @@ namespace TamgaApp
                         string[] parcalar = satir.Split('|');
                         string tabloAdi = parcalar[0];
                         string[] eklenecekVeri = new string[parcalar.Length - 1];
-                        Array.Copy(parcalar, 1, eklenecekVeri, 0, parcalar.Length - 1);
 
-                        // HEADER (SÜTUN BAŞLIKLARI) SATIRI GELDİYSE
+                        // 🌟 ŞİFRE ÇÖZÜCÜ: Şifrelenmiş satır atlatmaları tekrar gerçek alt satıra (\n) çeviriyoruz
+                        for (int i = 1; i < parcalar.Length; i++)
+                        {
+                            eklenecekVeri[i - 1] = parcalar[i].Replace("[YENISATIR]", "\n");
+                        }
+
                         if (tabloAdi.StartsWith("HEADER_"))
                         {
                             DataGridView hedef = tabloAdi == "HEADER_SECILEN" ? dgvAmbarSecilenFirmalar :
                                                  tabloAdi == "HEADER_PALET" ? dgvPaletler : dgvAmbarSonListe;
 
-                            // SADECE tablonun gerçekten hiç sütunu yoksa (Örn: Program ilk açıldığında bir bug olduysa) yeni sütun çiz.
                             if (hedef.ColumnCount == 0)
                             {
                                 for (int i = 0; i < eklenecekVeri.Length; i++) hedef.Columns.Add($"col{i}", eklenecekVeri[i]);
                             }
                         }
-                        // NORMAL VERİ SATIRI GELDİYSE
                         else if (tabloAdi == "SECILEN" || tabloAdi == "PALET" || tabloAdi == "SONLISTE")
                         {
                             DataGridView hedef = tabloAdi == "SECILEN" ? dgvAmbarSecilenFirmalar :
@@ -8715,7 +8718,5 @@ namespace TamgaApp
         #endregion
 
         #endregion
-
-        
     }
 }
