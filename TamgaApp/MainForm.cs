@@ -4490,6 +4490,26 @@ namespace TamgaApp
                 return;
             }
 
+            // 🌟 SİHİRLİ ZIRH: Mevcut Ekrandaki "Okutulan" (Okuma) Geçmişini Hafızaya Al!
+            Dictionary<string, int> oncekiOkutulanlar = new Dictionary<string, int>();
+            if (dgvMalzemeler.Rows.Count > 0)
+            {
+                foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                {
+                    if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
+                    string bNo = row.Cells["Belge No"].Value.ToString();
+                    string mKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+
+                    int okutulan = 0;
+                    if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
+
+                    if (okutulan > 0)
+                    {
+                        oncekiOkutulanlar[$"{bNo}_{mKodu}"] = okutulan;
+                    }
+                }
+            }
+
             // Tabloyu sıfırdan kur
             DataTable dtEkran = new DataTable();
             dtEkran.Columns.Add("Belge No", typeof(string));
@@ -4517,19 +4537,11 @@ namespace TamgaApp
                 string secilenBelge = isaretliBelge.ToString();
                 DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
 
-                // 🌟 İHRACAT (O1) KONTROLÜ İÇİN BELGE TİPİNİ BULUYORUZ
-                string belgeTipi = "";
-                if (filtrelenmisSatirlar.Length > 0)
-                {
-                    belgeTipi = filtrelenmisSatirlar[0]["BelgeTipi"]?.ToString().Trim() ?? "";
-                }
-
                 foreach (DataRow satir in filtrelenmisSatirlar)
                 {
                     string malzemeKodu = satir["Malzeme"].ToString().Trim();
                     string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
 
-                    // 🎯 YENİ AKILLI EŞLEŞTİRME MOTORU (BEYAZ = BOŞ KURALI EKLENDİ)
                     var urun = yerelUrunler.FirstOrDefault(u =>
                         u.UrunKodu == malzemeKodu &&
                         (
@@ -4541,16 +4553,21 @@ namespace TamgaApp
                         )
                     );
 
-                    // 🛡️ SON ÇARE ZIRHI: Eğer renklerden hiçbir şekilde tutturamazsak, sistem çökmesin diye koda ait ilk ürünü getir.
                     if (urun == null)
                     {
                         urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
                     }
 
-                    // Bulunan barkodu değişkene at, yoksa "BARKOD YOK" yaz
                     string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
-                    // 🌟 İŞTE KAYBOLAN O SİHİRLİ SATIR (Tabloya Yazdırma İşlemi)
+                    // 🌟 ESKİ OKUTULAN DEĞERİ HAFIZADAN ÇEK
+                    int yazilacakOkutulan = 0;
+                    string anahtar = $"{secilenBelge}_{malzemeKodu}";
+                    if (oncekiOkutulanlar.ContainsKey(anahtar))
+                    {
+                        yazilacakOkutulan = oncekiOkutulanlar[anahtar];
+                    }
+
                     dtEkran.Rows.Add(
                         secilenBelge,
                         malzemeKodu,
@@ -4558,7 +4575,7 @@ namespace TamgaApp
                         satir["MalzemeAdi"].ToString().Trim(),
                         satir["SecenekAciklamasi"].ToString().Trim(),
                         Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])),
-                        0
+                        yazilacakOkutulan // Sıfır yerine korunan değeri yaz
                     );
                 }
             }
@@ -4566,7 +4583,23 @@ namespace TamgaApp
             dgvMalzemeler.DataSource = dtEkran;
             dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-            MessageBox.Show($"{clbBelgeNo.CheckedItems.Count} adet sipariş fişi (İhracat kurallarıyla) birleştirilerek listeye eklendi!", "Siparişler Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            // 🌟 BOYA ZIRHI: Tablo yüklendikten sonra eski okunanların renklerini yeşil/sarıya geri boya
+            foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+            {
+                if (row.IsNewRow) continue;
+                int sip = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+                int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
+
+                if (oku >= sip && sip > 0) row.DefaultCellStyle.BackColor = Color.LightGreen;
+                else if (oku > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
+                else row.DefaultCellStyle.BackColor = Color.White;
+            }
+
+            // Kullanıcıyı boşa uyarıp yormamak için, metod otomatik (Askı/Ambar) tetiklenmediyse mesaj ver
+            if (sender != null)
+            {
+                MessageBox.Show($"{clbBelgeNo.CheckedItems.Count} adet sipariş fişi (İhracat kurallarıyla) listeye eklendi!\nÖnceki okutulan ürünleriniz başarıyla korundu.", "Siparişler Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
         }
 
         #endregion
@@ -5599,7 +5632,7 @@ namespace TamgaApp
             }
 
             DialogResult onay = MessageBox.Show(
-                "Bu müşteriye ait TÜM SİPARİŞLER seçilecek ve en eskisinden başlanacak şekilde (İhracat filtreleriyle) sıralanacaktır.\n\nEmin misiniz?",
+                "Bu müşteriye ait TÜM SİPARİŞLER seçilecek ve en eskisinden başlanacak şekilde sıralanacaktır.\n\nEmin misiniz?",
                 "Tümünü Seç Onayı",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
@@ -5610,6 +5643,23 @@ namespace TamgaApp
                 for (int i = 0; i < clbBelgeNo.Items.Count; i++)
                 {
                     clbBelgeNo.SetItemChecked(i, true);
+                }
+
+                // 🌟 SİHİRLİ ZIRH: Mevcut Ekrandaki Geçmişi Hafızaya Al!
+                Dictionary<string, int> oncekiOkutulanlar = new Dictionary<string, int>();
+                if (dgvMalzemeler.Rows.Count > 0)
+                {
+                    foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                    {
+                        if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
+                        string bNo = row.Cells["Belge No"].Value.ToString();
+                        string mKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+
+                        int okutulan = 0;
+                        if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
+
+                        if (okutulan > 0) oncekiOkutulanlar[$"{bNo}_{mKodu}"] = okutulan;
+                    }
                 }
 
                 DataTable dtEkran = new DataTable();
@@ -5638,32 +5688,20 @@ namespace TamgaApp
                 {
                     DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
 
-                    // Belge tipini öğren
-                    string belgeTipi = "";
-                    if (filtrelenmisSatirlar.Length > 0)
-                    {
-                        belgeTipi = filtrelenmisSatirlar[0]["BelgeTipi"]?.ToString().Trim() ?? "";
-                    }
-
                     foreach (DataRow satir in filtrelenmisSatirlar)
                     {
                         string malzemeKodu = satir["Malzeme"].ToString().Trim();
                         string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
 
-                        // 🌟 SİHİRLİ ZIRH: Eğer ERP siparişinde renk boş gelmişse VEYA "Beyaz" yazıyorsa,
-                        // büyük/küçük harf veya boşluk hatalarını ezip hepsini standart "Beyaz" formatına sokuyoruz.
                         if (string.IsNullOrEmpty(siparisRengi) || siparisRengi.Equals("BEYAZ", StringComparison.OrdinalIgnoreCase))
                         {
                             siparisRengi = "Beyaz";
                         }
 
-                        // 🎯 HEDEFİ TAM ON İKİDEN VUR: Hem Malzeme Koduna HEM DE Renge göre aynı anda eşleştir!
                         var urun = yerelUrunler.FirstOrDefault(u =>
                             u.UrunKodu == malzemeKodu &&
                             u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase));
 
-                        // BÜYÜK ZIRH: Eğer ERP'deki renk ismiyle Excel'deki uyuşmazsa (Örn: "Mat Siyah" vs "Siyah") 
-                        // sistem çökmesin diye sadece koda göre ilk bulduğunu getir.
                         if (urun == null)
                         {
                             urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
@@ -5671,14 +5709,34 @@ namespace TamgaApp
 
                         string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
-                        dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), 0);
+                        // 🌟 ESKİ OKUTULAN DEĞERİ HAFIZADAN ÇEK
+                        int yazilacakOkutulan = 0;
+                        string anahtar = $"{secilenBelge}_{malzemeKodu}";
+                        if (oncekiOkutulanlar.ContainsKey(anahtar))
+                        {
+                            yazilacakOkutulan = oncekiOkutulanlar[anahtar];
+                        }
+
+                        dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), yazilacakOkutulan);
                     }
                 }
 
                 dgvMalzemeler.DataSource = dtEkran;
                 dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-                MessageBox.Show("Tüm belgeler eklendi, FIFO kuralıyla ve ihracat filtreleriyle sıralandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // 🌟 BOYA ZIRHI
+                foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                {
+                    if (row.IsNewRow) continue;
+                    int sip = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+                    int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
+
+                    if (oku >= sip && sip > 0) row.DefaultCellStyle.BackColor = Color.LightGreen;
+                    else if (oku > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
+                    else row.DefaultCellStyle.BackColor = Color.White;
+                }
+
+                MessageBox.Show("Tüm belgeler eklendi ve sıralandı! Önceki okutulan ürünleriniz korundu.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
