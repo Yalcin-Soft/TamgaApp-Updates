@@ -478,6 +478,7 @@ namespace TamgaApp
             if (btnAmbarListeyeEkle != null) { btnAmbarListeyeEkle.Click -= btnAmbarListeyeEkle_Click; btnAmbarListeyeEkle.Click += btnAmbarListeyeEkle_Click; }
             if (btnAmbarSil != null) { btnAmbarSil.Click -= btnAmbarSil_Click; btnAmbarSil.Click += btnAmbarSil_Click; }
             if (btnAmbarYazdir != null) { btnAmbarYazdir.Click -= btnAmbarYazdir_Click; btnAmbarYazdir.Click += btnAmbarYazdir_Click; }
+            if (dgvAmbarSonListe != null) { dgvAmbarSonListe.CellMouseDown -= dgvAmbarSonListe_CellMouseDown; dgvAmbarSonListe.CellMouseDown += dgvAmbarSonListe_CellMouseDown; }
 
             // Depo Sayım Sistemi
             if (txtSayimBarkod != null) { txtSayimBarkod.KeyDown -= TxtSayimBarkod_KeyDown; txtSayimBarkod.KeyDown += TxtSayimBarkod_KeyDown; }
@@ -3858,6 +3859,83 @@ namespace TamgaApp
             if (dgvAmbarSecilenFirmalar != null) dgvAmbarSecilenFirmalar.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
             if (dgvPaletler != null) dgvPaletler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
+
+        // 🌟 SAĞ TIK MENÜSÜ (GERİ AL VE DESİ DÜZENLE MOTORU)
+        private void dgvAmbarSonListe_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            // Sadece sağ tıka ve geçerli bir satıra (başlıklara değil) basıldıysa çalış
+            if (e.Button == MouseButtons.Right && e.RowIndex >= 0)
+            {
+                // Tıklanan satırı otomatik olarak seçili hale getir (Maviye boya)
+                dgvAmbarSonListe.ClearSelection();
+                dgvAmbarSonListe.Rows[e.RowIndex].Selected = true;
+
+                // Şık bir sağ tık menüsü (Context Menu) oluştur
+                ContextMenuStrip sagTikMenu = new ContextMenuStrip();
+                sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                // 1. SEÇENEK: DESİ DÜZENLE
+                ToolStripMenuItem btnDuzenle = new ToolStripMenuItem("✏️ Toplam Desiyi Düzenle");
+                btnDuzenle.Click += (s, ev) =>
+                {
+                    // Hücredeki mevcut desiyi (Örn: "120 Ds.") al, içindeki yazıları temizleyip sadece rakamı bırak
+                    string mevcutDesi = dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value?.ToString().Replace("Ds.", "").Trim();
+
+                    // Düzenleme için şık, anlık bir popup form oluştur
+                    Form frmInput = new Form
+                    {
+                        Width = 350,
+                        Height = 180,
+                        Text = "Desi Düzenle",
+                        StartPosition = FormStartPosition.CenterParent,
+                        FormBorderStyle = FormBorderStyle.FixedDialog,
+                        MaximizeBox = false,
+                        MinimizeBox = false,
+                        BackColor = Color.WhiteSmoke,
+                        ShowIcon = false
+                    };
+
+                    Label lbl = new Label { Left = 20, Top = 20, Text = "Yeni Toplam Desi Miktarını Girin:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+                    TextBox txtDesi = new TextBox { Left = 20, Top = 50, Width = 290, Font = new Font("Segoe UI", 12), Text = mevcutDesi };
+                    Button btnOnay = new Button { Text = "✅ GÜNCELLE", Left = 20, Top = 90, Width = 290, Height = 35, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+                    btnOnay.Click += (senderObj, args) =>
+                    {
+                        // Girilen veri gerçekten bir rakamsa güncelle
+                        if (double.TryParse(txtDesi.Text.Trim(), out double yeniDesi))
+                        {
+                            dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value = Math.Round(yeniDesi, 0) + " Ds.";
+                            frmInput.Close();
+                        }
+                        else MessageBox.Show("Lütfen geçerli bir rakam girin!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    };
+
+                    // Enter tuşuna basınca direkt güncellesin (Fareye gerek kalmasın)
+                    txtDesi.KeyDown += (senderObj, args) => { if (args.KeyCode == Keys.Enter) { args.SuppressKeyPress = true; btnOnay.PerformClick(); } };
+
+                    frmInput.Controls.Add(lbl); frmInput.Controls.Add(txtDesi); frmInput.Controls.Add(btnOnay);
+                    frmInput.ShowDialog();
+                };
+
+                // 2. SEÇENEK: SİL (GERİ AL)
+                ToolStripMenuItem btnSil = new ToolStripMenuItem("❌ Seçili Satırı Sil (Geri Al)");
+                btnSil.ForeColor = Color.DarkRed;
+                btnSil.Click += (s, ev) =>
+                {
+                    // Sistemde zaten var olan Silme butonunun komutunu gizlice tetikliyoruz
+                    btnAmbarSil_Click(null, null);
+                };
+
+                // Menüye butonları ekle ve araya şık bir ayırıcı çizgi koy
+                sagTikMenu.Items.Add(btnDuzenle);
+                sagTikMenu.Items.Add(new ToolStripSeparator());
+                sagTikMenu.Items.Add(btnSil);
+
+                // Menüyü farenin tam ucunda (tıklanan yerde) göster
+                sagTikMenu.Show(Cursor.Position);
+            }
+        }
+
         #endregion
 
         #region 🔄 12.3 FİRMA VE PALET BİLGİSİ GİRİŞLERİ
@@ -4630,8 +4708,8 @@ namespace TamgaApp
                 string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
                 if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "Musteri";
 
-                // 🌟 YENİ: DOSYA UZANTISI ARTIK .xlsx OLARAK AYARLANDI
-                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:HHmm}.xlsx";
+                // 🌟 YENİ: DOSYA UZANTISI ARTIK .xls OLARAK AYARLANDI
+                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:HHmm}.xls";
                 string tamYol = Path.Combine(klasor, dosyaAdi);
 
                 System.Text.StringBuilder html = new System.Text.StringBuilder();
@@ -5829,7 +5907,7 @@ namespace TamgaApp
             if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
             // Dosya ismini tarih, saat ve rapor adı kombinasyonuyla eşsiz hale getir (Örn: 2026-07-23_1430_Sayim.csv)
-            string dosyaAdi = $"{DateTime.Now:yyyy-MM-dd_HHmm}_{raporIsmi}.csv";
+            string dosyaAdi = $"{DateTime.Now:yyyy-MM-dd_HHmm}_{raporIsmi}.xls";
             string tamYol = Path.Combine(anaYol, dosyaAdi);
 
             // Verileri Excel ve notepad ile uyumlu olacak şekilde UTF8 formatında satır satır yaz dök
@@ -7993,17 +8071,17 @@ namespace TamgaApp
                     MaximizeBox = false,
                     MinimizeBox = false,
                     BackColor = Color.WhiteSmoke,
-                    ShowIcon = false
+                    ShowIcon = false,
+                    TopMost = true // 🌟 SİHİRLİ DOKUNUŞ 1: Bu pencerenin de Kiosk gibi en üstte kalmasını sağlar!
                 };
 
                 Label lbl = new Label { Text = "Lütfen kamyona manuel olarak eklemek istediğiniz paleti seçin:", Location = new Point(20, 20), AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
 
                 ListBox lstBekleyen = new ListBox { Location = new Point(20, 60), Size = new Size(590, 250), Font = new Font("Segoe UI", 14) };
 
-                // Listeyi Dictionary'den ListBox formatına bağla
                 lstBekleyen.DataSource = new BindingSource(bekleyenler, null);
-                lstBekleyen.DisplayMember = "Value"; // Ekranda Palet Adı/Firma görünsün
-                lstBekleyen.ValueMember = "Key";     // Arka planda gizli Barkod tutulsun
+                lstBekleyen.DisplayMember = "Value";
+                lstBekleyen.ValueMember = "Key";
 
                 Button btnOnay = new Button { Text = "✅ SEÇİLİ PALETİ YÜKLE", Location = new Point(20, 330), Size = new Size(590, 60), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 14, FontStyle.Bold), Cursor = Cursors.Hand };
 
@@ -8011,11 +8089,8 @@ namespace TamgaApp
                 {
                     if (lstBekleyen.SelectedItem != null)
                     {
-                        // Seçilen paletin gizli barkodunu çek ve formu kapat
                         string seciliBarkod = ((KeyValuePair<string, string>)lstBekleyen.SelectedItem).Key;
                         frmManuel.Close();
-
-                        // Kiosk sistemini tetikleyerek okutulmuş gibi sisteme bildir
                         DisaridanBarkodGeldi(seciliBarkod);
                     }
                 };
@@ -8023,9 +8098,10 @@ namespace TamgaApp
                 frmManuel.Controls.Add(lbl);
                 frmManuel.Controls.Add(lstBekleyen);
                 frmManuel.Controls.Add(btnOnay);
-                frmManuel.ShowDialog();
 
-                // İşlem bitince klavye/okuyucu odağını geri al
+                // 🌟 SİHİRLİ DOKUNUŞ 2: (this) parametresi ile pencerenin sahibinin Kiosk olduğunu sisteme kanıtlıyoruz!
+                frmManuel.ShowDialog(this);
+
                 txtGizliBarkod.Focus();
             }
 
@@ -8909,8 +8985,8 @@ namespace TamgaApp
                     string klasorYolu = Path.Combine(masaustu, "TamgaApp Tamamlanan Sevkiyatlar", "Ambar", yil, ay, gun);
                     if (!Directory.Exists(klasorYolu)) Directory.CreateDirectory(klasorYolu);
 
-                    // 3. Dosya Adını Şablonuna Göre Ayarla (Örn: 17.07.2026 AMBAR YÜKLEMESİ 10 PALET.xlsx)
-                    string dosyaAdi = $"{DateTime.Now:dd.MM.yyyy} AMBAR YÜKLEMESİ {toplamPaletSayisi} PALET.xlsx";
+                    // 3. Dosya Adını Şablonuna Göre Ayarla (Örn: 17.07.2026 AMBAR YÜKLEMESİ 10 PALET.xls)
+                    string dosyaAdi = $"{DateTime.Now:dd.MM.yyyy} AMBAR YÜKLEMESİ {toplamPaletSayisi} PALET.xls";
                     string tamYol = Path.Combine(klasorYolu, dosyaAdi);
 
                     // 4. Excel'i Arka Planda Sessizce Kaydet
