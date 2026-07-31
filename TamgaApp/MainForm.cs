@@ -4630,8 +4630,8 @@ namespace TamgaApp
                 string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
                 if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "Musteri";
 
-                // Rapor Dosyası İsmi
-                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:HHmm}.xls";
+                // 🌟 YENİ: DOSYA UZANTISI ARTIK .xlsx OLARAK AYARLANDI
+                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:HHmm}.xlsx";
                 string tamYol = Path.Combine(klasor, dosyaAdi);
 
                 System.Text.StringBuilder html = new System.Text.StringBuilder();
@@ -7955,14 +7955,78 @@ namespace TamgaApp
                 pnlOrta.Controls.Add(lblMesaj);
                 this.Controls.Add(pnlOrta);
 
+                // 1. Kırmızı Çıkış Butonu
                 Button btnCikis = new Button { Text = "X ÇIKIŞ", Size = new Size(150, 60), Location = new Point(20, 20), BackColor = Color.Red, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btnCikis.Click += (s, e) => this.Close();
                 pnlOrta.Controls.Add(btnCikis);
                 btnCikis.BringToFront();
 
+                // 🌟 2. YENİ EKLENEN MANUEL EKLE BUTONU 🌟
+                Button btnManuel = new Button { Text = "✍️ MANUEL EKLE", Size = new Size(220, 60), Location = new Point(190, 20), BackColor = Color.DarkOrange, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+                btnManuel.Click += BtnManuel_Click;
+                pnlOrta.Controls.Add(btnManuel);
+                btnManuel.BringToFront();
+
                 txtGizliBarkod = new TextBox { Width = 0, Height = 0, Location = new Point(-100, -100) };
                 txtGizliBarkod.KeyDown += Barkod_KeyDown;
                 this.Controls.Add(txtGizliBarkod);
+            }
+
+            // 🌟 MANUEL EKLEME LİSTESİ VE MANTIĞI
+            private void BtnManuel_Click(object sender, EventArgs e)
+            {
+                // Sadece okutulmamış (bekleyen) paletleri bul
+                var bekleyenler = beklenenPaletler.Where(p => !okutulanBarkodlar.Contains(p.Key)).ToList();
+
+                if (bekleyenler.Count == 0)
+                {
+                    MessageBox.Show("Yüklenecek (bekleyen) palet kalmadı!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                Form frmManuel = new Form
+                {
+                    Text = "✍️ Manuel Palet Yükleme",
+                    Size = new Size(650, 450),
+                    StartPosition = FormStartPosition.CenterScreen,
+                    FormBorderStyle = FormBorderStyle.FixedDialog,
+                    MaximizeBox = false,
+                    MinimizeBox = false,
+                    BackColor = Color.WhiteSmoke,
+                    ShowIcon = false
+                };
+
+                Label lbl = new Label { Text = "Lütfen kamyona manuel olarak eklemek istediğiniz paleti seçin:", Location = new Point(20, 20), AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
+
+                ListBox lstBekleyen = new ListBox { Location = new Point(20, 60), Size = new Size(590, 250), Font = new Font("Segoe UI", 14) };
+
+                // Listeyi Dictionary'den ListBox formatına bağla
+                lstBekleyen.DataSource = new BindingSource(bekleyenler, null);
+                lstBekleyen.DisplayMember = "Value"; // Ekranda Palet Adı/Firma görünsün
+                lstBekleyen.ValueMember = "Key";     // Arka planda gizli Barkod tutulsun
+
+                Button btnOnay = new Button { Text = "✅ SEÇİLİ PALETİ YÜKLE", Location = new Point(20, 330), Size = new Size(590, 60), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 14, FontStyle.Bold), Cursor = Cursors.Hand };
+
+                btnOnay.Click += (s, ev) =>
+                {
+                    if (lstBekleyen.SelectedItem != null)
+                    {
+                        // Seçilen paletin gizli barkodunu çek ve formu kapat
+                        string seciliBarkod = ((KeyValuePair<string, string>)lstBekleyen.SelectedItem).Key;
+                        frmManuel.Close();
+
+                        // Kiosk sistemini tetikleyerek okutulmuş gibi sisteme bildir
+                        DisaridanBarkodGeldi(seciliBarkod);
+                    }
+                };
+
+                frmManuel.Controls.Add(lbl);
+                frmManuel.Controls.Add(lstBekleyen);
+                frmManuel.Controls.Add(btnOnay);
+                frmManuel.ShowDialog();
+
+                // İşlem bitince klavye/okuyucu odağını geri al
+                txtGizliBarkod.Focus();
             }
 
             protected override void OnShown(EventArgs e) { base.OnShown(e); txtGizliBarkod.Focus(); }
@@ -7978,7 +8042,7 @@ namespace TamgaApp
                 }
             }
 
-            // COM PORT'tan ana form aracılığıyla veri geldiğinde burası tetiklenir!
+            // COM PORT'tan ana form aracılığıyla veya Manuel Butondan veri geldiğinde burası tetiklenir!
             public void DisaridanBarkodGeldi(string okunanKod)
             {
                 if (string.IsNullOrEmpty(okunanKod)) return;
@@ -8005,6 +8069,9 @@ namespace TamgaApp
                         try { Console.Beep(1000, 200); Console.Beep(1500, 400); } catch { }
 
                         MessageBox.Show("Tüm paletler başarıyla araca yüklendi. Araç çıkış yapabilir.", "Sevkiyat Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        // 🌟 SİHİRLİ ONAY SİNYALİ: Bu komut arka plandaki Ambar butonunun kilidini açar!
+                        this.DialogResult = DialogResult.OK;
                         this.Close();
                     }
                 }
@@ -8446,8 +8513,14 @@ namespace TamgaApp
 
             foreach (var firma in AmbarHafizasi.Keys) lstAmbardakiFirmalar.Items.Add(firma);
 
-            Button btnSil = new Button { Text = "❌ Seçileni Ambardan Sil", Location = new Point(350, 50), Size = new Size(300, 50), BackColor = Color.DarkRed, ForeColor = Color.White };
-            Button btnTamamla = new Button { Text = "✅ Ambarı Tamamla (Toplu Sevk)", Location = new Point(350, 120), Size = new Size(300, 70), BackColor = Color.DarkGreen, ForeColor = Color.White };
+            Button btnSil = new Button { Text = "❌ Seçileni Ambardan Sil", Location = new Point(350, 30), Size = new Size(300, 50), BackColor = Color.DarkRed, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+            Button btnYuklemeBaslat = new Button { Text = "🚀 AMBAR YÜKLEMEYİ BAŞLAT", Location = new Point(350, 100), Size = new Size(300, 70), BackColor = Color.MediumSeaGreen, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            // 🌟 BAŞLANGIÇTA GRİ VE KİLİTLİ GÖRÜNEN TAMAMLA BUTONU
+            Button btnTamamla = new Button { Text = "✅ Ambarı Tamamla (Toplu Sevk)", Location = new Point(350, 190), Size = new Size(300, 70), BackColor = Color.Gray, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.No };
+
+            // 🌟 GÜVENLİK ZIRHI: Tümü okutulana kadar false kalacak
+            bool tumPaletlerOkundu = false;
 
             // ❌ SİL BUTONU İŞLEMİ
             btnSil.Click += (s, ev) =>
@@ -8456,11 +8529,65 @@ namespace TamgaApp
                 {
                     string silinecekFirma = lstAmbardakiFirmalar.SelectedItem.ToString();
                     AmbarHafizasi.Remove(silinecekFirma);
-                    AmbarHafizasiniKaydet(); // 🌟 SİLİNCE DİSKE DE MÜHÜRLE
+                    AmbarHafizasiniKaydet();
 
                     lstAmbardakiFirmalar.Items.Remove(silinecekFirma);
-                    MessageBox.Show($"{silinecekFirma} firmasının malları ambardan tamamen indirildi!", "Bilgi");
+                    MessageBox.Show($"{silinecekFirma} firmasının malları ambardan tamamen indirildi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+                else
+                {
+                    MessageBox.Show("Lütfen silinecek firmayı listeden seçin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+
+            // 🚀 AMBAR YÜKLEMEYİ BAŞLAT BUTONU (KİOSK MOTORU)
+            btnYuklemeBaslat.Click += (s, ev) =>
+            {
+                if (AmbarHafizasi.Count == 0)
+                {
+                    MessageBox.Show("Ambar aracı şu an boş! Yüklenecek palet bulunamadı.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                Dictionary<string, string> kioskPaletler = new Dictionary<string, string>();
+
+                foreach (var kvp in AmbarHafizasi)
+                {
+                    try
+                    {
+                        var hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(kvp.Value);
+                        if (hafiza != null && hafiza.PaletBarkodlari != null)
+                        {
+                            foreach (var pKvp in hafiza.PaletBarkodlari)
+                            {
+                                string barkod = pKvp.Value;
+                                string paletAdi = $"{kvp.Key} - {pKvp.Key}";
+
+                                if (!kioskPaletler.ContainsKey(barkod)) kioskPaletler.Add(barkod, paletAdi);
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                if (kioskPaletler.Count == 0)
+                {
+                    MessageBox.Show("Ambardaki firmalara ait etiket basılmış barkodlu palet bulunamadı!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                frmAmbar.Hide();
+                FrmKamyonKiosk kiosk = new FrmKamyonKiosk("🚛 AMBAR ARACI ORTAK SEVKİYAT", kioskPaletler);
+
+                // 🌟 EĞER KİOSK EKSİKSİZ BİTTİYSE (OK) ZIRHI AÇ!
+                if (kiosk.ShowDialog() == DialogResult.OK)
+                {
+                    tumPaletlerOkundu = true;
+                    btnTamamla.BackColor = Color.DarkGreen;
+                    btnTamamla.Cursor = Cursors.Hand;
+                }
+
+                frmAmbar.Show();
             };
 
             // ✅ AMBAR TAMAMLA BUTONU İŞLEMİ
@@ -8468,25 +8595,110 @@ namespace TamgaApp
             {
                 if (AmbarHafizasi.Count == 0)
                 {
-                    MessageBox.Show("Ambar aracı şu an boş!", "Uyarı");
+                    MessageBox.Show("Ambar aracı şu an boş!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // 🌟 ZIRH KONTROLÜ BURADA YAPILIYOR
+                if (!tumPaletlerOkundu)
+                {
+                    MessageBox.Show("DUR! Kamyona yüklenen paletlerin barkod okutması (Kiosk) henüz tamamlanmadı.\nLütfen önce 'Ambar Yüklemeyi Başlat' butonuna tıklayarak tüm paletleri okutun!", "Eksik İşlem", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
 
                 DialogResult onay = MessageBox.Show("Ambardaki TÜM firmaların sevkiyatı kapatılıp arşive gönderilecek. Emin misiniz?", "Ambar Çıkışı", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
                 if (onay == DialogResult.Yes)
                 {
-                    // TODO: BURAYA SQL GÜNCELLEME KODUN GELECEK
+                    // Ambarı boşaltmadan önce içindeki tüm firmaları Arşive (CSV) Döküyoruz!
+                    foreach (var kvp in AmbarHafizasi)
+                    {
+                        try
+                        {
+                            YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(kvp.Value);
+                            if (hafiza == null) continue;
+
+                            string musteri = string.IsNullOrWhiteSpace(hafiza.MusteriAdi) ? kvp.Key : hafiza.MusteriAdi;
+                            string sevkMusteri = hafiza.SevkMusteri;
+                            string belgeNo = hafiza.BelgeNo;
+                            string paletSayisi = hafiza.PaletSayisi.ToString();
+                            string sevkTuru = "AMBAR_SEVK";
+
+                            string belgeKontrol = string.IsNullOrEmpty(belgeNo) ? "SE" : belgeNo.Split(new[] { ',', '_' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                            string turKlasoru = belgeKontrol.StartsWith("O1") ? "İhracat" : "Yurtiçi";
+
+                            string yil = DateTime.Now.ToString("yyyy");
+                            string ay = DateTime.Now.ToString("MM");
+                            string gun = DateTime.Now.ToString("dd");
+
+                            string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar", turKlasoru, yil, ay, gun);
+                            if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
+
+                            string temizMusteri = string.Join("_", musteri.Split(Path.GetInvalidFileNameChars()));
+                            if (string.IsNullOrWhiteSpace(temizMusteri)) temizMusteri = "BilinmeyenFirma";
+
+                            string dosyaAdi = $"{temizMusteri}_{paletSayisi}Palet_{sevkTuru}_{DateTime.Now:HHmm}.csv";
+                            string tamYol = Path.Combine(anaYol, dosyaAdi);
+
+                            using (StreamWriter sw = new StreamWriter(tamYol, false, System.Text.Encoding.UTF8))
+                            {
+                                sw.WriteLine("Müşteri;SevkMüşteri;BelgeNo;Tarih;Sevk Türü");
+                                sw.WriteLine($"{musteri};{sevkMusteri};{belgeNo};{DateTime.Now:HH:mm};{sevkTuru}");
+                                sw.WriteLine("--- DETAYLAR ---");
+                                sw.WriteLine("Palet No;İçerik;PaletBarkodu");
+
+                                int sutunSayisi = hafiza.PaletMatrisiDurumu.Values.FirstOrDefault()?.Count ?? 0;
+
+                                for (int j = 0; j < sutunSayisi; j++)
+                                {
+                                    string paletAdi = $"{j + 1}. Palet";
+                                    string paletBarkodu = "";
+
+                                    if (hafiza.PaletBarkodlari != null && hafiza.PaletBarkodlari.ContainsKey(paletAdi))
+                                    {
+                                        paletBarkodu = hafiza.PaletBarkodlari[paletAdi];
+                                    }
+                                    else
+                                    {
+                                        paletBarkodu = Ean13Olustur();
+                                    }
+
+                                    int maxSatir = hafiza.PaletMatrisiDurumu.Keys.Count > 0 ? hafiza.PaletMatrisiDurumu.Keys.Max() : -1;
+                                    for (int i = 0; i <= maxSatir; i++)
+                                    {
+                                        if (hafiza.PaletMatrisiDurumu.ContainsKey(i) && hafiza.PaletMatrisiDurumu[i].ContainsKey(j))
+                                        {
+                                            string icerik = hafiza.PaletMatrisiDurumu[i][j];
+                                            if (!string.IsNullOrWhiteSpace(icerik))
+                                            {
+                                                sw.WriteLine($"{paletAdi};{icerik};{paletBarkodu}");
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            string[] belgeler = belgeNo.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            foreach (string b in belgeler)
+                            {
+                                KaliciKaraListeyeEkle(b);
+                            }
+                        }
+                        catch { }
+                    }
 
                     AmbarHafizasi.Clear();
-                    AmbarHafizasiniKaydet(); // 🌟 KAMYON GİDİNCE DOSYAYI SIFIRLA
+                    AmbarHafizasiniKaydet();
 
                     frmAmbar.Close();
-                    MessageBox.Show("Kamyon yola çıktı! Tüm kayıtlar başarıyla sevk edildi.", "Başarılı");
+                    MessageBox.Show("Kamyon yola çıktı! İçindeki tüm firmalar başarıyla Arşive kaydedildi ve açık sipariş listesinden düşüldü.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    btnSiparisYenile_Click(null, null);
                 }
             };
 
             frmAmbar.Controls.Add(lstAmbardakiFirmalar);
             frmAmbar.Controls.Add(btnSil);
+            frmAmbar.Controls.Add(btnYuklemeBaslat);
             frmAmbar.Controls.Add(btnTamamla);
             frmAmbar.ShowDialog();
         }
@@ -8679,20 +8891,40 @@ namespace TamgaApp
                 // 🌟 EXCEL KAYIT YÖNLENDİRMESİ 🌟
                 if (chkExcelKaydet.Checked)
                 {
-                    using (SaveFileDialog sfd = new SaveFileDialog { Filter = "Excel Dosyası|*.xls", FileName = $"Ambar_Raporu_{DateTime.Now:ddMMyyyy_HHmm}.xls" })
+                    // 1. Tablodaki Toplam Palet Sayısını Hesapla
+                    int toplamPaletSayisi = 0;
+                    foreach (DataGridViewRow r in dgvKonsolide.Rows)
                     {
-                        if (sfd.ShowDialog() == DialogResult.OK)
-                        {
-                            string excelHtml = html.ToString().Replace("<html>", "<html xmlns:x=\"urn:schemas-microsoft-com:office:excel\">");
-                            System.IO.File.WriteAllText(sfd.FileName, excelHtml, new System.Text.UTF8Encoding(true));
-                            MessageBox.Show("Rapor Excel formatında başarıyla kaydedildi!", "Excel'e Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
-                        }
+                        if (r.IsNewRow) continue;
+                        string adetStr = r.Cells["Adet"].Value?.ToString().Replace("PALET", "").Trim() ?? "0";
+                        if (int.TryParse(adetStr, out int p)) toplamPaletSayisi += p;
                     }
+
+                    // 2. Klasör Ağacını (Masaüstü > Tamamlanan Sevkiyatlar > Ambar > Yıl > Ay > Gün) Oluştur
+                    string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                    string yil = DateTime.Now.ToString("yyyy");
+                    string ay = DateTime.Now.ToString("MM");
+                    string gun = DateTime.Now.ToString("dd");
+
+                    string klasorYolu = Path.Combine(masaustu, "TamgaApp Tamamlanan Sevkiyatlar", "Ambar", yil, ay, gun);
+                    if (!Directory.Exists(klasorYolu)) Directory.CreateDirectory(klasorYolu);
+
+                    // 3. Dosya Adını Şablonuna Göre Ayarla (Örn: 17.07.2026 AMBAR YÜKLEMESİ 10 PALET.xlsx)
+                    string dosyaAdi = $"{DateTime.Now:dd.MM.yyyy} AMBAR YÜKLEMESİ {toplamPaletSayisi} PALET.xlsx";
+                    string tamYol = Path.Combine(klasorYolu, dosyaAdi);
+
+                    // 4. Excel'i Arka Planda Sessizce Kaydet
+                    string excelHtml = html.ToString().Replace("<html>", "<html xmlns:x=\"urn:schemas-microsoft-com:office:excel\">");
+                    System.IO.File.WriteAllText(tamYol, excelHtml, new System.Text.UTF8Encoding(true));
+
+                    MessageBox.Show($"Sevk Kontrol Raporu Excel formatında otomatik olarak kaydedildi!\n\nKayıt Yeri: {tamYol}", "Otomatik Excel Kaydı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Dosyayı otomatik aç
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
                 }
                 else
                 {
-                    await HtmlYaziciMotorunuCalistir(html.ToString(), "Ambar Raporu");
+                    await HtmlYaziciMotorunuCalistir(html.ToString(), "Sevk Kontrol Raporu");
                 }
             };
 
