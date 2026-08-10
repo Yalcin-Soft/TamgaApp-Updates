@@ -27,6 +27,25 @@ namespace TamgaApp
         // verilerle test etmek için bu şalteri 'true' yapın. 
         // Gerçek SQL veritabanına bağlanmak için mutlaka 'false' yapmalısınız!
         // ------------------------------------------------------------------------
+        // 🌟 PERFORMANS: Ses Motorları (RAM'de hazır bekler)
+        private System.Media.SoundPlayer basariliSesMotoru;
+        private System.Media.SoundPlayer hataSesMotoru;
+
+        private void SesMotorlariniHazirla()
+        {
+            try
+            {
+                string bYol = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "basarili.wav");
+                if (System.IO.File.Exists(bYol)) { basariliSesMotoru = new System.Media.SoundPlayer(bYol); basariliSesMotoru.LoadAsync(); }
+
+                string hYol = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hata.wav");
+                if (System.IO.File.Exists(hYol)) { hataSesMotoru = new System.Media.SoundPlayer(hYol); hataSesMotoru.LoadAsync(); }
+            }
+            catch { }
+        }
+
+        private void BasariliSesCal() { if (basariliSesMotoru != null) basariliSesMotoru.Play(); else System.Media.SystemSounds.Asterisk.Play(); }
+        private void HataSesCal() { if (hataSesMotoru != null) hataSesMotoru.Play(); else System.Media.SystemSounds.Hand.Play(); }
         public static bool EvModuAktif = false; // TODO: Canlı ortamda FALSE kalmalı!
         #endregion
 
@@ -183,6 +202,7 @@ namespace TamgaApp
                 }
             }
 
+            SesMotorlariniHazirla(); // Sesleri RAM'e yükle
 
             // 🛡️ ULTRA GÜVENLİ GOD MODE DESTEKLİ YETKİ KALKANI
             // Giriş yapan kullanıcı "TamgaApp" (Ana Admin) değilse ve yetkisi "Sınırsız" değilse çalışır.
@@ -513,6 +533,20 @@ namespace TamgaApp
 
             if (btnTumBelgeleriSec != null) { btnTumBelgeleriSec.Click -= btnTumBelgeleriSec_Click; btnTumBelgeleriSec.Click += btnTumBelgeleriSec_Click; }
             if (btnSevkRaporla != null) { btnSevkRaporla.Click -= btnSevkRaporla_Click; btnSevkRaporla.Click += btnSevkRaporla_Click; }
+
+            // Yeni Eksilt Butonunu bağla
+            if (this.Controls.Find("btnManuelEksilt", true).FirstOrDefault() is Button btnEksilt)
+            {
+                btnEksilt.Click -= btnManuelEksilt_Click;
+                btnEksilt.Click += btnManuelEksilt_Click;
+            }
+
+            // Sağ Tık Menüsünü bağla
+            if (dgvMalzemeler != null)
+            {
+                dgvMalzemeler.CellMouseDown -= dgvMalzemeler_CellMouseDown;
+                dgvMalzemeler.CellMouseDown += dgvMalzemeler_CellMouseDown;
+            }
 
             dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
         }
@@ -3931,8 +3965,10 @@ namespace TamgaApp
                 sagTikMenu.Items.Add(new ToolStripSeparator());
                 sagTikMenu.Items.Add(btnSil);
 
-                // Menüyü farenin tam ucunda (tıklanan yerde) göster
-                sagTikMenu.Show(Cursor.Position);
+                // 🌟 RAM SIZINTISINI ÖNLEYEN ZIRH: Menü kapanınca kendini RAM'den yok etsin
+                sagTikMenu.Closed += (senderMenu, argsMenu) => { sagTikMenu.Dispose(); };
+                
+                sagTikMenu.Show(Cursor.Position); // Zaten var olan kod
             }
         }
 
@@ -4953,7 +4989,7 @@ namespace TamgaApp
                         if (okutulanAdet == siparisAdedi)
                         {
                             hedefSatir.DefaultCellStyle.BackColor = Color.LightGreen;
-                            try { string wavYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "basarili.wav"); if (System.IO.File.Exists(wavYolu)) new System.Media.SoundPlayer(wavYolu).Play(); else System.Media.SystemSounds.Asterisk.Play(); } catch { }
+                            BasariliSesCal();
                         }
                         else hedefSatir.DefaultCellStyle.BackColor = Color.LightYellow;
 
@@ -5139,6 +5175,136 @@ namespace TamgaApp
             txtBarkod.Focus();
         }
 
+        // 🌟 ACİL DURUM BUTONU: Yanlış eklenen veya fazla okutulan ürünleri manuel olarak paletten düşer
+        private void btnManuelEksilt_Click(object sender, EventArgs e)
+        {
+            // 1. Palet seçili mi kalkanı
+            if (cmbAktifPalet.SelectedItem == null)
+            {
+                MessageBox.Show("Lütfen eksiltme yapmadan önce sağdan bir AKTİF PALET seçin!", "Palet Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2. Tablodan ürün seçilmiş mi kalkanı
+            if (dgvMalzemeler.SelectedRows.Count == 0)
+            {
+                MessageBox.Show("Lütfen tablodan miktarını düşmek istediğiniz ürünü (satırı) seçin!", "Ürün Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            DataGridViewRow hedefSatir = dgvMalzemeler.SelectedRows[0];
+
+            if (hedefSatir.IsNewRow || hedefSatir.Cells["Malzeme Kodu"].Value == null) return;
+
+            int siparisAdedi = Convert.ToInt32(hedefSatir.Cells["Sipariş Adedi"].Value);
+            int okutulanAdet = Convert.ToInt32(hedefSatir.Cells["Okutulan"].Value);
+
+            // Numaratörden düşülecek miktarı al
+            int eksiltilecekMiktar = (numManuelAdet != null) ? (int)numManuelAdet.Value : 1;
+
+            if (okutulanAdet < eksiltilecekMiktar)
+            {
+                MessageBox.Show($"Düşmek istediğiniz miktar, okutulan miktardan ({okutulanAdet}) büyük olamaz!", "Geçersiz İşlem", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 🌟 3. PALETTEN SEÇİLEN MİKTAR KADAR EKSİLTME MANTIĞI
+            int aktifPaletSutunIndex = cmbAktifPalet.SelectedIndex;
+            string aciklama = hedefSatir.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
+            string aitOlduguBelge = hedefSatir.Cells["Belge No"].Value.ToString();
+            string malzemeKodu = hedefSatir.Cells["Malzeme Kodu"].Value.ToString().Trim();
+
+            bool paletSutunundaBulundu = false;
+
+            foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+            {
+                if (paletSatiri.Cells[aktifPaletSutunIndex].Value != null)
+                {
+                    string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
+
+                    // Ürün eşleşmesini kontrol et (Renk/Açıklama körü zırhı dahil)
+                    if (hucreMetni.Contains(malzemeKodu) && hucreMetni.Contains(aitOlduguBelge) && (string.IsNullOrWhiteSpace(aciklama) || hucreMetni.Contains(aciklama)))
+                    {
+                        string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
+                        if (parcalar.Length == 2)
+                        {
+                            int mevcutPaletAdeti = int.Parse(parcalar[1]);
+                            int yeniAdet = mevcutPaletAdeti - eksiltilecekMiktar;
+
+                            if (yeniAdet > 0)
+                            {
+                                // Miktar sıfırlanmadıysa sadece rakamı güncelle
+                                paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {yeniAdet}";
+                            }
+                            else
+                            {
+                                // Eğer sıfıra düştüyse hücreyi matristen tamamen temizle (Çöplük yapmasın)
+                                paletSatiri.Cells[aktifPaletSutunIndex].Value = "";
+                            }
+                        }
+                        paletSutunundaBulundu = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!paletSutunundaBulundu)
+            {
+                MessageBox.Show("Düşmeye çalıştığınız ürün seçili AKTİF PALET'in içinde bulunamadı!\n\nLütfen sağdan doğru paleti seçtiğinizden emin olun.", "Palette Bulunamadı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return; // Palette bulamadığı ürünü ana listeden de düşmesin, işlemi iptal et
+            }
+
+            // 4. Ana tablodaki Adedi düşür ve satırın rengini eski haline (Sarı veya Beyaz) çevir
+            okutulanAdet -= eksiltilecekMiktar;
+            hedefSatir.Cells["Okutulan"].Value = okutulanAdet;
+
+            if (okutulanAdet >= siparisAdedi && siparisAdedi > 0) hedefSatir.DefaultCellStyle.BackColor = Color.LightGreen;
+            else if (okutulanAdet > 0) hedefSatir.DefaultCellStyle.BackColor = Color.LightYellow;
+            else hedefSatir.DefaultCellStyle.BackColor = Color.White;
+
+            // İşlem bitince numaratörü güvenli değer olan 1'e sıfırla
+            if (numManuelAdet != null) numManuelAdet.Value = 1;
+
+            txtBarkod.Focus();
+        }
+
+        // 🌟 SOL TABLO SAĞ TIK MENÜSÜ (Ekle / Çıkar)
+        private void dgvMalzemeler_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            // Sadece sağ tıka ve geçerli bir satıra basıldıysa çalış
+            if (e.Button == MouseButtons.Right && e.RowIndex >= 0)
+            {
+                dgvMalzemeler.ClearSelection();
+                dgvMalzemeler.Rows[e.RowIndex].Selected = true;
+
+                ContextMenuStrip sagTikMenu = new ContextMenuStrip();
+                sagTikMenu.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+                ToolStripMenuItem btnEkle = new ToolStripMenuItem("➕ Seçili Miktarı Ekle");
+                btnEkle.ForeColor = Color.DarkGreen;
+                btnEkle.Click += (s, ev) =>
+                {
+                    btnManuelEkle_Click(null, null); // Mevcut ekleme butonunu gizlice tetikler
+                };
+
+                ToolStripMenuItem btnCikar = new ToolStripMenuItem("➖ Seçili Miktarı Çıkar (Eksilt)");
+                btnCikar.ForeColor = Color.DarkRed;
+                btnCikar.Click += (s, ev) =>
+                {
+                    btnManuelEksilt_Click(null, null); // Yeni yazdığımız eksiltme butonunu gizlice tetikler
+                };
+
+                sagTikMenu.Items.Add(btnEkle);
+                sagTikMenu.Items.Add(new ToolStripSeparator());
+                sagTikMenu.Items.Add(btnCikar);
+
+                // 🌟 RAM SIZINTISINI ÖNLEYEN ZIRH: Menü kapanınca kendini RAM'den yok etsin
+                sagTikMenu.Closed += (senderMenu, argsMenu) => { sagTikMenu.Dispose(); };
+
+                sagTikMenu.Show(Cursor.Position);
+            }
+        }
+
         // 🌟 GERİ ALMA (UNDO) MOTORU: Paletten seçilen ürünün okutulmasını geri alır
         private void btnPalettenSil_Click(object sender, EventArgs e)
         {
@@ -5275,6 +5441,7 @@ namespace TamgaApp
         #endregion
 
         #region 📝 13.6 TAM VE KISMİ SEVKİYAT İŞLEMLERİ
+
         // Tüm ürünlerin eksiksiz okutulduğunu onaylar, arşive kaydeder ve belgeyi kalıcı olarak kara listeye ekler.
         private void btnTamSevk_Click(object sender, EventArgs e)
         {
@@ -5295,7 +5462,7 @@ namespace TamgaApp
             if (eksikVarMi) MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
             else
             {
-                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı!", "Başarılı");
+                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 // 🌟 ÇOKLU BELGE (KONSOLİDE) KAPATMA MANTIĞI
                 // Tabloda kaç farklı Belge No varsa hepsini bul ve listeye al
@@ -5313,11 +5480,12 @@ namespace TamgaApp
                 string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
                 SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "TAM_SEVK", secilenPalet);
 
-                // Her bir belgeyi tek tek Ghost Modu (Kara Liste) listesine at ve RAM'den uçur
+                // 🌟 PERFORMANS ZIRHI: Toplu Ekleme Motorunu Kullanıyoruz
+                KaliciKaraListeyeTopluEkle(bitenBelgeler);
+
+                // Her bir belgeyi SQL'den çektiğimiz RAM listesinden uçuruyoruz ki ekrandan silinsin
                 foreach (string bitenBelge in bitenBelgeler)
                 {
-                    KaliciKaraListeyeEkle(bitenBelge);
-
                     for (int i = dtTumSiparisler.Rows.Count - 1; i >= 0; i--)
                     {
                         if (dtTumSiparisler.Rows[i]["BelgeNo"].ToString().Trim() == bitenBelge)
@@ -5377,7 +5545,7 @@ namespace TamgaApp
             {
                 if (MessageBox.Show("Eksik ürünler var. Yine de Kısmi Sevk yapılsın mı?\n\nEksikler:\n" + string.Join("\n", eksikListesi), "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
-                    MessageBox.Show("Kısmi Sevk onaylandı!");
+                    MessageBox.Show("Kısmi Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                     // 🌟 ÇOKLU BELGE (KONSOLİDE) KAPATMA MANTIĞI
                     HashSet<string> bitenBelgeler = new HashSet<string>();
@@ -5391,10 +5559,11 @@ namespace TamgaApp
                     string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
                     SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "KISMI_SEVK", secilenPalet);
 
+                    // 🌟 PERFORMANS ZIRHI: Toplu Ekleme Motorunu Kullanıyoruz
+                    KaliciKaraListeyeTopluEkle(bitenBelgeler);
+
                     foreach (string bitenBelge in bitenBelgeler)
                     {
-                        KaliciKaraListeyeEkle(bitenBelge);
-
                         for (int i = dtTumSiparisler.Rows.Count - 1; i >= 0; i--)
                         {
                             if (dtTumSiparisler.Rows[i]["BelgeNo"].ToString().Trim() == bitenBelge)
@@ -5436,9 +5605,31 @@ namespace TamgaApp
                 MessageBox.Show("Hiçbir ürün eksik değil! Lütfen siparişi bitirmek için 'Tam Sevket' butonunu kullanın.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
+
         #endregion
 
         #region 🧠 13.7 KALICI HAFIZA MOTORU (TXT)
+
+        // 🌟 YENİ: Toplu Ekleme Motoru (Diski yormaz, tek seferde yazar)
+        private void KaliciKaraListeyeTopluEkle(IEnumerable<string> belgeler)
+        {
+            List<string> eklenecekler = new List<string>();
+            foreach (string b in belgeler)
+            {
+                string temiz = b.Trim();
+                if (!string.IsNullOrEmpty(temiz) && !TamamlananBelgeNolar.Contains(temiz))
+                {
+                    TamamlananBelgeNolar.Add(temiz);
+                    eklenecekler.Add(temiz);
+                }
+            }
+
+            if (eklenecekler.Count > 0)
+            {
+                File.AppendAllLines(KaraListeDosyaYolu(), eklenecekler);
+            }
+        }
+
         // Bitirilen siparişlerin bir daha asla karşına çıkmaması için onları yerel bir .txt dosyasına yazar.
         private string KaraListeDosyaYolu()
         {
@@ -5597,7 +5788,7 @@ namespace TamgaApp
                     else
                     {
                         // Alakasız bir sekmedeyse hata sesi ver ve hiçbir şeyi bozma
-                        try { string wavYolu = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hata.wav"); if (System.IO.File.Exists(wavYolu)) new System.Media.SoundPlayer(wavYolu).Play(); else System.Media.SystemSounds.Hand.Play(); } catch { }
+                        HataSesCal();
                     }
                 }));
             }
@@ -7982,7 +8173,8 @@ namespace TamgaApp
             KlasorTaramasi(kokYol, kok);
             kok.ExpandAll();
 
-            Dictionary<string, string> secilenPaletler = null;
+            // 🌟 HATAYI ÇÖZEN ZIRH: Dictionary yerine artık yeni KioskPaletModel Listesi kullanıyoruz!
+            List<FrmKamyonKiosk.KioskPaletModel> secilenPaletler = null;
             string secilenMusteriAdi = "";
 
             btnDevam.Click += (s2, e2) =>
@@ -7998,7 +8190,9 @@ namespace TamgaApp
                 if (satirlar.Length < 4) { return; }
 
                 secilenMusteriAdi = satirlar[1].Split(';')[0];
-                secilenPaletler = new Dictionary<string, string>();
+
+                // Kiosk listesini RAM'de oluştur
+                secilenPaletler = new List<FrmKamyonKiosk.KioskPaletModel>();
                 bool detaylarBasladi = false;
 
                 foreach (string satir in satirlar)
@@ -8011,9 +8205,17 @@ namespace TamgaApp
                         {
                             string pAdi = hucreler[0].Trim();
                             string pBarkod = hucreler[2].Trim();
-                            if (!string.IsNullOrEmpty(pBarkod) && !secilenPaletler.ContainsKey(pBarkod))
+
+                            // 🌟 YENİ FORMAT: Eğer barkod listeye henüz eklenmemişse, onu yeni modele çevirip ekle
+                            if (!string.IsNullOrEmpty(pBarkod) && !secilenPaletler.Any(p => p.Barkod == pBarkod))
                             {
-                                secilenPaletler.Add(pBarkod, pAdi);
+                                secilenPaletler.Add(new FrmKamyonKiosk.KioskPaletModel
+                                {
+                                    Barkod = pBarkod,
+                                    PaletAdi = pAdi,
+                                    EtiketBasildiMi = true, // Geçmiş arşivden geldiği için etiketi basılı ve sağlam kabul ediyoruz
+                                    EtiketHtml = ""         // Zaten basılı olduğu için HTML şablonuna gerek yok
+                                });
                             }
                         }
                     }
@@ -8039,7 +8241,16 @@ namespace TamgaApp
         #region 🚛 23. KIOSK MOTORU (TAM EKRAN YÜKLEME EKRANI)
         public class FrmKamyonKiosk : Form
         {
-            private Dictionary<string, string> beklenenPaletler;
+            // 🌟 YENİ: Kiosk için özel geliştirilmiş palet modeli
+            public class KioskPaletModel
+            {
+                public string Barkod { get; set; }
+                public string PaletAdi { get; set; }
+                public bool EtiketBasildiMi { get; set; }
+                public string EtiketHtml { get; set; }
+            }
+
+            private List<KioskPaletModel> paletModelleri;
             private List<string> okutulanBarkodlar;
             private string firmaAdi;
 
@@ -8049,10 +8260,10 @@ namespace TamgaApp
             private TextBox txtGizliBarkod;
             private Timer renkSifirlayici;
 
-            public FrmKamyonKiosk(string musteriAdi, Dictionary<string, string> paletler)
+            public FrmKamyonKiosk(string musteriAdi, List<KioskPaletModel> paletler)
             {
                 this.firmaAdi = musteriAdi;
-                this.beklenenPaletler = paletler;
+                this.paletModelleri = paletler;
                 this.okutulanBarkodlar = new List<string>();
 
                 this.Text = "Kamyon Yükleme Kiosk";
@@ -8075,6 +8286,42 @@ namespace TamgaApp
                 Label lblFirma = new Label { Text = firmaAdi, Dock = DockStyle.Top, Height = 90, Font = new Font("Segoe UI", 18, FontStyle.Bold), TextAlign = ContentAlignment.MiddleCenter, BackColor = Color.FromArgb(15, 76, 58), ForeColor = Color.White };
 
                 lstSagPanel = new ListBox { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 15, FontStyle.Bold), ItemHeight = 35, IntegralHeight = false };
+
+                // 🌟 SİHİRLİ SAĞ TIK MENÜSÜ BURADA BAŞLIYOR 🌟
+                lstSagPanel.MouseDown += (s, e) =>
+                {
+                    if (e.Button == MouseButtons.Right)
+                    {
+                        int index = lstSagPanel.IndexFromPoint(e.Location);
+                        if (index != ListBox.NoMatches)
+                        {
+                            lstSagPanel.SelectedIndex = index;
+                            var seciliModel = paletModelleri[index];
+
+                            // Sadece okutulmamış ürünlerde sağ tıka izin ver
+                            if (!okutulanBarkodlar.Contains(seciliModel.Barkod))
+                            {
+                                ContextMenuStrip menu = new ContextMenuStrip();
+                                menu.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+
+                                // Sadece etiketi basılmamış olanlara yazdırma izni ver
+                                if (!seciliModel.EtiketBasildiMi)
+                                {
+                                    ToolStripMenuItem btnYazdir = new ToolStripMenuItem("🖨️ Etiketi Yazdır");
+                                    btnYazdir.Click += (ms, me) => { EtiketYazdir(seciliModel); };
+                                    menu.Items.Add(btnYazdir);
+                                }
+
+                                ToolStripMenuItem btnAtla = new ToolStripMenuItem("⏭️ Manuel Onayla (Atla)");
+                                btnAtla.Click += (ms, me) => { DisaridanBarkodGeldi(seciliModel.Barkod); };
+                                menu.Items.Add(btnAtla);
+
+                                menu.Show(Cursor.Position);
+                            }
+                        }
+                    }
+                };
+
                 pnlSag.Controls.Add(lstSagPanel);
                 pnlSag.Controls.Add(lblFirma);
                 this.Controls.Add(pnlSag);
@@ -8084,13 +8331,11 @@ namespace TamgaApp
                 pnlOrta.Controls.Add(lblMesaj);
                 this.Controls.Add(pnlOrta);
 
-                // 1. Kırmızı Çıkış Butonu
                 Button btnCikis = new Button { Text = "X ÇIKIŞ", Size = new Size(150, 60), Location = new Point(20, 20), BackColor = Color.Red, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btnCikis.Click += (s, e) => this.Close();
                 pnlOrta.Controls.Add(btnCikis);
                 btnCikis.BringToFront();
 
-                // 🌟 2. YENİ EKLENEN MANUEL EKLE BUTONU 🌟
                 Button btnManuel = new Button { Text = "✍️ MANUEL EKLE", Size = new Size(220, 60), Location = new Point(190, 20), BackColor = Color.DarkOrange, ForeColor = Color.White, Font = new Font("Segoe UI", 16, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
                 btnManuel.Click += BtnManuel_Click;
                 pnlOrta.Controls.Add(btnManuel);
@@ -8101,11 +8346,37 @@ namespace TamgaApp
                 this.Controls.Add(txtGizliBarkod);
             }
 
-            // 🌟 MANUEL EKLEME LİSTESİ VE MANTIĞI
+            // 🌟 KİOSK İÇİNDEN DİREKT ETİKET YAZDIRMA MOTORU 🌟
+            private void EtiketYazdir(KioskPaletModel model)
+            {
+                Form frmYazdir = new Form { Text = "Etiket Yazdırılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterScreen, TopMost = true, ShowIcon = false };
+                Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+                frmYazdir.Controls.Add(web);
+
+                frmYazdir.FormClosed += (s, e) => { web.Dispose(); };
+
+                frmYazdir.Shown += async (s, e) =>
+                {
+                    var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "KioskPrint"));
+                    await web.EnsureCoreWebView2Async(ozelHafiza);
+                    web.NavigationCompleted += (ws, we) =>
+                    {
+                        web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+
+                        // 🌟 Etiket basıldığı an "(ETİKETSİZ)" uyarısını kaldırır ve bekliyor moduna alır
+                        model.EtiketBasildiMi = true;
+                        ListeyiGuncelle();
+                    };
+                    web.NavigateToString(model.EtiketHtml);
+                };
+
+                frmYazdir.ShowDialog(this);
+                txtGizliBarkod.Focus(); // Yazdırma bitince barkod okuyucuyu tekrar aktif et
+            }
+
             private void BtnManuel_Click(object sender, EventArgs e)
             {
-                // Sadece okutulmamış (bekleyen) paletleri bul
-                var bekleyenler = beklenenPaletler.Where(p => !okutulanBarkodlar.Contains(p.Key)).ToList();
+                var bekleyenler = paletModelleri.Where(p => !okutulanBarkodlar.Contains(p.Barkod)).ToList();
 
                 if (bekleyenler.Count == 0)
                 {
@@ -8123,16 +8394,15 @@ namespace TamgaApp
                     MinimizeBox = false,
                     BackColor = Color.WhiteSmoke,
                     ShowIcon = false,
-                    TopMost = true // 🌟 SİHİRLİ DOKUNUŞ 1: Bu pencerenin de Kiosk gibi en üstte kalmasını sağlar!
+                    TopMost = true
                 };
 
                 Label lbl = new Label { Text = "Lütfen kamyona manuel olarak eklemek istediğiniz paleti seçin:", Location = new Point(20, 20), AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
-
                 ListBox lstBekleyen = new ListBox { Location = new Point(20, 60), Size = new Size(590, 250), Font = new Font("Segoe UI", 14) };
 
                 lstBekleyen.DataSource = new BindingSource(bekleyenler, null);
-                lstBekleyen.DisplayMember = "Value";
-                lstBekleyen.ValueMember = "Key";
+                lstBekleyen.DisplayMember = "PaletAdi";
+                lstBekleyen.ValueMember = "Barkod";
 
                 Button btnOnay = new Button { Text = "✅ SEÇİLİ PALETİ YÜKLE", Location = new Point(20, 330), Size = new Size(590, 60), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 14, FontStyle.Bold), Cursor = Cursors.Hand };
 
@@ -8140,36 +8410,35 @@ namespace TamgaApp
                 {
                     if (lstBekleyen.SelectedItem != null)
                     {
-                        string seciliBarkod = ((KeyValuePair<string, string>)lstBekleyen.SelectedItem).Key;
+                        string seciliBarkod = ((KioskPaletModel)lstBekleyen.SelectedItem).Barkod;
                         frmManuel.Close();
                         DisaridanBarkodGeldi(seciliBarkod);
                     }
                 };
 
-                frmManuel.Controls.Add(lbl);
-                frmManuel.Controls.Add(lstBekleyen);
-                frmManuel.Controls.Add(btnOnay);
-
-                // 🌟 SİHİRLİ DOKUNUŞ 2: (this) parametresi ile pencerenin sahibinin Kiosk olduğunu sisteme kanıtlıyoruz!
+                frmManuel.Controls.Add(lbl); frmManuel.Controls.Add(lstBekleyen); frmManuel.Controls.Add(btnOnay);
                 frmManuel.ShowDialog(this);
-
                 txtGizliBarkod.Focus();
             }
 
             protected override void OnShown(EventArgs e) { base.OnShown(e); txtGizliBarkod.Focus(); }
             protected override void OnClick(EventArgs e) { base.OnClick(e); txtGizliBarkod.Focus(); }
 
+            // 🌟 EKRANDAKİ LİSTEYİ OLUŞTURURKEN (ETİKETSİZ) ZIRHINI DEVREYE SOKAR
             private void ListeyiGuncelle()
             {
                 lstSagPanel.Items.Clear();
-                foreach (var palet in beklenenPaletler)
+                foreach (var p in paletModelleri)
                 {
-                    if (okutulanBarkodlar.Contains(palet.Key)) lstSagPanel.Items.Add($"✅ {palet.Value} (YÜKLENDİ)");
-                    else lstSagPanel.Items.Add($"📦 {palet.Value} (Bekliyor)");
+                    if (okutulanBarkodlar.Contains(p.Barkod))
+                        lstSagPanel.Items.Add($"✅ {p.PaletAdi} (YÜKLENDİ)");
+                    else if (!p.EtiketBasildiMi)
+                        lstSagPanel.Items.Add($"⚠️ {p.PaletAdi} (ETİKETSİZ)");
+                    else
+                        lstSagPanel.Items.Add($"📦 {p.PaletAdi} (Bekliyor)");
                 }
             }
 
-            // COM PORT'tan ana form aracılığıyla veya Manuel Butondan veri geldiğinde burası tetiklenir!
             public void DisaridanBarkodGeldi(string okunanKod)
             {
                 if (string.IsNullOrEmpty(okunanKod)) return;
@@ -8180,15 +8449,15 @@ namespace TamgaApp
                     return;
                 }
 
-                if (beklenenPaletler.ContainsKey(okunanKod))
+                var hedeflenenModel = paletModelleri.FirstOrDefault(p => p.Barkod == okunanKod);
+                if (hedeflenenModel != null)
                 {
-                    string paletAdi = beklenenPaletler[okunanKod];
                     okutulanBarkodlar.Add(okunanKod);
 
-                    OnayVer($"✅ {paletAdi.ToUpper()} ONAYLANDI\nPALET YÜKLENEBİLİR!");
+                    OnayVer($"✅ {hedeflenenModel.PaletAdi.ToUpper()} ONAYLANDI\nPALET YÜKLENEBİLİR!");
                     ListeyiGuncelle();
 
-                    if (okutulanBarkodlar.Count == beklenenPaletler.Count)
+                    if (okutulanBarkodlar.Count == paletModelleri.Count)
                     {
                         renkSifirlayici.Stop();
                         pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
@@ -8197,7 +8466,6 @@ namespace TamgaApp
 
                         MessageBox.Show("Tüm paletler başarıyla araca yüklendi. Araç çıkış yapabilir.", "Sevkiyat Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                        // 🌟 SİHİRLİ ONAY SİNYALİ: Bu komut arka plandaki Ambar butonunun kilidini açar!
                         this.DialogResult = DialogResult.OK;
                         this.Close();
                     }
@@ -8215,7 +8483,7 @@ namespace TamgaApp
                     string okunanKod = txtGizliBarkod.Text.Trim();
                     txtGizliBarkod.Clear();
                     e.SuppressKeyPress = true;
-                    DisaridanBarkodGeldi(okunanKod); // Klavye ile okutulursa da aynı metoda pasla
+                    DisaridanBarkodGeldi(okunanKod);
                 }
             }
 
@@ -8425,8 +8693,8 @@ namespace TamgaApp
         {
             AmbarHafizasiniYukle(); // Önce diskteki eski kamyonu getir ki üstüne binmesin
 
-            string seciliFirma = cmbMusteri.Text;
-            if (string.IsNullOrEmpty(seciliFirma))
+            string orjinalFirma = cmbMusteri.Text.Trim();
+            if (string.IsNullOrEmpty(orjinalFirma))
             {
                 MessageBox.Show("Lütfen önce bir firma seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -8438,10 +8706,19 @@ namespace TamgaApp
                 return;
             }
 
+            // 🌟 SİHİRLİ İSİM ZIRHI: Aynı firmadan varsa ismin sonuna - 1, - 2 ekleyerek benzersiz yapar!
+            string seciliFirma = orjinalFirma;
+            int sayac = 1;
+            while (AmbarHafizasi.ContainsKey(seciliFirma))
+            {
+                seciliFirma = $"{orjinalFirma} - {sayac}";
+                sayac++;
+            }
+
             // Ekrandaki tüm veriyi "YarimSevkiyatHafizasi" kalıbında topla
             YarimSevkiyatHafizasi hafiza = new YarimSevkiyatHafizasi
             {
-                MusteriAdi = txtMusteriAdi.Text,
+                MusteriAdi = seciliFirma, // 🌟 Artık benzersiz ismiyle hafızaya yazılıyor
                 BelgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>()),
                 SevkMusteri = txtSevkMusteri.Text,
                 PaletSayisi = cmbSevkPaletSayisi.SelectedIndex != -1 ? Convert.ToInt32(cmbSevkPaletSayisi.SelectedItem) : 0,
@@ -8480,13 +8757,12 @@ namespace TamgaApp
             // JSON'a Çevir
             string jsonVeri = Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented);
 
-            // Ambara Ekle veya Güncelle
-            if (AmbarHafizasi.ContainsKey(seciliFirma)) AmbarHafizasi[seciliFirma] = jsonVeri;
-            else AmbarHafizasi.Add(seciliFirma, jsonVeri);
+            // 🌟 ARTIK ÜZERİNE YAZMIYOR, GÜVENLE YENİ KAYIT OLARAK EKLİYOR
+            AmbarHafizasi.Add(seciliFirma, jsonVeri);
 
             AmbarHafizasiniKaydet(); // 🌟 YAPILAN İŞLEMİ DİSKE MÜHÜRLE!
 
-            MessageBox.Show($"{seciliFirma} firmasının ürünleri Ambar Aracına KALICI olarak yüklendi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show($"'{seciliFirma}' ürünleri Ambar Aracına KALICI olarak yüklendi!", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             btnSevkTemizle_Click(null, null); // Ekranı temizle
         }
@@ -8676,37 +8952,143 @@ namespace TamgaApp
                     return;
                 }
 
-                Dictionary<string, string> kioskPaletler = new Dictionary<string, string>();
+                // 🌟 YENİ: Kiosk'a gidecek detaylı palet modelleri listesi
+                List<FrmKamyonKiosk.KioskPaletModel> kioskPaletler = new List<FrmKamyonKiosk.KioskPaletModel>();
+                bool degisiklikYapildi = false;
+                var yerelUrunler = DataAccess.GetAllUrunler(); // Ürün isimleri için veritabanını çek
 
-                foreach (var kvp in AmbarHafizasi)
+                foreach (var kvp in AmbarHafizasi.ToList())
                 {
                     try
                     {
                         var hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(kvp.Value);
-                        if (hafiza != null && hafiza.PaletBarkodlari != null)
-                        {
-                            foreach (var pKvp in hafiza.PaletBarkodlari)
-                            {
-                                string barkod = pKvp.Value;
-                                string paletAdi = $"{kvp.Key} - {pKvp.Key}";
+                        if (hafiza == null) continue;
 
-                                if (!kioskPaletler.ContainsKey(barkod)) kioskPaletler.Add(barkod, paletAdi);
+                        if (hafiza.PaletBarkodlari == null) hafiza.PaletBarkodlari = new Dictionary<string, string>();
+
+                        int sutunSayisi = hafiza.PaletMatrisiDurumu.Values.FirstOrDefault()?.Count ?? 0;
+
+                        for (int j = 0; j < sutunSayisi; j++)
+                        {
+                            string pAdi = $"{j + 1}. Palet";
+                            bool etiketBasildiMi = true;
+
+                            // 🌟 Eğer palete daha önce etiket basılmamışsa, Kiosk için işaretle ve arka planda barkod uydur
+                            if (!hafiza.PaletBarkodlari.ContainsKey(pAdi))
+                            {
+                                hafiza.PaletBarkodlari[pAdi] = Ean13Olustur();
+                                etiketBasildiMi = false;
+                                degisiklikYapildi = true;
                             }
+
+                            string barkod = hafiza.PaletBarkodlari[pAdi];
+                            string paletGosterimAdi = $"{kvp.Key} - {pAdi}";
+
+                            // 🌟 HTML ETİKET ÜRETİMİ (Kiosk'un içinden yazdırabilmek için hazır ediyoruz)
+                            List<string> urunler = new List<string>();
+                            int maxSatir = hafiza.PaletMatrisiDurumu.Keys.Count > 0 ? hafiza.PaletMatrisiDurumu.Keys.Max() : -1;
+
+                            for (int i = 0; i <= maxSatir; i++)
+                            {
+                                if (hafiza.PaletMatrisiDurumu.ContainsKey(i) && hafiza.PaletMatrisiDurumu[i].ContainsKey(j))
+                                {
+                                    string hamVeri = hafiza.PaletMatrisiDurumu[i][j];
+                                    if (!string.IsNullOrWhiteSpace(hamVeri))
+                                    {
+                                        string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+                                        string urunKismi = parcalar[0];
+                                        string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
+
+                                        int parantezIndex = urunKismi.LastIndexOf('(');
+                                        if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
+
+                                        string uKodu = urunKismi;
+                                        string uAdi = "";
+                                        int tireIndex = urunKismi.IndexOf(" - ");
+
+                                        if (tireIndex > 0)
+                                        {
+                                            uKodu = urunKismi.Substring(0, tireIndex).Trim();
+                                            uAdi = urunKismi.Substring(tireIndex + 3).Trim();
+                                        }
+                                        else
+                                        {
+                                            uKodu = urunKismi.Trim();
+                                            var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == uKodu || u.Barkod == uKodu);
+                                            if (urun != null) uAdi = urun.Aciklama;
+                                            else uAdi = "Bilinmeyen Ürün";
+                                        }
+
+                                        urunler.Add($"<li><span class='k-kod'>• {uKodu}</span><span class='k-ad'>{uAdi}</span><span class='k-adet'>Adet: {adetKismi}</span></li>");
+                                    }
+                                }
+                            }
+
+                            string listeHtml = string.Join("", urunler);
+                            string yaziPaletAdi = (sutunSayisi == 1) ? "1 Palet Dolap" : pAdi;
+                            string sevkMusteriAdi = string.IsNullOrEmpty(hafiza.SevkMusteri) ? "Belirtilmedi" : hafiza.SevkMusteri;
+                            string belgeNo = string.IsNullOrEmpty(hafiza.BelgeNo) ? "" : hafiza.BelgeNo;
+
+                            string html = $@"<html>
+                            <head>
+                               <meta charset='utf-8'>
+                               <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
+                               <style>
+                                  body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
+                                  .firma {{ font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
+                                  .sevk-musteri {{ font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
+                                  .belge {{ font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }}
+                                  .palet {{ font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
+                                  .urunler {{ text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
+                                  ul {{ margin: 0; padding-left: 0; list-style-type: none; }}
+                                  li {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }}
+                                  .k-kod {{ flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }}
+                                  .k-ad {{ flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }}
+                                  .k-adet {{ flex: 2; text-align: right; font-size: 20px; color: black; }}
+                                  .barkod-alani {{ margin-top: 20px; }} 
+                               </style>
+                            </head>
+                            <body>
+                               <div class='firma'>{hafiza.MusteriAdi}</div>
+                               <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
+                               <div class='belge'>Belge No: {belgeNo}</div>
+                               <div class='palet'>{yaziPaletAdi}</div>
+                               <div class='urunler'><ul>{listeHtml}</ul></div>
+                               <div class='barkod-alani'><svg id='barkod'></svg></div>
+                               <script>
+                                  JsBarcode('#barkod', '{barkod}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
+                               </script>
+                            </body></html>";
+
+                            // Modele ekliyoruz
+                            kioskPaletler.Add(new FrmKamyonKiosk.KioskPaletModel
+                            {
+                                Barkod = barkod,
+                                PaletAdi = paletGosterimAdi,
+                                EtiketBasildiMi = etiketBasildiMi,
+                                EtiketHtml = html
+                            });
+                        }
+
+                        if (degisiklikYapildi)
+                        {
+                            AmbarHafizasi[kvp.Key] = Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented);
                         }
                     }
                     catch { }
                 }
 
+                if (degisiklikYapildi) AmbarHafizasiniKaydet();
+
                 if (kioskPaletler.Count == 0)
                 {
-                    MessageBox.Show("Ambardaki firmalara ait etiket basılmış barkodlu palet bulunamadı!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show("Ambardaki firmalara ait yüklenecek palet bulunamadı!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 frmAmbar.Hide();
                 FrmKamyonKiosk kiosk = new FrmKamyonKiosk("🚛 AMBAR ARACI ORTAK SEVKİYAT", kioskPaletler);
 
-                // 🌟 EĞER KİOSK EKSİKSİZ BİTTİYSE (OK) ZIRHI AÇ!
                 if (kiosk.ShowDialog() == DialogResult.OK)
                 {
                     tumPaletlerOkundu = true;
