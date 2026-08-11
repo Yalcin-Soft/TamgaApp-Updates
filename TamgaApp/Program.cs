@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Drawing;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace TamgaApp
@@ -11,8 +13,22 @@ namespace TamgaApp
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            // 🌟 1. UI (Arayüz) İçi Hataları Yakalayan Küresel Zırh
+            Application.ThreadException += new ThreadExceptionEventHandler(GlobalThreadException);
+
+            // 🌟 2. Arka Plan ve Thread İçi Hataları Yakalayan Küresel Zırh
+            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(GlobalUnhandledException);
+
             // KRİTİK: Veritabanı kontrolü Login ekranından ÖNCE yapılmalı ki kullanıcıyı doğrulayabilelim!
-            DbHelper.EnsureDatabase();
+            try
+            {
+                DbHelper.EnsureDatabase();
+            }
+            catch (Exception ex)
+            {
+                HataEkraniniGoster(ex, "Veritabanı Başlatma (DbHelper) Hatası");
+                return; // Veritabanı yoksa programı devam ettirme
+            }
 
             #region 🛠️ GELİŞTİRİCİ (GOD MODE) BYPASS
             // Geliştirme yaparken şifre ekranını atlamak için aşağıdaki 4 satırın başındaki "//" işaretlerini silin.
@@ -48,6 +64,81 @@ namespace TamgaApp
             }
 
             #endregion
+        }
+
+        // =========================================================================================
+        // 🛡️ KÜRESEL HATA YAKALAMA MOTORLARI VE EKRAN ÇİZİMİ
+        // =========================================================================================
+
+        private static void GlobalThreadException(object sender, ThreadExceptionEventArgs e)
+        {
+            HataEkraniniGoster(e.Exception, "Arayüz Hatası (UI Exception)");
+        }
+
+        private static void GlobalUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            Exception ex = e.ExceptionObject as Exception;
+            HataEkraniniGoster(ex, "Kritik Sistem Hatası (Unhandled Exception)");
+        }
+
+        private static void HataEkraniniGoster(Exception ex, string hataTuru)
+        {
+            string hataMesaji = ex != null ? ex.Message : "Bilinmeyen bir hata oluştu.";
+            string hataDetayi = ex != null ? ex.StackTrace : "Stacktrace bilgisi bulunamadı.";
+
+            Form frmHata = new Form
+            {
+                Text = "⚠️ TamgaApp - Kritik Sistem Hatası",
+                Size = new Size(600, 450),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.WhiteSmoke,
+                TopMost = true
+            };
+
+            Label lblBaslik = new Label
+            {
+                Text = $"❌ Programda beklenmeyen bir hata oluştu!\nTür: {hataTuru}",
+                Location = new Point(20, 20),
+                Size = new Size(540, 50),
+                Font = new Font("Segoe UI", 11, FontStyle.Bold),
+                ForeColor = Color.DarkRed
+            };
+
+            TextBox txtDetay = new TextBox
+            {
+                Text = $"HATA MESAJI:\r\n{hataMesaji}\r\n\r\nTEKNİK DETAY (STACK TRACE):\r\n{hataDetayi}",
+                Location = new Point(20, 80),
+                Size = new Size(540, 250),
+                Multiline = true,
+                ReadOnly = true,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 9),
+                BackColor = Color.White,
+                ForeColor = Color.Black
+            };
+
+            Button btnKapat = new Button
+            {
+                Text = "Programı Kapat",
+                Location = new Point(430, 350),
+                Size = new Size(130, 40),
+                BackColor = Color.DarkRed,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand
+            };
+
+            btnKapat.Click += (s, args) => { frmHata.Close(); Environment.Exit(1); };
+
+            frmHata.Controls.Add(lblBaslik);
+            frmHata.Controls.Add(txtDetay);
+            frmHata.Controls.Add(btnKapat);
+
+            // Eğer program o an kilitliyse hata penceresi gömülü kalmasın diye en üste çağırıyoruz
+            frmHata.ShowDialog();
         }
     }
 }
