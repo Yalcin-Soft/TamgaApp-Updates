@@ -57,6 +57,7 @@ namespace TamgaApp
             this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.splitContainer5 = new System.Windows.Forms.SplitContainer();
             this.panel7 = new System.Windows.Forms.Panel();
+            this.btnManuelEksilt = new System.Windows.Forms.Button();
             this.btnSevkRaporla = new System.Windows.Forms.Button();
             this.numManuelAdet = new System.Windows.Forms.NumericUpDown();
             this.btnTumBelgeleriSec = new System.Windows.Forms.Button();
@@ -352,7 +353,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnManuelEksilt = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
@@ -705,6 +705,18 @@ namespace TamgaApp
             this.panel7.Size = new System.Drawing.Size(401, 522);
             this.panel7.TabIndex = 54;
             // 
+            // btnManuelEksilt
+            // 
+            this.btnManuelEksilt.BackColor = System.Drawing.Color.Coral;
+            this.btnManuelEksilt.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnManuelEksilt.Location = new System.Drawing.Point(9, 291);
+            this.btnManuelEksilt.Name = "btnManuelEksilt";
+            this.btnManuelEksilt.Size = new System.Drawing.Size(88, 70);
+            this.btnManuelEksilt.TabIndex = 52;
+            this.btnManuelEksilt.Text = "EKSİLT";
+            this.btnManuelEksilt.UseVisualStyleBackColor = false;
+            this.btnManuelEksilt.Click += new System.EventHandler(this.btnManuelEksilt_Click);
+            // 
             // btnSevkRaporla
             // 
             this.btnSevkRaporla.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
@@ -1012,7 +1024,7 @@ namespace TamgaApp
             // 
             this.splitContainer3.Panel2.Controls.Add(this.dgvUretim);
             this.splitContainer3.Size = new System.Drawing.Size(1763, 866);
-            this.splitContainer3.SplitterDistance = 299;
+            this.splitContainer3.SplitterDistance = 297;
             this.splitContainer3.TabIndex = 19;
             // 
             // panel5
@@ -1161,7 +1173,7 @@ namespace TamgaApp
             this.dgvUretim.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvUretim.Location = new System.Drawing.Point(0, 0);
             this.dgvUretim.Name = "dgvUretim";
-            this.dgvUretim.Size = new System.Drawing.Size(1460, 866);
+            this.dgvUretim.Size = new System.Drawing.Size(1462, 866);
             this.dgvUretim.TabIndex = 1;
             // 
             // ÜrünKodu
@@ -3917,18 +3929,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Name = "cmbPaletSayisi";
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
-            // 
-            // btnManuelEksilt
-            // 
-            this.btnManuelEksilt.BackColor = System.Drawing.Color.Coral;
-            this.btnManuelEksilt.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelEksilt.Location = new System.Drawing.Point(9, 291);
-            this.btnManuelEksilt.Name = "btnManuelEksilt";
-            this.btnManuelEksilt.Size = new System.Drawing.Size(88, 70);
-            this.btnManuelEksilt.TabIndex = 52;
-            this.btnManuelEksilt.Text = "EKSİLT";
-            this.btnManuelEksilt.UseVisualStyleBackColor = false;
-            this.btnManuelEksilt.Click += new System.EventHandler(this.btnManuelEksilt_Click);
             // 
             // MainForm
             // 

@@ -261,6 +261,27 @@ namespace TamgaApp
 
             YardimSekmesiniKur();     // 👈 İŞTE SADECE BU SATIRI EKLİYORSUN
             StokSisteminiKur();
+            // --- YETKİ KUTUSUNU OTOMATİK DOLDURAN MOTOR ---
+            // Programdaki tüm sekmeleri tarar ve "Yönetim" dışındaki sekmeleri Kullanıcı Ekleme sayfasındaki listeye doldurur.
+            clbYetkiler.Items.Clear();
+            foreach (TabPage sekme in tabControl1.TabPages)
+            {
+                clbYetkiler.Items.Add(sekme.Text);
+
+                foreach (Control ctrl in sekme.Controls)
+                {
+                    if (ctrl is TabControl altTabControl)
+                    {
+                        foreach (TabPage altSekme in altTabControl.TabPages)
+                        {
+                            if (altSekme.Text != "Yönetim")
+                            {
+                                clbYetkiler.Items.Add(altSekme.Text);
+                            }
+                        }
+                    }
+                }
+            }
 
             // Tasarım Ekranı Özellikler Paneli (Properties) Varsayılan Ayarları
             numPropFontSize.Minimum = 6;
@@ -828,79 +849,129 @@ namespace TamgaApp
 
         #endregion
 
-        #region 📱 02.9 ULTRA RESPONSIVE (TABLET / DEV EKRAN) MOTORU
+        #region 📱 02.9 KESİN ÇÖZÜM: TÜM SEKMELERE UYGULANAN TABLET ZIRHI VE KAYDIRMA MOTORU
 
-        // Tasarımın yapıldığı orijinal boyutlar (Bunu kendi tasarım boyutuna göre değiştirebilirsin)
-        private const float TASARIM_GENISLIK = 1400f;
-        private const float TASARIM_YUKSEKLIK = 850f;
-
-        public void AkilliOlceklendirmeBaslat()
+        public void TabletModunuAktifEt()
         {
             try
             {
-                // Mevcut cihazın çalışma alanı (Görev çubuğu hariç net ekran boyutu)
-                Rectangle ekran = Screen.PrimaryScreen.WorkingArea;
+                // 1. Ekranı tam kapla ve minimum form boyutunu belirle
+                this.WindowState = FormWindowState.Maximized;
+                this.MinimumSize = new Size(1024, 720);
 
-                // Eğer cihaz zaten tasarım boyutundaysa veya daha büyükse hiç yorma
-                if (ekran.Width >= TASARIM_GENISLIK && ekran.Height >= TASARIM_YUKSEKLIK)
+                // 🌟 2. ANA PANEL (HOŞGELDİN EKRANI) ÇARPIŞMA ZIRHI 🌟
+                // Resimdeki facianın sebebi: Çıkış butonları "Sağa Yapışık" ayarlı olduğu için saati eziyordu.
+                if (btnCikisYap != null && btnLoginDon != null)
                 {
-                    this.WindowState = FormWindowState.Maximized;
-                    return;
+                    // Tablet ekranında (genişlik 1200'den küçükse) butonları sağda bırakıp görünmez yapmak yerine, 
+                    // saatin hemen altına şık bir sıraya diziyoruz!
+                    if (Screen.PrimaryScreen.WorkingArea.Width < 1200)
+                    {
+                        btnLoginDon.Location = new Point(67, 460);
+                        btnCikisYap.Location = new Point(230, 460);
+                    }
                 }
 
-                // Cihazın ekranı küçükse (Tablet vb.), küçülme oranını hesapla
-                float oranX = ekran.Width / TASARIM_GENISLIK;
-                float oranY = ekran.Height / TASARIM_YUKSEKLIK;
+                // 🌟 3. EVRENSEL "UÇAN BUTON" ZIRHI (TÜM SEKMELER İÇİN) 🌟
+                if (tabControl1 != null)
+                {
+                    foreach (TabPage sekme in tabControl1.TabPages)
+                    {
+                        sekme.AutoScroll = true; // Tüm sekmelerde kaydırmayı aç
+                        TehlikeliCapalariSok(sekme); // Tüm tehlikeli çapaları temizle
+                    }
+                }
 
-                // Orantısız bozulmayı engellemek için en küçük küçülme oranını baz al
-                float sabitOran = Math.Min(oranX, oranY);
+                // 🌟 4. BÖLÜCÜ (SPLITCONTAINER) KORUMALARI 🌟
+                // --- DEPO KABUL ZIRHI ---
+                if (splitContainer3 != null)
+                {
+                    splitContainer3.FixedPanel = FixedPanel.Panel1;
+                    splitContainer3.SplitterDistance = 310;
+                    splitContainer3.Panel1.AutoScroll = true;
+                    if (panel5 != null) panel5.AutoScroll = true;
+                }
 
-                // Tüm formdaki nesneleri bu orana göre ezerek küçült!
-                NesneleriYenidenBoyutlandir(this, sabitOran);
+                // --- DEPO SAYIM ZIRHI ---
+                if (splitContainer4 != null)
+                {
+                    splitContainer4.FixedPanel = FixedPanel.Panel1;
+                    splitContainer4.SplitterDistance = 300;
+                    splitContainer4.Panel1.AutoScroll = true;
+                }
 
-                // Formu ekrana tam oturt
-                this.Size = new Size((int)(TASARIM_GENISLIK * sabitOran), (int)(TASARIM_YUKSEKLIK * sabitOran));
-                this.StartPosition = FormStartPosition.CenterScreen;
+                // --- FİRMA DÜZENLEME ZIRHI ---
+                if (splitContainer1 != null)
+                {
+                    splitContainer1.FixedPanel = FixedPanel.Panel2;
+                    splitContainer1.SplitterDistance = Math.Max(500, this.Width - 500);
+                    splitContainer1.Panel2.AutoScroll = true;
+                    if (panel11 != null) panel11.AutoScroll = true;
+                }
+
+                // --- AMBAR / ÇOKLU ZARF ZIRHI ---
+                if (splitContainer2 != null)
+                {
+                    splitContainer2.Panel1.AutoScroll = true;
+                    splitContainer2.Panel2.AutoScroll = true;
+                }
+
+                // --- SEVKİYAT PLAN (Kusursuz Lego Zırhı) ---
+                if (splitContainer5 != null && splitContainer6 != null)
+                {
+                    splitContainer5.Height = 525;
+                    splitContainer6.Height = 340;
+
+                    splitContainer5.Dock = DockStyle.Top;
+                    splitContainer6.Dock = DockStyle.Top;
+
+                    splitContainer6.SendToBack();
+                    splitContainer5.SendToBack();
+
+                    splitContainer5.FixedPanel = FixedPanel.Panel1;
+                    splitContainer5.SplitterDistance = 420;
+                    splitContainer5.Panel1.AutoScroll = true;
+                    if (panel7 != null) panel7.AutoScroll = true;
+
+                    splitContainer6.FixedPanel = FixedPanel.Panel1;
+                    splitContainer6.SplitterDistance = 530;
+                    splitContainer6.Panel1.AutoScroll = true;
+                    if (panel8 != null) panel8.AutoScroll = true;
+                }
+
+                // --- DİĞER SERBEST PANELLER ---
+                if (panel9 != null) { panel9.MinimumSize = new Size(1000, 700); panel9.AutoScroll = true; }
+                if (panel10 != null) { panel10.MinimumSize = new Size(1000, 700); panel10.AutoScroll = true; }
+                if (panel12 != null) { panel12.MinimumSize = new Size(1200, 700); panel12.AutoScroll = true; }
+
+                // --- YÖNETİM EKRANI TABLO SABİTLEYİCİ ---
+                if (dgvKullanicilar != null)
+                {
+                    dgvKullanicilar.Height = 450;
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine("Ölçeklendirme Hatası: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine("Sanal Ekran Hatası: " + ex.Message);
             }
         }
 
-        // Formdaki tüm nesneleri (Panel içindekiler, sekmelerdekiler dahil) matruşka gibi iç içe gezen YZ Motoru
-        private void NesneleriYenidenBoyutlandir(Control parent, float oran)
+        // 🌟 WİNFORMS "UÇAN NESNE" BUG'INI TEMİZLEYEN VİRÜS PROGRAMI 🌟
+        private void TehlikeliCapalariSok(Control parent)
         {
             foreach (Control ctrl in parent.Controls)
             {
-                // 1. Koordinatları ve Boyutları Küçült/Büyüt
-                ctrl.Left = (int)(ctrl.Left * oran);
-                ctrl.Top = (int)(ctrl.Top * oran);
-                ctrl.Width = (int)(ctrl.Width * oran);
-                ctrl.Height = (int)(ctrl.Height * oran);
-
-                // 2. Yazı Fontlarını Küçült (Bozulmasın diye minimum 6 punto koruması)
-                if (ctrl.Font != null)
+                // Tablo, Panel, Bölücü (Container) ve Sekmelere dokunmuyoruz, onlar tasarım gereği esnemeli.
+                // Sadece Buton, Label, TextBox, Checkbox gibi serbest nesnelerin çivilerini söküp Sola ve Üste (Top | Left) kilitliyoruz.
+                if (!(ctrl is DataGridView) && !(ctrl is SplitContainer) && !(ctrl is TabControl) && !(ctrl is Panel))
                 {
-                    float yeniPunto = Math.Max(6f, ctrl.Font.Size * oran);
-                    ctrl.Font = new Font(ctrl.Font.FontFamily, yeniPunto, ctrl.Font.Style);
+                    ctrl.Anchor = AnchorStyles.Top | AnchorStyles.Left;
                 }
 
-                // Özel Nesne Düzeltmeleri
-                if (ctrl is TabControl tabControl)
-                {
-                    tabControl.ItemSize = new Size((int)(tabControl.ItemSize.Width * oran), (int)(tabControl.ItemSize.Height * oran));
-                }
-                else if (ctrl is DataGridView dgv)
-                {
-                    dgv.ColumnHeadersHeight = Math.Max(20, (int)(dgv.ColumnHeadersHeight * oran));
-                    dgv.RowTemplate.Height = Math.Max(18, (int)(dgv.RowTemplate.Height * oran));
-                }
-
-                // 3. Eğer bu nesnenin içinde başka nesneler varsa (Örn: Panel veya TabPage), onların içine de girip küçült
+                // Eğer nesnenin içinde başka nesneler de varsa (İç içe klasör gibi) onların da içine girip temizlik yap (Matruşka mantığı)
                 if (ctrl.Controls.Count > 0)
                 {
-                    NesneleriYenidenBoyutlandir(ctrl, oran);
+                    TehlikeliCapalariSok(ctrl);
                 }
             }
         }
@@ -909,56 +980,7 @@ namespace TamgaApp
 
         #region 📱 02.10 TABLET VE KÜÇÜK EKRAN (SIVI AKIŞ) RESPONSIVE MOTORU
 
-        public void TabletModunuAktifEt()
-        {
-            // Ekran genişliği 1400 pikselden (standart laptoptan) küçükse Tablet/Küçük Ekran motorunu devreye sok
-            if (Screen.PrimaryScreen.WorkingArea.Width <= 1400)
-            {
-                // Formdaki sadece buton ve kutulardan oluşan "sabit" panelleri sıvı akışa (Flow Layout) çeviriyoruz.
-                // İçinde Tablo (DataGridView) olan panellere dokunmuyoruz ki tabloların tam ekran özelliği bozulmasın.
 
-                PaneliSiviAkisaCevir(panel7);  // Sevkiyat Plan Üst Kontroller
-                PaneliSiviAkisaCevir(panel8);  // Sevkiyat Plan Sol Alt Butonlar
-                PaneliSiviAkisaCevir(panel9);  // Yeni Firma Ekleme
-                PaneliSiviAkisaCevir(panel10); // Yazdırma Ayarları
-                PaneliSiviAkisaCevir(panel11); // Firma Düzenleme
-                PaneliSiviAkisaCevir(panel12); // Manuel Etiket
-                PaneliSiviAkisaCevir(panel13); // Klasör Konumları Ayarı
-            }
-        }
-
-        // 🌟 SİHİRLİ DÖNÜŞTÜRÜCÜ: Sabit bir paneli alır, içindeki nesneleri ezmeden esnek (Responsive) hale getirir
-        private void PaneliSiviAkisaCevir(Panel pnl)
-        {
-            if (pnl == null || pnl.Controls.Count == 0) return;
-
-            // 1. Panelin içindeki tüm nesneleri (buton, yazı, kutu) ekrandaki Yukarıdan Aşağıya, Soldan Sağa duruş sırasına göre listele
-            var siraliNesneler = pnl.Controls.Cast<Control>()
-                                    .OrderBy(c => c.Top)
-                                    .ThenBy(c => c.Left)
-                                    .ToList();
-
-            // 2. Web sitesi mantığıyla çalışan Esnek Panel (FlowLayoutPanel) oluştur
-            FlowLayoutPanel flp = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                AutoScroll = true, // Eğer ekrana sığmazsa ezmek yerine aşağı kaydırma (Scroll) çubuğu çıkartır
-                Padding = new Padding(10), // Kenarlardan 10 piksel nefes boşluğu bırak
-                BackColor = pnl.BackColor // Orijinal panelin rengini koru
-            };
-
-            // 3. Sıralanmış nesneleri esnek panele taşı
-            foreach (Control ctrl in siraliNesneler)
-            {
-                // Nesneler birbirine yapışmasın diye etraflarına 5 piksellik koruma kalkanı koy
-                ctrl.Margin = new Padding(5, 5, 15, 10);
-                flp.Controls.Add(ctrl);
-            }
-
-            // 4. Eski sabit paneli boşalt ve yerine yeni esnek motoru yerleştir
-            pnl.Controls.Clear();
-            pnl.Controls.Add(flp);
-        }
 
         #endregion
 
@@ -4148,55 +4170,72 @@ namespace TamgaApp
                 sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
                 // =========================================================
-                // 1. SEÇENEK: PALET VE DESİ DÜZENLE
+                // 1. SEÇENEK: PALET VE DESİ DÜZENLE (GERİ ÇEKME MOTORU)
                 // =========================================================
-                ToolStripMenuItem btnDesiDuzenle = new ToolStripMenuItem("✏️ Palet ve Desiyi Düzenle");
+                ToolStripMenuItem btnDesiDuzenle = new ToolStripMenuItem("✏️ Düzenlemek İçin Geri Çek");
                 btnDesiDuzenle.Click += (s, ev) =>
                 {
-                    string mevcutPalet = dgvAmbarSonListe.Rows[e.RowIndex].Cells[6].Value?.ToString().Trim();
-                    string mevcutDesi = dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value?.ToString().Replace("Ds.", "").Trim();
+                    var row = dgvAmbarSonListe.Rows[e.RowIndex];
 
-                    Form frmInput = new Form
+                    // Son listedeki verileri hafızaya al
+                    string paletSayisiStr = row.Cells[6].Value?.ToString().Trim() ?? "";
+                    string olculerHam = row.Cells[7].Value?.ToString() ?? "";
+                    string firmaAdi = row.Cells[1].Value?.ToString() ?? "";
+
+                    // 1. Adım: Palet Sayısını ComboBox'ta seç ve orta tabloyu tetikle
+                    if (cmbPaletSayisi.Items.Contains(paletSayisiStr))
                     {
-                        Width = 350,
-                        Height = 250,
-                        Text = "Palet ve Desi Düzenle",
-                        StartPosition = FormStartPosition.CenterParent,
-                        FormBorderStyle = FormBorderStyle.FixedDialog,
-                        MaximizeBox = false,
-                        MinimizeBox = false,
-                        BackColor = Color.WhiteSmoke,
-                        ShowIcon = false
-                    };
-
-                    Label lblP = new Label { Left = 20, Top = 20, Text = "Palet Sayısı:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-                    TextBox txtPalet = new TextBox { Left = 130, Top = 18, Width = 170, Font = new Font("Segoe UI", 11), Text = mevcutPalet };
-
-                    Label lblD = new Label { Left = 20, Top = 60, Text = "Toplam Desi:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-                    TextBox txtDesi = new TextBox { Left = 130, Top = 58, Width = 170, Font = new Font("Segoe UI", 11), Text = mevcutDesi };
-
-                    Button btnOnay = new Button { Text = "✅ GÜNCELLE", Left = 20, Top = 120, Width = 280, Height = 45, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
-
-                    btnOnay.Click += (senderObj, args) =>
+                        cmbPaletSayisi.SelectedItem = paletSayisiStr; // Bu satır dgvPaletler'de boş satırları anında oluşturur!
+                    }
+                    else
                     {
-                        dgvAmbarSonListe.Rows[e.RowIndex].Cells[6].Value = txtPalet.Text.Trim();
+                        MessageBox.Show("Geçerli bir palet sayısı bulunamadı!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
 
-                        if (double.TryParse(txtDesi.Text.Trim(), out double yeniDesi))
-                            dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value = Math.Round(yeniDesi, 0) + " Ds.";
-                        else
-                            dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value = txtDesi.Text.Trim() + " Ds.";
+                    // 2. Adım: Orijinal ölçüleri parçala ve orta tabloya (dgvPaletler) geri doldur
+                    string[] satirlar = olculerHam.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
-                        frmInput.Close();
-                    };
+                    for (int i = 0; i < satirlar.Length && i < dgvPaletler.Rows.Count; i++)
+                    {
+                        string satir = satirlar[i]; // Örn: "1. KASA: 80*120*150 (120 Ds.)"
+                        int colonIndex = satir.IndexOf(":");
+                        if (colonIndex > 0)
+                        {
+                            string ozelIsim = satir.Substring(0, colonIndex).Trim(); // "1. KASA"
+                            string kalan = satir.Substring(colonIndex + 1).Trim();   // "80*120*150 (120 Ds.)"
 
-                    // Enter tuşlarına basıldığında onaylasın
-                    txtPalet.KeyDown += (senderObj, args) => { if (args.KeyCode == Keys.Enter) { args.SuppressKeyPress = true; btnOnay.PerformClick(); } };
-                    txtDesi.KeyDown += (senderObj, args) => { if (args.KeyCode == Keys.Enter) { args.SuppressKeyPress = true; btnOnay.PerformClick(); } };
+                            int parantezIndex = kalan.IndexOf("(");
+                            string ebat = kalan;
+                            string desi = "0 Ds.";
 
-                    frmInput.Controls.Add(lblP); frmInput.Controls.Add(txtPalet);
-                    frmInput.Controls.Add(lblD); frmInput.Controls.Add(txtDesi);
-                    frmInput.Controls.Add(btnOnay);
-                    frmInput.ShowDialog();
+                            if (parantezIndex > 0)
+                            {
+                                ebat = kalan.Substring(0, parantezIndex).Trim(); // "80*120*150"
+                                desi = kalan.Substring(parantezIndex + 1).Replace(")", "").Trim(); // "120 Ds."
+                            }
+
+                            dgvPaletler.Rows[i].Cells[0].Value = ozelIsim;
+                            dgvPaletler.Rows[i].Cells[1].Value = ebat;
+                            dgvPaletler.Rows[i].Cells[2].Value = desi;
+                        }
+                    }
+
+                    // 3. Adım: İşlemi kolaylaştırmak için Seçilen Firmalar listesinde o firmayı bul ve maviyle seç
+                    foreach (DataGridViewRow secilenRow in dgvAmbarSecilenFirmalar.Rows)
+                    {
+                        if (secilenRow.Cells[1].Value != null && secilenRow.Cells[1].Value.ToString() == firmaAdi)
+                        {
+                            dgvAmbarSecilenFirmalar.ClearSelection();
+                            secilenRow.Selected = true;
+                            break;
+                        }
+                    }
+
+                    // 4. Adım: Alt listeden (dgvAmbarSonListe) bu satırı UÇUR
+                    dgvAmbarSonListe.Rows.RemoveAt(e.RowIndex);
+
+                    MessageBox.Show("Kayıt masaya geri çekildi!\n\nOrta tablodan ölçüleri yeniden düzenleyip 'Listeye Ekle' butonuna basarak işleminizi tamamlayabilirsiniz.", "Düzenleme Modu", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 };
 
                 // =========================================================
@@ -4507,17 +4546,15 @@ namespace TamgaApp
                 return;
             }
 
-            // 1. HTML İSKELETİ VE CSS AYARLARI (TARAYICI YAZILARINI GİZLEME)
+            // 1. HTML İSKELETİ VE CSS AYARLARI
             System.Text.StringBuilder htmlBuilder = new System.Text.StringBuilder();
             htmlBuilder.Append(@"
     <html>
     <head>
         <style>
-            /* Tarayıcının üst/alt bilgi (Tarih, Link, 1/2) basmasını engeller */
             @page { margin: 0; }
             @media print {
                 body { margin: 1cm; }
-                /* Her paletten sonra yeni kağıda geçmesi için */
                 .sayfa-kes { page-break-after: always; } 
             }
             
@@ -4537,6 +4574,9 @@ namespace TamgaApp
             .sol-kutu { border-right: 2px solid black; }
             .baslik { font-size: 20px; font-weight: bold; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
             .veri { font-size: 15px; font-weight: bold; line-height: 1.5; }
+            
+            /* 🌟 YENİ: Ölçülerin ip gibi düzgün hizalanması için */
+            .olcu-listesi { display: inline-block; text-align: left; }
         </style>
     </head>
     <body>");
@@ -4553,18 +4593,42 @@ namespace TamgaApp
                 string tel2 = row.Cells[5].Value?.ToString() ?? "";
                 string paletSayisi = row.Cells[6].Value?.ToString() ?? "";
 
-                // 🌟 AKILLI TELEFON SATIRI: Alt alta yazdırır, 2. telefon boşsa boşluk bırakmaz!
                 string telefonlar = tel1;
-                if (!string.IsNullOrWhiteSpace(tel2))
+                if (!string.IsNullOrWhiteSpace(tel2)) telefonlar += "<br>" + tel2;
+
+                string olculerHam = row.Cells[7].Value?.ToString() ?? "";
+                string olculer = olculerHam.Replace(")", ")<br>");
+                string toplamDesi = row.Cells[8].Value?.ToString() ?? "";
+
+                // 🌟 SİHİRLİ AMBALAJ SAYACI MOTORU 🌟
+                Dictionary<string, int> ambalajTurleri = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                string[] satirlar = olculerHam.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string satir in satirlar)
                 {
-                    telefonlar += "<br>" + tel2;
+                    int colonIndex = satir.IndexOf(":");
+                    if (colonIndex > 0)
+                    {
+                        string isimKisimi = satir.Substring(0, colonIndex).ToUpper(); // Örn: "1.KASA" veya "2. PALET"
+
+                        // İçindeki rakamları ve noktaları sil, sadece harfleri (KASA, PALET vb.) cımbızla
+                        string tur = new string(isimKisimi.Where(char.IsLetter).ToArray()).Trim();
+                        if (string.IsNullOrWhiteSpace(tur)) tur = "PALET"; // Harf bulamazsa varsayılan PALET
+
+                        if (ambalajTurleri.ContainsKey(tur)) ambalajTurleri[tur]++;
+                        else ambalajTurleri.Add(tur, 1);
+                    }
                 }
 
-                // 🌟 AKILLI ÖLÇÜ SATIRI: Tüm ölçüleri alt alta dizer!
-                string olculer = row.Cells[7].Value?.ToString() ?? "";
-                olculer = olculer.Replace(")", ")<br>");
+                // Sayılanları "1 PALET + 1 KASA" şeklinde birleştir
+                List<string> ozetListesi = new List<string>();
+                foreach (var kvp in ambalajTurleri)
+                {
+                    ozetListesi.Add($"{kvp.Value} {kvp.Key}");
+                }
 
-                string toplamDesi = row.Cells[8].Value?.ToString() ?? "";
+                string dinamikToplamText = string.Join(" + ", ozetListesi);
+                if (string.IsNullOrWhiteSpace(dinamikToplamText)) dinamikToplamText = paletSayisi + " PALET";
 
                 // HTML Tasarımına Ekle
                 htmlBuilder.Append($@"
@@ -4582,10 +4646,10 @@ namespace TamgaApp
                 <div class='baslik'>PALET ÖLÇÜLERİ</div>
                 <div class='veri'>
                     <br>
-                    {olculer}<br>
+                    <div class='olcu-listesi'>{olculer}</div><br>
                     ----------------------<br>
                     Genel Toplam: {toplamDesi}<br><br>
-                    TOPLAM: {paletSayisi} PALET
+                    TOPLAM: {dinamikToplamText}
                 </div>
             </div>
         </div>");
@@ -4595,7 +4659,7 @@ namespace TamgaApp
     </body>
     </html>");
 
-            // 3. YAZDIRMA ALANI PENCERESİNİ DÜZENLE (LOGO VE BAŞLIK)
+            // 3. YAZDIRMA ALANI PENCERESİNİ DÜZENLE 
             Form modernOnizleme = new Form();
             modernOnizleme.Text = "Yazdırma Alanı";
             modernOnizleme.ShowIcon = false;
@@ -4603,12 +4667,10 @@ namespace TamgaApp
             modernOnizleme.Height = 600;
             modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
 
-            // 4. WEB MOTORUNU BAĞLA VE YAZDIR
             Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
             webCizici.Dock = DockStyle.Fill;
             modernOnizleme.Controls.Add(webCizici);
 
-            // 🌟 SİHİRLİ DOKUNUŞ 1: Kullanıcı pencereyi kapattığında Edge motorunu öldür, klasörü serbest bıraksın!
             modernOnizleme.FormClosed += (s, ev) =>
             {
                 webCizici.Dispose();
@@ -4616,16 +4678,13 @@ namespace TamgaApp
 
             modernOnizleme.Show();
 
-            // 🌟 SİHİRLİ DOKUNUŞ 2: Hafıza klasörünü "AppData/Local" klasörüne alıyoruz (Yetki sorunu çözümü)
             string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_CokluZarf");
 
             var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
 
-            // Motoru bu özel hafızayla uyandırıyoruz
             await webCizici.EnsureCoreWebView2Async(ozelHafiza);
 
-            // Ürettiğimiz dinamik HTML kodunu motora veriyoruz
             webCizici.NavigateToString(htmlBuilder.ToString());
 
             webCizici.NavigationCompleted += (s, args) =>
@@ -8796,7 +8855,7 @@ namespace TamgaApp
 
         // =========================================================================================
 
-        #region 📖 24. DİNAMİK KULLANIM KILAVUZU MOTORU
+        #region 📖 24. DİNAMİK KULLANIM KILAVUZU MOTORU (ANSİKLOPEDİK SÜRÜM)
 
         public void YardimSekmesiniKur()
         {
@@ -8836,125 +8895,129 @@ namespace TamgaApp
             System.Text.StringBuilder kilavuzMetni = new System.Text.StringBuilder();
 
             kilavuzMetni.AppendLine($"SİSTEME HOŞ GELDİNİZ SAYIN {AktifKullaniciAdi.ToUpper()}!\n");
-            kilavuzMetni.AppendLine("Bu alan, TamgaApp Otomasyon V2 sisteminin resmi, detaylı ve kapsamlı kullanım kılavuzudur.");
-            kilavuzMetni.AppendLine("Aşağıda, mevcut erişim yetkinize göre kullanabileceğiniz modüllerin 'Ne işe yaradığı', 'Nasıl kullanılacağı' ve 'Arka planda ne yaptığı' adım adım anlatılmıştır.\n");
+            kilavuzMetni.AppendLine("TAMGAAPP OTOMASYON V2.0 - KAPSAMLI SİSTEM MİMARİSİ VE KULLANIM ANSİKLOPEDİSİ");
+            kilavuzMetni.AppendLine("Bu doküman, sistemin tüm modüllerinin arka plan çalışma prensiplerini, operasyonel iş akışlarını (Workflow) ve hata giderme (Troubleshooting) prosedürlerini detaylandıran resmi ansiklopedik rehberdir.\n");
             kilavuzMetni.AppendLine(new string('=', 100) + "\n");
-
-            // =========================================================================================
-            // DİNAMİK İÇERİK ÜRETİMİ
-            // =========================================================================================
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Ana Panel"))
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 1: ANA PANEL (KONTROL MERKEZİ)\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Sisteme giriş yaptığınızda sizi karşılayan ana kumanda merkezidir. Sistemin genel durumunu, aktif kullanıcıyı ve zamanı takip etmenizi sağlar.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Güvenli Çıkış (Kırmızı Buton): Programı sağ üstteki çarpıdan (X) kapatmak yerine bu butonu kullanmalısınız. Neden mi? Çünkü bu butona bastığınızda sistem açık olan barkod okuyucu portlarını serbest bırakır, veritabanı bağlantılarını güvenlice sonlandırır ve RAM'i temizleyerek kapanır. Böylece cihazınız kilitlenmez.");
-                kilavuzMetni.AppendLine("➤ Oturumu Kapat: Başka bir personelin kendi hesabıyla giriş yapabilmesi için programı tamamen kapatmadan sadece şifre ekranına dönmenizi sağlar.\n");
+                kilavuzMetni.AppendLine("📌 MODÜL 1: ANA PANEL (KONTROL MERKEZİ VE SİSTEM GÜVENLİĞİ)\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Ana Panel, uygulamanın yaşam döngüsünü (Lifecycle) yöneten kök dizindir. Asenkron saat motoru, oturum yönetimi ve RAM/Port temizlik (Garbage Collection) süreçleri buradan komuta edilir.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Güvenli Çıkış (Kırmızı Buton): Sistemden ayrılırken pencereyi (X) ikonundan kapatmak yerine bu modül kullanılmalıdır. Bu işlem; açık olan donanımsal COM (Barkod) portlarını güvenlice serbest bırakır, veritabanı yığınlarını (Cache) temizler ve donmayı/kilitlenmeyi engelleyen Asenkron Kapanış (Fade-out) motorunu tetikler.");
+                kilavuzMetni.AppendLine("➤ Oturumu Kapat: Vardiya değişimlerinde, programın çekirdek dosyalarını kapatmadan yalnızca Aktif Kullanıcı (Session) kimliğini sıfırlayarak giriş ekranına döner.\n");
                 kilavuzMetni.AppendLine(new string('-', 100) + "\n");
             }
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Depo Kabul"))
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 2: DEPO KABUL VE ÜRETİM TAKİP\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Üretim bandından çıkan veya dış tedarikçiden depoya yeni gelen ürünlerin sisteme hızlıca kaydedildiği ve kabul fişlerinin (A4 formatında) yazdırıldığı alandır.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Adım 1 (Barkod Okutma): İmleci 'Ürün Barkodu' kutusuna tıklayın ve el terminali ile ürünlerin barkodunu art arda okutun. Sistem okunan barkodu anında SQL veritabanında arar, ürünün adını ve rengini bularak tabloya ekler.");
-                kilavuzMetni.AppendLine("➤ Adım 2 (Otomatik Sayım): Aynı barkodu ikinci kez okutursanız, sistem yeni bir satır açmak yerine mevcut ürünün 'Adet' miktarını 1 artırır.");
-                kilavuzMetni.AppendLine("➤ Adım 3 (Hata Düzeltme): Eğer bir ürünü yanlış okuttuysanız, tablodan o ürünün satırını farenizle seçin ve 'Seçilen Kalemleri Sil' butonuna basarak listeden çıkartın.");
-                kilavuzMetni.AppendLine("➤ Adım 4 (Kaydet ve Yazdır): İşleminiz bittiğinde bu butona basın. Sistem ne yapar? Önce bu listeyi bilgisayarınızdaki (Masaüstü) 'Günlük Üretim Takip' klasörüne o günün tarihiyle Excel (CSV) formatında yedekler. Ardından karşınıza şık bir 'Baskı Önizleme' ekranı getirir. Bu ekrandan sol üstteki yazıcı ikonuna basarak depo kabul fişini fiziksel olarak kağıda dökebilirsiniz.\n");
+                kilavuzMetni.AppendLine("📌 MODÜL 2: DEPO KABUL VE ÜRETİM TAKİP (GİRİŞ KALİTE KONTROL)\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Fabrika üretim hattından çıkan mamullerin veya dış tedarikçiden gelen malzemelerin, SQL veritabanındaki Master Data (Ana Veri) ile eşleştirilerek envantere dahil edilmesini sağlar.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Akıllı Barkod Eşleştirme (Smart Matching): Okutulan her barkod, saliseler içinde SQL veritabanında taranır. Eşleşme bulunursa Ürün Kodu, Adı ve Lavabo Rengi otomatik olarak tabloya yansıtılır. Eşleşme bulunamazsa sistem 'KAYITSIZ' statüsünde dummy (sanal) bir kayıt oluşturur.");
+                kilavuzMetni.AppendLine("➤ Otomatik Yığma (Aggregation): Aynı barkod peş peşe okutulduğunda, sistem yorgunluğunu önlemek adına yeni satır açılmaz; mevcut satırın 'Adet' hücresindeki sayı matematiksel olarak (+1) güncellenir.");
+                kilavuzMetni.AppendLine("➤ Hata İzolasyonu (Geri Alma): Yanlış veya fazla okutulan kalemler, satır seçilip 'Seçilen Kalemleri Sil' komutuyla listeden çıkartılır.");
+                kilavuzMetni.AppendLine("➤ CSV Dışa Aktarım ve Yazdırma: 'Kaydet ve Yazdır' komutu, oluşturulan listeyi öncelikle Masaüstündeki 'Günlük Üretim Takip' klasörüne o günün tarihiyle .csv formatında (Excel uyumlu) mühürler. Ardından GDI+ çizim motorunu kullanarak endüstriyel standartlarda A4 Kabul Fişi önizlemesini ekrana yansıtır.\n");
                 kilavuzMetni.AppendLine(new string('-', 100) + "\n");
             }
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Sevkiyat Plan"))
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 3: SEVKİYAT PLAN (WMS & BARKOD OKUMA)\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Bu modül programın kalbidir. ERP (Muhasebe) sisteminden gelen açık siparişlerin hatasız bir şekilde toplanmasını, personelin yanlış ürün göndermesini engellemeyi ve ürünlerin paletlere paylaştırılmasını (Desi/Kilo hesaplamalarıyla birlikte) sağlar.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Adım 1 (Siparişleri Çekme): Sol taraftaki 'Yenile' butonuna tıklayın. Sistem anında ERP/SQL veritabanına bağlanır ve SE (Yurtiçi) veya O1 (İhracat) tipindeki henüz sevk edilmemiş tüm açık siparişleri çeker.");
-                kilavuzMetni.AppendLine("➤ Adım 2 (Müşteri Seçimi): 'Müşteri Seç' açılır kutusundan işlem yapacağınız firmayı seçin. Seçtiğiniz an, o firmaya ait açık 'Belge Numaraları (İrsaliye/Sipariş No)' altındaki listeye düşecektir.");
-                kilavuzMetni.AppendLine("➤ Adım 3 (Belge Seçimi & Konsolidasyon): Hangi belgeleri sevk edecekseniz yanlarındaki kutucuklara tik atın. Eğer bir müşterinin 5 farklı siparişini tek kamyonda birleştirecekseniz 'Tüm Belge No Seç' butonuna basın. Sistem bu 5 belgeyi FİFO (İlk Giren İlk Çıkar / En eskiden en yeniye) kuralına göre sıraya dizecektir.");
-                kilavuzMetni.AppendLine("➤ Adım 4 (Palet Açma): Ürünleri okutmaya başlamadan önce, sol alttaki 'Palet Sayısı' kutusundan kamyona kaç palet yapacağınızı (Örn: 3) seçin. Sağ tarafta 3 adet palet sütunu açılacaktır. Hangi paleti dolduruyorsanız 'Aktif Palet' kutusundan onu seçili tutun.");
-                kilavuzMetni.AppendLine("➤ Adım 5 (Barkod Okutma & Akıllı Mıknatıs Zırhı): El terminalini elinize alın ve ürünleri okutun. Peki ya dalgınlıkla tablonun boş bir yerine tıkladıysanız? Korkmayın! Sistemdeki 'Mıknatıs Zırhı', okuyucunun gönderdiği ilk harfi hissettiği an imleci ışık hızında 'Ürün Barkodu' kutusuna kilitler. Hiçbir veri kaybı yaşamazsınız.");
-                kilavuzMetni.AppendLine("➤ Sesli ve Görsel Uyarılar: Okutulan ürün siparişte varsa sistem 'Başarılı' sesi verir ve rengi sarı yapar. İstenen adede ulaşıldığında renk Yeşil'e döner. Siparişte olmayan veya kotası dolmuş bir ürün okutursanız, sistem acı bir hata sesiyle işlemi reddeder.");
-                kilavuzMetni.AppendLine("➤ Manuel Ekleme/Eksiltme (Sağ Tık Menüsü): Eğer 50 tane aynı ürünü tek tek okutmak istemiyorsanız, satıra SAĞ TIKLAYIN. Açılan menüden 'Tamamını Ekle' diyerek kalan miktarın hepsini tek tıkla palete gönderebilir veya 'Tamamını Eksilt' diyerek yanlış eklenenleri geri alabilirsiniz.");
-                kilavuzMetni.AppendLine("➤ Kısmi veya Tam Sevk (Kapanış):");
-                kilavuzMetni.AppendLine("   - TAM SEVK: Eğer tablodaki her şey Yeşil olduysa bu butona basın. Sistem siparişi %100 tamamlanmış sayar, arşive atar ve 'Ghost (Hayalet) Modu' devreye girer. Bu ne demek? ERP'de sipariş açık görünse bile sistem bu belgeyi hafızaya kazır ve Yenile dediğinizde bir daha asla karşınıza çıkartmaz!");
-                kilavuzMetni.AppendLine("   - KISMİ SEVK: Eksik ürünleriniz varsa ve sadece okuttuğunuz kadarını gönderecekseniz buna basın. Sistem eksikleri size raporlar, okutulanları arşive atar ve eksik kalanları sistemde açık bırakır.");
-                kilavuzMetni.AppendLine("   - ASKIYA AL: Kamyon gecikti veya mesai bitti diyelim. Bu butona basarsanız, ekrandaki her şey paletleriyle birlikte dondurularak kaydedilir. Yarın gelip 'Askıdakileri Getir' diyerek milimi milimine kaldığınız yerden devam edebilirsiniz!\n");
+                kilavuzMetni.AppendLine("📌 MODÜL 3: SEVKİYAT PLAN (WMS ÇEKİRDEĞİ VE DESİ/PALETLEME)\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Canias/ERP veritabanından çekilen 'Açık Siparişlerin (Backorders)' lojistik kurallarına göre toplanması, paletlere bölünmesi ve hatasız çıkış (Poka-Yoke) yapılmasını sağlayan kompleks yönlendirme motorudur.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ OLEDB SQL Entegrasyonu: 'Yenile' komutu; SE (Yurtiçi) ve O1 (İhracat) belge tiplerindeki, silinmemiş ve sevk edilmemiş tüm açık siparişleri devasa bir JOIN sorgusuyla ERP'den çeker.");
+                kilavuzMetni.AppendLine("➤ FİFO (İlk Giren İlk Çıkar) Konsolidasyonu: 'Tüm Belge No Seç' komutu, bir müşteriye ait birden fazla sipariş belgesini tarih sırasına göre birleştirerek tek bir yükleme ekranında (Konsolide) sunar.");
+                kilavuzMetni.AppendLine("➤ Palet Matrisi ve Desi Algoritması: Açılan palet kolonlarına okutulan her ürün yerleştirilir. 'Palet ve Desiyi Düzenle' menüsü ile En x Boy x Yükseklik / 3000 formülü arka planda çalıştırılarak Lojistik Desi hesaplaması otomatik yapılır.");
+                kilavuzMetni.AppendLine("➤ Manyetik İmleç Zırhı (Magnetic Focus): Operatör ekranda başka bir yere tıklasa dahi, barkod okuyucunun gönderdiği ilk veri byte'ı algılandığı an, sistem imleci ışık hızında barkod giriş kutusuna kilitler (Sıfır Veri Kaybı).");
+                kilavuzMetni.AppendLine("➤ Kapanış (Sevk) Stratejileri:");
+                kilavuzMetni.AppendLine("   - TAM SEVK (Green State): Tüm satırlar hedeflenen adede (Yeşil) ulaştığında çalışır. Belgeyi Ghost (Hayalet) Modu kara listesine alır, arşivler ve ERP'de açık görünse dahi bir daha ekrana yansıtmaz.");
+                kilavuzMetni.AppendLine("   - KISMİ SEVK (Orange State): Eksik okutulan (Sarı) satırları analiz eder. Mevcut okutulanı arşive atıp, kalan bakiyeyi sistemde açık (bekleyen) olarak bırakır.");
+                kilavuzMetni.AppendLine("   - ASKIYA AL (Snapshot): Yüklemenin yarım kalması durumunda, ekranın birebir kopyasını (Snapshot) JSON formatında diske yazar. 'Askıdakileri Getir' ile milisaniyeler içinde tüm tablo geri yüklenir.\n");
                 kilavuzMetni.AppendLine(new string('-', 100) + "\n");
             }
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Sevkiyat"))
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 4: SEVKİYAT (ARŞİV, KIOSK VE AMBAR)\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Sevkiyatı bitmiş işlemlerin raporlandığı, araç yüklemesinin yapıldığı ve Ambar (Parsiyel/Toplu taşıma) araçlarının organize edildiği kontrol kulesidir.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Klasör Ağacı (Geçmiş Arşiv): Sol panelde tüm bitmiş sevkiyatlarınızı Yıl > Ay > Gün şeklinde görebilirsiniz. Bir dosyanın üstüne tıkladığınızda sağ tarafta o sevkiyatın tüm detayları açılır. Bu detay ekranında 'Canlı Arama' kutusuna bir barkod okutursanız, sistem anında o barkodun hangi müşteriye, hangi tarihte ve hangi paletle gittiğini size söyler!");
-                kilavuzMetni.AppendLine("➤ Kamyon Yükleme Kiosk (Tam Ekran Modu): Yükleme rampasında forklift personeli için tasarlanmıştır. Yükleme başlayacağı zaman 'Araç Yüklemeyi Başlat' butonuna basın ve arşivden ilgili aracı seçin. Ekran siyah, devasa bir terminale (Kiosk) dönüşür.");
-                kilavuzMetni.AppendLine("   - Kiosk Nasıl Çalışır?: Araca binen her paletin üzerindeki EAN-13 etiketini okutmanız gerekir. Doğru palet okutulduğunda yeşil onay verir. Başka müşterinin paleti okutulursa ekran kıpkırmızı olur ve hata sesiyle personeli uyarır.");
-                kilavuzMetni.AppendLine("   - Etiketsiz Palet Zırhı: Eğer paletin birine etiket basmayı unuttuysanız, sistem Kiosk ekranında o paletin yanına '⚠️ (ETİKETSİZ)' yazar. Sağ tıklayıp anında yazıcıdan etiketini çıkartabilir veya manuel olarak araca yüklendiğini onaylayabilirsiniz.");
-                kilavuzMetni.AppendLine("➤ Ambar Modülü: Diyelim ki kamyona 3 farklı müşterinin malı yüklenecek. Ana ekrandan birinci müşterinin sevkini bitirin ve 'Ambara Kaydet' butonuna basın. Sonra ikinci müşteriyi bitirip onu da Ambara Kaydedin. En son 'Ambar Görüntüle' dediğinizde bu 3 müşterinin malları tek bir listede birleşir ve tek bir Kiosk yüklemesiyle araca yüklenir.\n");
+                kilavuzMetni.AppendLine("📌 MODÜL 4: SEVKİYAT ARŞİVİ, AMBAR KONSOLİDASYONU VE KIOSK\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Kapanmış belgelerin Hiyerarşik Ağaç (Tree) mimarisiyle saklandığı, çapraz sorguların yapıldığı ve forklift/yükleme personeli için Kiosk (Tam Ekran) barkod doğrulamasının yapıldığı istasyondur.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Çok Yönlü Arama (Cross-Search): Sağ üstteki arama çubuğu, binlerce CSV dosyası içindeki her bir satırı tarayarak, spesifik bir barkodun veya ürünün hangi tarihte, hangi müşteriye ve hangi palet içinde gönderildiğini anında ekrana basar.");
+                kilavuzMetni.AppendLine("➤ Ambar (Parsiyel Yükleme) Modülü: Farklı müşterilere ait küçük hacimli siparişlerin (Örn: 1 palet A müşterisi, 2 palet B müşterisi) 'Ambar Aracı' isimli sanal bir havuzda (JSON) toplanmasını sağlar. 'Ambarı Tamamla' komutuyla bu havuz tek bir araca yüklenmiş gibi konsolide (Toplu) Excel Raporu üretir.");
+                kilavuzMetni.AppendLine("➤ Kamyon Yükleme Kiosk (Terminal Modu): Araç yükleme rampasında çalışır. Araca bindirilen her paletin EAN-13 etiketi okutulduğunda sistem yeşil onay verir. Yanlış palet yüklemesinde kırmızı hata ekranı ve sesli alarm devreye girerek Poka-Yoke (Hata Önleme) kuralını uygular. Etiketsiz paletler için sağ tık menüsünden anında 'Edge WebView2' motoruyla etiket basılabilir.\n");
                 kilavuzMetni.AppendLine(new string('-', 100) + "\n");
             }
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Depo Sayım"))
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 5: DEPO SAYIM\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Depo stoklarının, yıl sonu envanterinin veya belirli rafların hızlıca el terminaliyle sayılarak bilgisayara aktarılmasını sağlar.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Adım 1 (Okutma): 'Barkod Okut' kutusuna barkodları okutmaya başlayın. Sistem okutulan her ürünü tabloya ekler ve adedini sayar.");
-                kilavuzMetni.AppendLine("➤ Adım 2 (Akıllı Bulucu): Daha önce deponuzda hiç bulunmayan yeni bir ürün okutursanız, sistem o barkodu SQL veritabanında arar, ürünün orijinal ismini ve rengini bulup tabloya öyle kaydeder. Yani 'Kayıtsız Ürün' hatasını minimuma indirir.");
-                kilavuzMetni.AppendLine("➤ Adım 3 (Kaydetme): Sayım bitince rapora bir isim verin (Örn: A_Koridoru_Sayimi) ve Kaydet deyin. Bu raporlar Masaüstünde birikir ve ekranın sol tarafındaki ağaç listesinden istediğiniz zaman eski sayımlarınıza tek tıkla ulaşabilirsiniz.\n");
+                kilavuzMetni.AppendLine("📌 MODÜL 5: FİZİKSEL ENVANTER VE DEPO SAYIM\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Periyodik veya anlık stok sayımlarının (Cycle Count) yapılarak ERP sistemi ile fiziki ambarın karşılaştırılmasına olanak tanıyan hızlı kayıt modülüdür.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Çift Yönlü Algılama: Kullanıcı barkod okuttuğunda sistem hem 'Barkod (EAN)' alanına hem de 'Malzeme Kodu' alanına bakar. Kayıtsız ürünlerde dahi sayım durdurulmaz, manuel müdahale için listeye eklenir.");
+                kilavuzMetni.AppendLine("➤ Arşiv Mimarisi: Sayımlar, kullanıcının belirlediği isimle (Örn: A_Koridoru_Hirdavat) Yıl ve Ay klasörlerine ayrıştırılarak CSV formatında kaydedilir. Ağaç (Tree) menüsünden eski sayımlara ulaşılıp canlı filtreleme (Live Filter) yapılabilir.\n");
                 kilavuzMetni.AppendLine(new string('-', 100) + "\n");
             }
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Normal Zarf Yazdırma") || yetkiler.Contains("Çoklu Zarf Yazdırma"))
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 6: ZARF VE ETİKET TASARIM YAZICISI\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Firmanıza özel koli etiketleri, posta zarfları veya fatura çıktıları tasarlamanızı ve bu tasarımları yüzlerce müşteri için otomatik doldurup saniyeler içinde basmanızı sağlayan dinamik motordur.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Tasarım Ekranı: Üstteki menüden kağıt boyutunu seçin. 'Alan Ekle' butonuna basarak kağıda kutucuklar yerleştirin. Bu kutucukları farenizle taşıyabilir veya 'Shift + Yön Tuşları' ile milimetrik olarak sündürüp boyutlandırabilirsiniz.");
-                kilavuzMetni.AppendLine("➤ Dinamik (Akıllı) Kodlar: Tasarımınıza bir alan ekleyip içindeki metni {FirmaAdi}, {Adres}, {Il} şeklinde ayarlarsanız, bu tasarım bir şablon haline gelir. Çıktı alırken program o parantezlerin içine müşterinin gerçek bilgilerini otomatik yerleştirir.");
-                kilavuzMetni.AppendLine("➤ Edge Yazdırma Motoru: Çoklu Zarf sekmesine geçin, yazdırmak istediğiniz şablonu seçin ve yan taraftaki müşteri listesinden 50 müşteriye tik atın. 'Kaydet ve Yazdır' dediğinizde sistem Microsoft Edge tabanlı WebView2 motorunu kullanarak 50 etiketi yüksek çözünürlüklü ve hatasız bir şekilde yazıcınıza tek seferde yollar!\n");
+                kilavuzMetni.AppendLine("📌 MODÜL 6: DİNAMİK TASARIM, ŞABLON VE EDGE (WEBVIEW2) YAZDIRMA\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Firmanın kargo etiketi, mektup zarfı veya palet fişlerini Sürükle-Bırak (Drag & Drop) mantığıyla tasarladığı ve Chromium altyapısıyla sıfır çözünürlük kaybıyla kağıda döktüğü motordur.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Akıllı Koordinat Sistemi: Ekrana eklenen nesnelerin X,Y konumları Px (Piksel) yerine donanımdan bağımsız Mm (Milimetre) cinsinden hesaplanarak JSON olarak kaydedilir. Bu sayede tasarım her marka yazıcıda milimi milimine aynı yerden çıkar.");
+                kilavuzMetni.AppendLine("➤ Değişken (Placeholder) Mimarisi: Metinlerin içine gömülen {FirmaAdi}, {Il} gibi değişkenler, yazdırma anında (Runtime) SQL'den veya UI'dan gelen gerçek firma bilgileriyle Replace edilerek basılır.");
+                kilavuzMetni.AppendLine("➤ Edge Render Motoru (WebView2): Tasarımlar, arka planda dinamik olarak CSS3 ve HTML5 kodlarına dönüştürülür. WebView2 Runtime motoru bu kodları derleyerek, klasik WinForms yazdırmasındaki pikselleşmeyi (Bulanıklığı) %100 yok eder ve Vektörel (Cam gibi) baskı alınmasını sağlar.\n");
+                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
+            }
+
+            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Stok"))
+            {
+                kilavuzMetni.AppendLine("📌 MODÜL 8: CANLI STOK PİVOTLARI VE SQL ENTEGRASYONU\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Kullanıcıların kendi yazdıkları özel SQL sorgularını (Query) sisteme entegre edip, dinamik rapor sekmeleri (Pivot Tablolar) yaratmasını sağlayan Business Intelligence (İş Zekası) aracıdır.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Dinamik Sekme Yaratımı (Runtime Injection): Girilen SQL sorgusu çalıştırılır ve dönen DataTable sonucu, programı yeniden başlatmaya gerek kalmadan anında yeni bir sekme (TabPage) olarak üst menüye enjekte edilir.");
+                kilavuzMetni.AppendLine("➤ Asenkron Veri Çekimi (Task.Run): Veritabanı sorguları arka plan iş parçacıklarında (Background Thread) çalıştırılır, böylece devasa veriler çekilirken programın arayüzü asla donmaz veya kilitlenmez (Not Responding hatası engellenir).");
+                kilavuzMetni.AppendLine("➤ Kalıcı Hafıza (JSON Serialization): Eklenen her SQL rapor ayarı AppData klasörüne şifrelenerek kaydedilir. Uygulama açıldığında raporlar otomatik olarak son güncel halleriyle tabloya dökülür.\n");
                 kilavuzMetni.AppendLine(new string('-', 100) + "\n");
             }
 
             if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Yönetim"))
             {
-                kilavuzMetni.AppendLine("👑 MODÜL 7: YÖNETİCİ KONTROLLERİ VE GÜVENLİK\n");
-                kilavuzMetni.AppendLine("AMACI NEDİR?");
-                kilavuzMetni.AppendLine("Sistemin ayarlarını yaptığınız, personelleri kontrol ettiğiniz ve tehlikeli işlemleri (veri silme) gerçekleştirdiğiniz 'Patron' modülüdür.\n");
-                kilavuzMetni.AppendLine("NASIL KULLANILIR VE NE İŞE YARAR?");
-                kilavuzMetni.AppendLine("➤ Personel Yönetimi: Yeni kullanıcı eklerken, o personelin sadece görmesi gereken sekmeleri (Örn: Sadece Depo Kabul) işaretleyin. Sistem, o personel girdiğinde diğer sekmeleri tamamen yok ederek yetkisiz erişimi sıfırlar.");
-                kilavuzMetni.AppendLine("➤ Kriptolu Güvenlik: Yazdığınız kullanıcı şifreleri ve SQL Veritabanı şifreleriniz, arka planda uluslararası (Hash) standartlarında kriptolanarak diske yazılır. IT departmanından biri bu dosyaları açsa bile şifreleri asla çözemez.");
-                kilavuzMetni.AppendLine("➤ Tehlikeli Butonlar: 'Veritabanını Sıfırla' veya 'Tüm Firmaları Sil' gibi kırmızı renkli butonlar, sistemdeki binlerce kaydı saniyeler içinde uçurur. Bu butonları kullanırken ekrana gelen çift güvenlik uyarılarını dikkatlice okuyunuz!\n");
+                kilavuzMetni.AppendLine("👑 MODÜL 7: YÖNETİCİ KONTROLLERİ VE GÜVENLİK KATMANI\n");
+                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
+                kilavuzMetni.AppendLine("Sistemin kriptografik güvenlik politikalarının (Hashing), yetki bazlı menü gizlemelerinin (Isolation) ve yıkıcı/toplu veri silme işlemlerinin (CRUD Destructive) yönetildiği 'Super Admin' terminalidir.\n");
+                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
+                kilavuzMetni.AppendLine("➤ Kriptolojik Veri Güvenliği: Yönetim panelinden kaydedilen SQL bağlantı dizesi şifreleri (Connection String Passwords) ve Kullanıcı giriş şifreleri, AES/SHA algoritması benzeri özel Hashing kütüphanesiyle şifrelenir (Encrypted). Diske açık metin (Cleartext) olarak hiçbir şifre yazılmaz.");
+                kilavuzMetni.AppendLine("➤ Yetki İzolasyonu (Role-Based Access Control): Bir personele sadece 'Depo Kabul' yetkisi verilirse, Sistem Açılış (Init) motoru diğer tüm sekmeleri (Sevkiyat, Ayarlar vs.) RAM'den fiziksel olarak siler. Kullanıcı ekranı büyüterek veya kısayol deneyerek bu sekmelere ulaşamaz.");
+                kilavuzMetni.AppendLine("➤ Yıkıcı Komut Zırhı: 'Operasyonel Fabrika Ayarlarına Dön' veya 'Tüm Firmaları Sil' gibi kritik komutlar, kazara tıklanmaları önlemek amacıyla Çift Katmanlı Onay diyaloğuna (Double-Check Confirmation) ve Focus kaybı zırhına tabi tutulmuştur.\n");
             }
 
             kilavuzMetni.AppendLine(new string('=', 100));
-            kilavuzMetni.AppendLine("\nSistem Mimarisi ve Geliştirme: TamgaApp Operasyon Otomasyonu V2");
-            kilavuzMetni.AppendLine("Her türlü teknik arıza veya yeni modül talepleriniz için lütfen sistem yöneticinizle iletişime geçiniz.");
+            kilavuzMetni.AppendLine("\nSistem Mimarisi, Geliştirme ve Optimizasyon: TamgaApp Operasyon Otomasyonu V2.0");
+            kilavuzMetni.AppendLine("TamgaApp altyapısı, C# / .NET / OLEDB / WebView2 Teknolojileri kullanılarak yüksek performans ve lojistik standartlarına göre inşa edilmiştir.");
 
             rtbIcerik.Text = kilavuzMetni.ToString();
 
-            // 5. Renklendirme Motorunu Çalıştır
-            Renklendir(rtbIcerik, "SİSTEME HOŞ GELDİNİZ SAYIN", Color.DarkRed);
+            // 5. Renklendirme Motorunu Çalıştır (Kurumsal Ansiklopedi Formatı)
+            Renklendir(rtbIcerik, "TAMGAAPP OTOMASYON V2.0 - KAPSAMLI SİSTEM MİMARİSİ VE KULLANIM ANSİKLOPEDİSİ", Color.DarkBlue);
+            Renklendir(rtbIcerik, $"SİSTEME HOŞ GELDİNİZ SAYIN {AktifKullaniciAdi.ToUpper()}!", Color.DarkRed);
 
             // Başlıkları renklendir
             string[] basliklar = {
-                "📌 MODÜL 1: ANA PANEL (KONTROL MERKEZİ)",
-                "📌 MODÜL 2: DEPO KABUL VE ÜRETİM TAKİP",
-                "📌 MODÜL 3: SEVKİYAT PLAN (WMS & BARKOD OKUMA)",
-                "📌 MODÜL 4: SEVKİYAT (ARŞİV, KIOSK VE AMBAR)",
-                "📌 MODÜL 5: DEPO SAYIM",
-                "📌 MODÜL 6: ZARF VE ETİKET TASARIM YAZICISI",
-                "👑 MODÜL 7: YÖNETİCİ KONTROLLERİ VE GÜVENLİK"
+                "📌 MODÜL 1: ANA PANEL (KONTROL MERKEZİ VE SİSTEM GÜVENLİĞİ)",
+                "📌 MODÜL 2: DEPO KABUL VE ÜRETİM TAKİP (GİRİŞ KALİTE KONTROL)",
+                "📌 MODÜL 3: SEVKİYAT PLAN (WMS ÇEKİRDEĞİ VE DESİ/PALETLEME)",
+                "📌 MODÜL 4: SEVKİYAT ARŞİVİ, AMBAR KONSOLİDASYONU VE KIOSK",
+                "📌 MODÜL 5: FİZİKSEL ENVANTER VE DEPO SAYIM",
+                "📌 MODÜL 6: DİNAMİK TASARIM, ŞABLON VE EDGE (WEBVIEW2) YAZDIRMA",
+                "📌 MODÜL 8: CANLI STOK PİVOTLARI VE SQL ENTEGRASYONU",
+                "👑 MODÜL 7: YÖNETİCİ KONTROLLERİ VE GÜVENLİK KATMANI"
             };
 
             foreach (var baslik in basliklar)
@@ -8963,28 +9026,29 @@ namespace TamgaApp
             }
 
             // Alt Başlıkları ve Önemli Uyarıları Renklendir
-            string[] altBasliklar = { "AMACI NEDİR?", "NASIL KULLANILIR VE NE İŞE YARAR?" };
+            string[] altBasliklar = { "SİSTEM MİMARİSİ VE AMACI:", "OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:" };
             foreach (var alt in altBasliklar) Renklendir(rtbIcerik, alt, Color.Blue);
 
             // Maddeleri Kalın Yap (Siyah kalsın, sadece kalınlaşsın)
             string[] maddeler = {
                 "➤ Güvenli Çıkış (Kırmızı Buton):", "➤ Oturumu Kapat:",
-                "➤ Adım 1 (Barkod Okutma):", "➤ Adım 2 (Otomatik Sayım):", "➤ Adım 3 (Hata Düzeltme):", "➤ Adım 4 (Kaydet ve Yazdır):",
-                "➤ Adım 1 (Siparişleri Çekme):", "➤ Adım 2 (Müşteri Seçimi):", "➤ Adım 3 (Belge Seçimi & Konsolidasyon):", "➤ Adım 4 (Palet Açma):", "➤ Adım 5 (Barkod Okutma & Akıllı Mıknatıs Zırhı):",
-                "➤ Sesli ve Görsel Uyarılar:", "➤ Manuel Ekleme/Eksiltme (Sağ Tık Menüsü):", "➤ Kısmi veya Tam Sevk (Kapanış):",
-                "➤ Klasör Ağacı (Geçmiş Arşiv):", "➤ Kamyon Yükleme Kiosk (Tam Ekran Modu):", "➤ Ambar Modülü:",
-                "➤ Adım 1 (Okutma):", "➤ Adım 2 (Akıllı Bulucu):", "➤ Adım 3 (Kaydetme):",
-                "➤ Tasarım Ekranı:", "➤ Dinamik (Akıllı) Kodlar:", "➤ Edge Yazdırma Motoru:",
-                "➤ Personel Yönetimi:", "➤ Kriptolu Güvenlik:", "➤ Tehlikeli Butonlar:"
+                "➤ Akıllı Barkod Eşleştirme (Smart Matching):", "➤ Otomatik Yığma (Aggregation):", "➤ Hata İzolasyonu (Geri Alma):", "➤ CSV Dışa Aktarım ve Yazdırma:",
+                "➤ OLEDB SQL Entegrasyonu:", "➤ FİFO (İlk Giren İlk Çıkar) Konsolidasyonu:", "➤ Palet Matrisi ve Desi Algoritması:", "➤ Manyetik İmleç Zırhı (Magnetic Focus):", "➤ Kapanış (Sevk) Stratejileri:",
+                "➤ Çok Yönlü Arama (Cross-Search):", "➤ Ambar (Parsiyel Yükleme) Modülü:", "➤ Kamyon Yükleme Kiosk (Terminal Modu):",
+                "➤ Çift Yönlü Algılama:", "➤ Arşiv Mimarisi:",
+                "➤ Akıllı Koordinat Sistemi:", "➤ Değişken (Placeholder) Mimarisi:", "➤ Edge Render Motoru (WebView2):",
+                "➤ Dinamik Sekme Yaratımı (Runtime Injection):", "➤ Asenkron Veri Çekimi (Task.Run):", "➤ Kalıcı Hafıza (JSON Serialization):",
+                "➤ Kriptolojik Veri Güvenliği:", "➤ Yetki İzolasyonu (Role-Based Access Control):", "➤ Yıkıcı Komut Zırhı:"
             };
 
             foreach (var madde in maddeler) Renklendir(rtbIcerik, madde, Color.Black);
 
-            // Dikkat çeken kelimeler
-            Renklendir(rtbIcerik, "- TAM SEVK:", Color.DarkGreen);
-            Renklendir(rtbIcerik, "- KISMİ SEVK:", Color.DarkOrange);
-            Renklendir(rtbIcerik, "- ASKIYA AL:", Color.DarkBlue);
+            // Özel Terim Vurguları
+            Renklendir(rtbIcerik, "- TAM SEVK (Green State):", Color.DarkGreen);
+            Renklendir(rtbIcerik, "- KISMİ SEVK (Orange State):", Color.DarkOrange);
+            Renklendir(rtbIcerik, "- ASKIYA AL (Snapshot):", Color.DarkBlue);
             Renklendir(rtbIcerik, "Ghost (Hayalet) Modu", Color.Purple);
+            Renklendir(rtbIcerik, "Poka-Yoke (Hata Önleme)", Color.DarkMagenta);
 
             // Kutuyu panele, paneli de sekmeye ekle
             pnlIcerik.Controls.Add(rtbIcerik);
@@ -9012,7 +9076,6 @@ namespace TamgaApp
             }
             rtb.Select(0, 0); // Seçimi bırak
         }
-
         #endregion
 
         // =========================================================================================
@@ -9944,15 +10007,32 @@ namespace TamgaApp
         public void StokSisteminiKur()
         {
             TabPage sekmeStok = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "📦 Stok");
+
+            // 🌟 1. ANA PANEL'İN YERİNİ BUL (DİNAMİK ZIRH)
+            int anaPanelIndex = 0;
+            for (int i = 0; i < tabControl1.TabPages.Count; i++)
+            {
+                if (tabControl1.TabPages[i].Text.Contains("Ana Panel"))
+                {
+                    anaPanelIndex = i;
+                    break;
+                }
+            }
+
             if (sekmeStok == null)
             {
                 sekmeStok = new TabPage("📦 Stok");
                 sekmeStok.BackColor = Color.WhiteSmoke;
-                tabControl1.TabPages.Add(sekmeStok);
+                // 🌟 En sona atmak yerine Ana Panel'in hemen sağına (+1) sıkıştırıyoruz!
+                tabControl1.TabPages.Insert(anaPanelIndex + 1, sekmeStok);
             }
             else
             {
                 sekmeStok.Controls.Clear();
+
+                // Eğer sekme zaten varsa ama yanlışlıkla sona gittiyse, onu koparıp Ana Panel'in yanına taşıyoruz
+                tabControl1.TabPages.Remove(sekmeStok);
+                tabControl1.TabPages.Insert(anaPanelIndex + 1, sekmeStok);
             }
 
             Panel pnlStokUst = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(45, 52, 54) };
@@ -9978,7 +10058,6 @@ namespace TamgaApp
             sekmeStok.Controls.Add(tabStokPivotlar);
             sekmeStok.Controls.Add(pnlStokUst);
 
-            // Açılışta kayıtlı raporları diskten çek ve SQL'i çalıştırıp ekrana doldur
             StokHafizaYukle();
         }
 
