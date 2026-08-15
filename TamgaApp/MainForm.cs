@@ -250,7 +250,7 @@ namespace TamgaApp
             SayimSisteminiHazirla();
             YaziciAyarlariniYukle();
             OtomatikPortBaglantisiBaslat();
-            EkranEsnekliginiAyarla();
+            TabletModunuAktifEt();
             TablolariJiletGibiYap();
             YeniNesilSevkiyatSisteminiKur();
             KlasorAyarlariniEkranaGetir();
@@ -260,6 +260,7 @@ namespace TamgaApp
             SekmeleriModernlestir();  // (Sekmeleri jilet gibi yapar)
 
             YardimSekmesiniKur();     // 👈 İŞTE SADECE BU SATIRI EKLİYORSUN
+            StokSisteminiKur();
 
             // Tasarım Ekranı Özellikler Paneli (Properties) Varsayılan Ayarları
             numPropFontSize.Minimum = 6;
@@ -823,6 +824,140 @@ namespace TamgaApp
                 }
             }
             catch { }
+        }
+
+        #endregion
+
+        #region 📱 02.9 ULTRA RESPONSIVE (TABLET / DEV EKRAN) MOTORU
+
+        // Tasarımın yapıldığı orijinal boyutlar (Bunu kendi tasarım boyutuna göre değiştirebilirsin)
+        private const float TASARIM_GENISLIK = 1400f;
+        private const float TASARIM_YUKSEKLIK = 850f;
+
+        public void AkilliOlceklendirmeBaslat()
+        {
+            try
+            {
+                // Mevcut cihazın çalışma alanı (Görev çubuğu hariç net ekran boyutu)
+                Rectangle ekran = Screen.PrimaryScreen.WorkingArea;
+
+                // Eğer cihaz zaten tasarım boyutundaysa veya daha büyükse hiç yorma
+                if (ekran.Width >= TASARIM_GENISLIK && ekran.Height >= TASARIM_YUKSEKLIK)
+                {
+                    this.WindowState = FormWindowState.Maximized;
+                    return;
+                }
+
+                // Cihazın ekranı küçükse (Tablet vb.), küçülme oranını hesapla
+                float oranX = ekran.Width / TASARIM_GENISLIK;
+                float oranY = ekran.Height / TASARIM_YUKSEKLIK;
+
+                // Orantısız bozulmayı engellemek için en küçük küçülme oranını baz al
+                float sabitOran = Math.Min(oranX, oranY);
+
+                // Tüm formdaki nesneleri bu orana göre ezerek küçült!
+                NesneleriYenidenBoyutlandir(this, sabitOran);
+
+                // Formu ekrana tam oturt
+                this.Size = new Size((int)(TASARIM_GENISLIK * sabitOran), (int)(TASARIM_YUKSEKLIK * sabitOran));
+                this.StartPosition = FormStartPosition.CenterScreen;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Ölçeklendirme Hatası: " + ex.Message);
+            }
+        }
+
+        // Formdaki tüm nesneleri (Panel içindekiler, sekmelerdekiler dahil) matruşka gibi iç içe gezen YZ Motoru
+        private void NesneleriYenidenBoyutlandir(Control parent, float oran)
+        {
+            foreach (Control ctrl in parent.Controls)
+            {
+                // 1. Koordinatları ve Boyutları Küçült/Büyüt
+                ctrl.Left = (int)(ctrl.Left * oran);
+                ctrl.Top = (int)(ctrl.Top * oran);
+                ctrl.Width = (int)(ctrl.Width * oran);
+                ctrl.Height = (int)(ctrl.Height * oran);
+
+                // 2. Yazı Fontlarını Küçült (Bozulmasın diye minimum 6 punto koruması)
+                if (ctrl.Font != null)
+                {
+                    float yeniPunto = Math.Max(6f, ctrl.Font.Size * oran);
+                    ctrl.Font = new Font(ctrl.Font.FontFamily, yeniPunto, ctrl.Font.Style);
+                }
+
+                // Özel Nesne Düzeltmeleri
+                if (ctrl is TabControl tabControl)
+                {
+                    tabControl.ItemSize = new Size((int)(tabControl.ItemSize.Width * oran), (int)(tabControl.ItemSize.Height * oran));
+                }
+                else if (ctrl is DataGridView dgv)
+                {
+                    dgv.ColumnHeadersHeight = Math.Max(20, (int)(dgv.ColumnHeadersHeight * oran));
+                    dgv.RowTemplate.Height = Math.Max(18, (int)(dgv.RowTemplate.Height * oran));
+                }
+
+                // 3. Eğer bu nesnenin içinde başka nesneler varsa (Örn: Panel veya TabPage), onların içine de girip küçült
+                if (ctrl.Controls.Count > 0)
+                {
+                    NesneleriYenidenBoyutlandir(ctrl, oran);
+                }
+            }
+        }
+
+        #endregion
+
+        #region 📱 02.10 TABLET VE KÜÇÜK EKRAN (SIVI AKIŞ) RESPONSIVE MOTORU
+
+        public void TabletModunuAktifEt()
+        {
+            // Ekran genişliği 1400 pikselden (standart laptoptan) küçükse Tablet/Küçük Ekran motorunu devreye sok
+            if (Screen.PrimaryScreen.WorkingArea.Width <= 1400)
+            {
+                // Formdaki sadece buton ve kutulardan oluşan "sabit" panelleri sıvı akışa (Flow Layout) çeviriyoruz.
+                // İçinde Tablo (DataGridView) olan panellere dokunmuyoruz ki tabloların tam ekran özelliği bozulmasın.
+
+                PaneliSiviAkisaCevir(panel7);  // Sevkiyat Plan Üst Kontroller
+                PaneliSiviAkisaCevir(panel8);  // Sevkiyat Plan Sol Alt Butonlar
+                PaneliSiviAkisaCevir(panel9);  // Yeni Firma Ekleme
+                PaneliSiviAkisaCevir(panel10); // Yazdırma Ayarları
+                PaneliSiviAkisaCevir(panel11); // Firma Düzenleme
+                PaneliSiviAkisaCevir(panel12); // Manuel Etiket
+                PaneliSiviAkisaCevir(panel13); // Klasör Konumları Ayarı
+            }
+        }
+
+        // 🌟 SİHİRLİ DÖNÜŞTÜRÜCÜ: Sabit bir paneli alır, içindeki nesneleri ezmeden esnek (Responsive) hale getirir
+        private void PaneliSiviAkisaCevir(Panel pnl)
+        {
+            if (pnl == null || pnl.Controls.Count == 0) return;
+
+            // 1. Panelin içindeki tüm nesneleri (buton, yazı, kutu) ekrandaki Yukarıdan Aşağıya, Soldan Sağa duruş sırasına göre listele
+            var siraliNesneler = pnl.Controls.Cast<Control>()
+                                    .OrderBy(c => c.Top)
+                                    .ThenBy(c => c.Left)
+                                    .ToList();
+
+            // 2. Web sitesi mantığıyla çalışan Esnek Panel (FlowLayoutPanel) oluştur
+            FlowLayoutPanel flp = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true, // Eğer ekrana sığmazsa ezmek yerine aşağı kaydırma (Scroll) çubuğu çıkartır
+                Padding = new Padding(10), // Kenarlardan 10 piksel nefes boşluğu bırak
+                BackColor = pnl.BackColor // Orijinal panelin rengini koru
+            };
+
+            // 3. Sıralanmış nesneleri esnek panele taşı
+            foreach (Control ctrl in siraliNesneler)
+            {
+                // Nesneler birbirine yapışmasın diye etraflarına 5 piksellik koruma kalkanı koy
+                ctrl.Margin = new Padding(5, 5, 15, 10);
+                flp.Controls.Add(ctrl);
+            }
+
+            // 4. Eski sabit paneli boşalt ve yerine yeni esnek motoru yerleştir
+            pnl.Controls.Clear();
+            pnl.Controls.Add(flp);
         }
 
         #endregion
@@ -3918,11 +4053,14 @@ namespace TamgaApp
 
         #region 🧮 12.1 DESİ HESAPLAMA ÇEKİRDEĞİ
         // Kargo ve ambar standartlarına göre (En x Boy x Yükseklik / 3000) hacimsel ağırlık (Desi) hesaplar.
+        // Hane (basamak) sayısı serbesttir, sadece 3 parça olması yeterlidir.
         public double DesiHesapla(string ebatMetni)
         {
             try
             {
-                string[] carpanlar = ebatMetni.Split('*');
+                string temizMetin = ebatMetni.ToLower().Replace("x", "*").Replace("-", "*").Replace(" ", "*");
+                string[] carpanlar = temizMetin.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
+
                 if (carpanlar.Length == 3)
                 {
                     double en = Convert.ToDouble(carpanlar[0].Trim());
@@ -3956,7 +4094,7 @@ namespace TamgaApp
 
             // 2. PALET TABLOSU SÜTUN AYARLARI
             dgvPaletler.ColumnCount = 3;
-            dgvPaletler.Columns[0].Name = "Palet No"; dgvPaletler.Columns[0].ReadOnly = true;
+            dgvPaletler.Columns[0].Name = "Palet No"; dgvPaletler.Columns[0].ReadOnly = false; // 🌟 KİLİT AÇILDI! Artık "1. Kasa" vs. yazılabilir
             dgvPaletler.Columns[1].Name = "Ebatlar (En*Boy*Yük)";
             dgvPaletler.Columns[2].Name = "Desi"; dgvPaletler.Columns[2].ReadOnly = true; // Desi otomatik hesaplanacağı için elle müdahaleye kapalı
             dgvPaletler.AllowUserToAddRows = false;
@@ -3995,7 +4133,7 @@ namespace TamgaApp
             if (dgvPaletler != null) dgvPaletler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
         }
 
-        // 🌟 SAĞ TIK MENÜSÜ (GERİ AL VE DESİ DÜZENLE MOTORU)
+        // 🌟 SAĞ TIK MENÜSÜ (GERİ AL, DESİ DÜZENLE VE ADRES DÜZENLE MOTORU)
         private void dgvAmbarSonListe_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
         {
             // Sadece sağ tıka ve geçerli bir satıra (başlıklara değil) basıldıysa çalış
@@ -4009,19 +4147,20 @@ namespace TamgaApp
                 ContextMenuStrip sagTikMenu = new ContextMenuStrip();
                 sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
-                // 1. SEÇENEK: DESİ DÜZENLE
-                ToolStripMenuItem btnDuzenle = new ToolStripMenuItem("✏️ Toplam Desiyi Düzenle");
-                btnDuzenle.Click += (s, ev) =>
+                // =========================================================
+                // 1. SEÇENEK: PALET VE DESİ DÜZENLE
+                // =========================================================
+                ToolStripMenuItem btnDesiDuzenle = new ToolStripMenuItem("✏️ Palet ve Desiyi Düzenle");
+                btnDesiDuzenle.Click += (s, ev) =>
                 {
-                    // Hücredeki mevcut desiyi (Örn: "120 Ds.") al, içindeki yazıları temizleyip sadece rakamı bırak
+                    string mevcutPalet = dgvAmbarSonListe.Rows[e.RowIndex].Cells[6].Value?.ToString().Trim();
                     string mevcutDesi = dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value?.ToString().Replace("Ds.", "").Trim();
 
-                    // Düzenleme için şık, anlık bir popup form oluştur
                     Form frmInput = new Form
                     {
                         Width = 350,
-                        Height = 180,
-                        Text = "Desi Düzenle",
+                        Height = 250,
+                        Text = "Palet ve Desi Düzenle",
                         StartPosition = FormStartPosition.CenterParent,
                         FormBorderStyle = FormBorderStyle.FixedDialog,
                         MaximizeBox = false,
@@ -4030,29 +4169,99 @@ namespace TamgaApp
                         ShowIcon = false
                     };
 
-                    Label lbl = new Label { Left = 20, Top = 20, Text = "Yeni Toplam Desi Miktarını Girin:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-                    TextBox txtDesi = new TextBox { Left = 20, Top = 50, Width = 290, Font = new Font("Segoe UI", 12), Text = mevcutDesi };
-                    Button btnOnay = new Button { Text = "✅ GÜNCELLE", Left = 20, Top = 90, Width = 290, Height = 35, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+                    Label lblP = new Label { Left = 20, Top = 20, Text = "Palet Sayısı:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+                    TextBox txtPalet = new TextBox { Left = 130, Top = 18, Width = 170, Font = new Font("Segoe UI", 11), Text = mevcutPalet };
+
+                    Label lblD = new Label { Left = 20, Top = 60, Text = "Toplam Desi:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+                    TextBox txtDesi = new TextBox { Left = 130, Top = 58, Width = 170, Font = new Font("Segoe UI", 11), Text = mevcutDesi };
+
+                    Button btnOnay = new Button { Text = "✅ GÜNCELLE", Left = 20, Top = 120, Width = 280, Height = 45, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
 
                     btnOnay.Click += (senderObj, args) =>
                     {
-                        // Girilen veri gerçekten bir rakamsa güncelle
+                        dgvAmbarSonListe.Rows[e.RowIndex].Cells[6].Value = txtPalet.Text.Trim();
+
                         if (double.TryParse(txtDesi.Text.Trim(), out double yeniDesi))
-                        {
                             dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value = Math.Round(yeniDesi, 0) + " Ds.";
-                            frmInput.Close();
-                        }
-                        else MessageBox.Show("Lütfen geçerli bir rakam girin!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        else
+                            dgvAmbarSonListe.Rows[e.RowIndex].Cells[8].Value = txtDesi.Text.Trim() + " Ds.";
+
+                        frmInput.Close();
                     };
 
-                    // Enter tuşuna basınca direkt güncellesin (Fareye gerek kalmasın)
+                    // Enter tuşlarına basıldığında onaylasın
+                    txtPalet.KeyDown += (senderObj, args) => { if (args.KeyCode == Keys.Enter) { args.SuppressKeyPress = true; btnOnay.PerformClick(); } };
                     txtDesi.KeyDown += (senderObj, args) => { if (args.KeyCode == Keys.Enter) { args.SuppressKeyPress = true; btnOnay.PerformClick(); } };
 
-                    frmInput.Controls.Add(lbl); frmInput.Controls.Add(txtDesi); frmInput.Controls.Add(btnOnay);
+                    frmInput.Controls.Add(lblP); frmInput.Controls.Add(txtPalet);
+                    frmInput.Controls.Add(lblD); frmInput.Controls.Add(txtDesi);
+                    frmInput.Controls.Add(btnOnay);
                     frmInput.ShowDialog();
                 };
 
-                // 2. SEÇENEK: SİL (GERİ AL)
+                // =========================================================
+                // 2. SEÇENEK: ADRES VE İLETİŞİM DÜZENLE
+                // =========================================================
+                ToolStripMenuItem btnAdresDuzenle = new ToolStripMenuItem("🏠 Adres ve İletişim Düzenle");
+                btnAdresDuzenle.ForeColor = Color.DarkBlue;
+                btnAdresDuzenle.Click += (s, ev) =>
+                {
+                    var satir = dgvAmbarSonListe.Rows[e.RowIndex];
+
+                    Form frmAdres = new Form
+                    {
+                        Width = 400,
+                        Height = 380,
+                        Text = "Adres ve İletişim Düzenle",
+                        StartPosition = FormStartPosition.CenterParent,
+                        FormBorderStyle = FormBorderStyle.FixedDialog,
+                        MaximizeBox = false,
+                        MinimizeBox = false,
+                        BackColor = Color.WhiteSmoke,
+                        ShowIcon = false
+                    };
+
+                    Label lbl1 = new Label { Text = "Firma Adı:", Left = 20, Top = 20, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+                    TextBox txtFirma = new TextBox { Left = 120, Top = 18, Width = 240, Text = satir.Cells[1].Value?.ToString() };
+
+                    Label lbl2 = new Label { Text = "Adres:", Left = 20, Top = 60, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+                    TextBox txtAdres = new TextBox { Left = 120, Top = 58, Width = 240, Height = 60, Multiline = true, Text = satir.Cells[2].Value?.ToString() };
+
+                    Label lbl3 = new Label { Text = "İl / İlçe:", Left = 20, Top = 140, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+                    TextBox txtIl = new TextBox { Left = 120, Top = 138, Width = 240, Text = satir.Cells[3].Value?.ToString() };
+
+                    Label lbl4 = new Label { Text = "Telefon 1:", Left = 20, Top = 180, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+                    TextBox txtTel1 = new TextBox { Left = 120, Top = 178, Width = 240, Text = satir.Cells[4].Value?.ToString() };
+
+                    Label lbl5 = new Label { Text = "Telefon 2:", Left = 20, Top = 220, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+                    TextBox txtTel2 = new TextBox { Left = 120, Top = 218, Width = 240, Text = satir.Cells[5].Value?.ToString() };
+
+                    Button btnAdresOnay = new Button { Text = "✅ BİLGİLERİ GÜNCELLE", Left = 20, Top = 270, Width = 340, Height = 45, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+                    btnAdresOnay.Click += (senderObj, args) =>
+                    {
+                        satir.Cells[1].Value = txtFirma.Text.Trim();
+                        satir.Cells[2].Value = txtAdres.Text.Trim();
+                        satir.Cells[3].Value = txtIl.Text.Trim();
+                        satir.Cells[4].Value = txtTel1.Text.Trim();
+                        satir.Cells[5].Value = txtTel2.Text.Trim();
+
+                        frmAdres.Close();
+                    };
+
+                    frmAdres.Controls.Add(lbl1); frmAdres.Controls.Add(txtFirma);
+                    frmAdres.Controls.Add(lbl2); frmAdres.Controls.Add(txtAdres);
+                    frmAdres.Controls.Add(lbl3); frmAdres.Controls.Add(txtIl);
+                    frmAdres.Controls.Add(lbl4); frmAdres.Controls.Add(txtTel1);
+                    frmAdres.Controls.Add(lbl5); frmAdres.Controls.Add(txtTel2);
+                    frmAdres.Controls.Add(btnAdresOnay);
+
+                    frmAdres.ShowDialog();
+                };
+
+                // =========================================================
+                // 3. SEÇENEK: SİL (GERİ AL)
+                // =========================================================
                 ToolStripMenuItem btnSil = new ToolStripMenuItem("❌ Seçili Satırı Sil (Geri Al)");
                 btnSil.ForeColor = Color.DarkRed;
                 btnSil.Click += (s, ev) =>
@@ -4061,15 +4270,17 @@ namespace TamgaApp
                     btnAmbarSil_Click(null, null);
                 };
 
-                // Menüye butonları ekle ve araya şık bir ayırıcı çizgi koy
-                sagTikMenu.Items.Add(btnDuzenle);
+                // Menüye butonları ekle ve araya şık ayırıcı çizgiler koy
+                sagTikMenu.Items.Add(btnDesiDuzenle);
+                sagTikMenu.Items.Add(btnAdresDuzenle);
                 sagTikMenu.Items.Add(new ToolStripSeparator());
                 sagTikMenu.Items.Add(btnSil);
 
-                // 🌟 RAM SIZINTISINI ÖNLEYEN ZIRH: Menü kapanınca kendini RAM'den yok etsin
+                // 🌟 ÇÖKMEYİ ÖNLEYEN ZIRH (Gecikmeli Silme)
                 sagTikMenu.Closed += (senderMenu, argsMenu) => { this.BeginInvoke(new Action(() => sagTikMenu.Dispose())); };
 
-                sagTikMenu.Show(Cursor.Position); // Zaten var olan kod
+                // Menüyü farenin tam ucunda (tıklanan yerde) göster
+                sagTikMenu.Show(Cursor.Position);
             }
         }
 
@@ -4128,7 +4339,7 @@ namespace TamgaApp
             if (dgvPaletler.ColumnCount == 0)
             {
                 dgvPaletler.ColumnCount = 3;
-                dgvPaletler.Columns[0].Name = "Palet No"; dgvPaletler.Columns[0].ReadOnly = true;
+                dgvPaletler.Columns[0].Name = "Palet No"; dgvPaletler.Columns[0].ReadOnly = false; // 🌟 KİLİT AÇILDI!
                 dgvPaletler.Columns[1].Name = "Ebatlar (En*Boy*Yük)";
                 dgvPaletler.Columns[2].Name = "Desi"; dgvPaletler.Columns[2].ReadOnly = true;
                 dgvPaletler.AllowUserToAddRows = false;
@@ -4140,6 +4351,7 @@ namespace TamgaApp
             {
                 for (int i = 1; i <= paletSayisi; i++)
                 {
+                    // Varsayılan olarak Palet yazar ama sen üstüne tıklayıp Kasa veya Koli yapabilirsin
                     dgvPaletler.Rows.Add($"{i}. PALET", "", "0 Ds.");
                 }
             }
@@ -4196,10 +4408,14 @@ namespace TamgaApp
             // Tüm palet satırlarını gez, ebatları ve desileri alt alta yazılacak şekilde birleştir
             foreach (DataGridViewRow prow in dgvPaletler.Rows)
             {
+                // 🌟 KULLANICININ YAZDIĞI ÖZEL İSMİ (KASA, PARÇA VB.) ÇEK
+                string ozelIsim = prow.Cells[0].Value?.ToString() ?? "";
+
                 string ebat = prow.Cells[1].Value?.ToString() ?? "";
                 string desiMetni = prow.Cells[2].Value?.ToString() ?? "0 Ds.";
 
-                olculerListesi.Add($"{ebat} ({desiMetni})"); // Örn: 080*120*150 (120 Ds.)
+                // Özel isimle birlikte listeye ekle
+                olculerListesi.Add($"{ozelIsim}: {ebat} ({desiMetni})"); // Örn: 1. KASA: 80*120*150 (120 Ds.)
                 toplamDesi += DesiHesapla(ebat);
             }
 
@@ -4801,24 +5017,13 @@ namespace TamgaApp
 
         #region 🔫 13.5 SEVKİYAT BARKOD OKUTMA VE PALETLEME
 
-        // Seçilen paletleri ve okutulan ürünleri GERÇEK Excel (.xlsx) formatında raporlar
+        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (SÜSSÜZ, TIMES NEW ROMAN)
         private void btnSevkRaporla_Click(object sender, EventArgs e)
         {
-            if (dgvMalzemeler.Rows.Count == 0)
-            {
-                MessageBox.Show("Raporlanacak aktif sevkiyat malzemesi bulunamadı!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            if (dgvPaletMatrisi.Columns.Count == 0)
-            {
-                MessageBox.Show("Oluşturulmuş palet matrisi bulunamadı!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (dgvMalzemeler.Rows.Count == 0 || dgvPaletMatrisi.Columns.Count == 0) return;
 
             try
             {
-                // 🌟 KLASÖRLEME AĞACI
                 string belgeNo = "SE";
                 foreach (DataGridViewRow r in dgvMalzemeler.Rows)
                 {
@@ -4828,28 +5033,24 @@ namespace TamgaApp
                     }
                 }
 
-                string belgeKontrol = belgeNo.Split('_')[0];
-                string turKlasoru = belgeKontrol.StartsWith("O1") ? "İhracat" : "Yurtiçi";
-                string yil = DateTime.Now.ToString("yyyy");
-                string ay = DateTime.Now.ToString("MM");
-                string gun = DateTime.Now.ToString("dd");
+                string turKlasoru = belgeNo.Split('_')[0].StartsWith("O1") ? "İhracat" : "Yurtiçi";
                 string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-
-                string klasor = Path.Combine(masaustu, "TamgaApp Sevkiyat Raporları", turKlasoru, yil, ay, gun);
+                string klasor = Path.Combine(masaustu, "TamgaApp Sevkiyat Raporları", turKlasoru, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
                 if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
 
                 string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
                 if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "Musteri";
+                string tamYol = Path.Combine(klasor, $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:HHmm}.xlsx");
 
-                string dosyaAdi = $"MatrisRaporu_{musteriTemiz}_{DateTime.Now:HHmm}.xlsx";
-                string tamYol = Path.Combine(klasor, dosyaAdi);
-
-                // 🌟 CLOSEDXML KÜTÜPHANESİ İLE GERÇEK EXCEL DOSYASI OLUŞTURMA
                 using (var wb = new ClosedXML.Excel.XLWorkbook())
                 {
                     var ws = wb.Worksheets.Add("Sevkiyat Matrisi");
 
-                    // --- SÜTUN BAŞLIKLARI (Mükemmel Hizalama) ---
+                    // 🌟 SADECE TIMES NEW ROMAN VE SIFIR TASARIM ZIRHI
+                    ws.Style.Font.FontName = "Times New Roman";
+                    ws.Style.Font.FontSize = 11;
+
+                    // --- SÜTUN BAŞLIKLARI ---
                     ws.Cell(1, 1).Value = "Müşteri Adı";
                     ws.Cell(1, 2).Value = "Belge No";
                     ws.Cell(1, 3).Value = "Malzeme Kodu";
@@ -4860,152 +5061,57 @@ namespace TamgaApp
                     int colIndex = 7;
                     foreach (DataGridViewColumn col in dgvPaletMatrisi.Columns)
                     {
-                        string paletAdi = col.HeaderText.Replace(". Palet", "").Replace("Palet_", "P ");
-                        ws.Cell(1, colIndex).Value = paletAdi;
-
-                        // Palet başlıklarını dikey (90 derece) yap
-                        ws.Cell(1, colIndex).Style.Alignment.TextRotation = 90;
+                        ws.Cell(1, colIndex).Value = col.HeaderText.Replace(". Palet", "").Replace("Palet_", "P ");
                         colIndex++;
                     }
 
-                    // --- BAŞLIK TASARIMINI (STİLİNİ) AYARLA ---
-                    var headerRange = ws.Range(1, 1, 1, colIndex - 1);
-                    headerRange.Style.Font.Bold = true;
-                    headerRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGray;
-                    headerRange.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
-                    headerRange.Style.Border.InsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
-                    headerRange.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                    headerRange.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
-                    ws.Row(1).Height = 45;
-
-                    // --- SÜTUN GENİŞLİKLERİNİ AYARLA ---
-                    ws.Column(1).Width = 18;
-                    ws.Column(2).Width = 12;
-                    ws.Column(3).Width = 16;
-                    ws.Column(4).Width = 35;
-                    ws.Column(5).Width = 25;
-                    ws.Column(6).Width = 6;
-                    for (int c = 7; c < colIndex; c++) ws.Column(c).Width = 5;
-
-                    // --- VERİLERİ FİLTRELE (🌟 SADECE OKUTULANLARI AL ZIRHI) ---
                     var gecerliSatirlar = dgvMalzemeler.Rows.Cast<DataGridViewRow>()
-                        .Where(r => !r.IsNewRow
-                                 && r.Cells["Malzeme Kodu"].Value != null
-                                 && !string.IsNullOrWhiteSpace(r.Cells["Malzeme Kodu"].Value.ToString())
-                                 && Convert.ToInt32(r.Cells["Okutulan"].Value ?? 0) > 0)
-                        .ToList();
-
-                    var grupluSatirlar = gecerliSatirlar.GroupBy(r => r.Cells["Belge No"].Value?.ToString().Trim() ?? "BİLİNMEYEN").ToList();
+                        .Where(r => !r.IsNewRow && r.Cells["Malzeme Kodu"].Value != null && Convert.ToInt32(r.Cells["Okutulan"].Value ?? 0) > 0).ToList();
 
                     int satir = 2;
-
-                    // --- VERİLERİ EXCEL'E DÖK ---
-                    foreach (var grup in grupluSatirlar)
+                    foreach (var urunSatiri in gecerliSatirlar)
                     {
-                        int grupBaslangic = satir;
-                        int satirSayisi = grup.Count();
+                        string bNo = urunSatiri.Cells["Belge No"].Value?.ToString().Trim() ?? "";
+                        string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
+                        string aciklama = urunSatiri.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
+                        int.TryParse(urunSatiri.Cells["Okutulan"].Value?.ToString(), out int okutulanAdet);
 
-                        foreach (DataGridViewRow urunSatiri in grup)
+                        ws.Cell(satir, 1).Value = txtMusteriAdi.Text.Trim();
+                        ws.Cell(satir, 2).Value = bNo;
+                        ws.Cell(satir, 3).Value = malzemeKodu;
+                        ws.Cell(satir, 4).Value = urunSatiri.Cells["Malzeme Adı"].Value?.ToString().Trim() ?? "";
+                        ws.Cell(satir, 5).Value = aciklama;
+                        ws.Cell(satir, 6).Value = okutulanAdet;
+
+                        // Palet Dağılımı
+                        int pCol = 7;
+                        for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
                         {
-                            string musteriAdi = txtMusteriAdi.Text.Trim();
-                            string bNo = grup.Key;
-                            string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
-                            string malzemeAdi = urunSatiri.Cells["Malzeme Adı"].Value?.ToString().Trim() ?? "";
-                            string aciklama = urunSatiri.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
-
-                            // 🌟 DİKKAT: Excel'deki Adet sütununa Sipariş değil, Okutulan (Sevk Edilen) rakamı basıyoruz
-                            int.TryParse(urunSatiri.Cells["Okutulan"].Value?.ToString(), out int okutulanAdet);
-
-                            if (satir == grupBaslangic)
+                            int palettekiMiktar = 0;
+                            foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
                             {
-                                ws.Cell(satir, 1).Value = musteriAdi;
-                                ws.Cell(satir, 2).Value = bNo;
-                            }
-
-                            ws.Cell(satir, 3).Value = malzemeKodu;
-                            ws.Cell(satir, 4).Value = malzemeAdi;
-                            ws.Cell(satir, 5).Value = aciklama;
-                            ws.Cell(satir, 6).Value = okutulanAdet;
-
-                            ws.Cell(satir, 3).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                            ws.Cell(satir, 6).Style.Font.Bold = true;
-                            ws.Cell(satir, 6).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-
-                            // 🌟 KUSURSUZ PALET DAĞILIMI ZIRHI 🌟
-                            int pCol = 7;
-                            for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
-                            {
-                                int palettekiMiktar = 0;
-                                foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                                if (paletSatiri.Cells[j].Value != null)
                                 {
-                                    if (paletSatiri.Cells[j].Value != null)
+                                    string hucre = paletSatiri.Cells[j].Value.ToString();
+                                    if (hucre.Contains(malzemeKodu) && hucre.Contains(bNo) && (string.IsNullOrWhiteSpace(aciklama) || hucre.Contains(aciklama)))
                                     {
-                                        string hucre = paletSatiri.Cells[j].Value.ToString();
-
-                                        // Sadece Kodu, Belgesi ve Rengi (Açıklaması) aynı olanları topla!
-                                        if (hucre.Contains(malzemeKodu) && hucre.Contains(bNo))
-                                        {
-                                            if (string.IsNullOrWhiteSpace(aciklama) || hucre.Contains(aciklama))
-                                            {
-                                                string[] parcalar = hucre.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
-                                                if (parcalar.Length == 2)
-                                                {
-                                                    int.TryParse(parcalar[1], out int adetParca);
-                                                    palettekiMiktar += adetParca;
-                                                }
-                                            }
-                                        }
+                                        string[] parcalar = hucre.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
+                                        if (parcalar.Length == 2) { int.TryParse(parcalar[1], out int adetParca); palettekiMiktar += adetParca; }
                                     }
                                 }
-
-                                if (palettekiMiktar > 0)
-                                {
-                                    ws.Cell(satir, pCol).Value = palettekiMiktar;
-                                    ws.Cell(satir, pCol).Style.Font.Bold = true;
-                                    ws.Cell(satir, pCol).Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                                }
-                                pCol++;
                             }
-                            satir++;
+                            if (palettekiMiktar > 0) ws.Cell(satir, pCol).Value = palettekiMiktar;
+                            pCol++;
                         }
-
-                        // 🌟 MÜŞTERİ ADI VE BELGE NO HÜCRELERİNİ BİRLEŞTİR (MERGE)
-                        if (satirSayisi > 1)
-                        {
-                            var musteriMerge = ws.Range(grupBaslangic, 1, satir - 1, 1);
-                            musteriMerge.Merge();
-                            musteriMerge.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
-                            musteriMerge.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                            musteriMerge.Style.Font.Bold = true;
-
-                            var belgeMerge = ws.Range(grupBaslangic, 2, satir - 1, 2);
-                            belgeMerge.Merge();
-                            belgeMerge.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
-                            belgeMerge.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Center;
-                            belgeMerge.Style.Font.Bold = true;
-                        }
+                        satir++;
                     }
-
-                    // --- TÜM VERİLERE ÇERÇEVE ÇİZ ---
-                    if (satir > 2)
-                    {
-                        var dataRange = ws.Range(2, 1, satir - 1, colIndex - 1);
-                        dataRange.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
-                        dataRange.Style.Border.InsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
-                        dataRange.Style.Alignment.Vertical = ClosedXML.Excel.XLAlignmentVerticalValues.Center;
-                        dataRange.Style.Alignment.WrapText = true;
-                    }
-
+                    ws.Columns().AdjustToContents();
                     wb.SaveAs(tamYol);
                 }
-
-                MessageBox.Show($"Gerçek Excel (.xlsx) Raporu başarıyla oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Saf Excel (.xlsx) Raporu oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Rapor oluşturulurken hata oluştu. Dosya başka bir programda açık olabilir.\nDetay: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error); }
         }
 
         // 🌟 OTOMATİK BARKOD YÖNLENDİRİCİ ZIRHI (Mıknatıs Motoru)
@@ -6317,7 +6423,7 @@ namespace TamgaApp
             if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
             // Dosya ismini tarih, saat ve rapor adı kombinasyonuyla eşsiz hale getir (Örn: 2026-07-23_1430_Sayim.csv)
-            string dosyaAdi = $"{DateTime.Now:yyyy-MM-dd_HHmm}_{raporIsmi}.xls";
+            string dosyaAdi = $"{DateTime.Now:yyyy-MM-dd_HHmm}_{raporIsmi}.csv";
             string tamYol = Path.Combine(anaYol, dosyaAdi);
 
             // Verileri Excel ve notepad ile uyumlu olacak şekilde UTF8 formatında satır satır yaz dök
@@ -8103,20 +8209,28 @@ namespace TamgaApp
                     try
                     {
                         // 🌟 1. DURUM: Araya herhangi bir işaret konduysa (*, x, - veya boşluk)
+                        // Kural: Kaç haneli olursa olsun tam 3 sayı (En, Boy, Yük) girilmesi şarttır!
                         if (girdi.Contains("*") || girdi.Contains("x") || girdi.Contains(" ") || girdi.Contains("-"))
                         {
                             girdi = girdi.Replace("x", "*").Replace(" ", "*").Replace("-", "*");
                             string[] parcalar = girdi.Split(new char[] { '*' }, StringSplitOptions.RemoveEmptyEntries);
 
+                            // Sadece 3 parça varsa işlemi yap (Hane sayısı önemli değil)
                             if (parcalar.Length == 3)
                             {
-                                double en = Convert.ToDouble(parcalar[0]);
-                                double boy = Convert.ToDouble(parcalar[1]);
-                                double yukseklik = Convert.ToDouble(parcalar[2]);
-                                desi = (en * boy * yukseklik) / 3000.0;
+                                if (double.TryParse(parcalar[0].Trim(), out double en) &&
+                                    double.TryParse(parcalar[1].Trim(), out double boy) &&
+                                    double.TryParse(parcalar[2].Trim(), out double yuk))
+                                {
+                                    desi = (en * boy * yuk) / 3000.0;
 
-                                // Kutuyu da jilet gibi formata geri çevir
-                                dgvPaletler.Rows[e.RowIndex].Cells[1].Value = $"{en}*{boy}*{yukseklik}";
+                                    // Kutuyu da jilet gibi formata geri çevir (Örn: 2x123x23 yazdıysa 2*123*23 yapar)
+                                    dgvPaletler.Rows[e.RowIndex].Cells[1].Value = $"{en}*{boy}*{yuk}";
+                                }
+                            }
+                            else
+                            {
+                                MessageBox.Show("Lütfen ölçüleri 'En x Boy x Yükseklik' formatında tam 3 parça olarak girin! (Örn: 10x20x30)", "Format Hatası", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                             }
                         }
                         // 🌟 2. DURUM: Dümdüz bitişik rakam yazıldıysa (Örn: 6510012, 80120150)
@@ -9604,52 +9718,8 @@ namespace TamgaApp
             // ====================================================================
             btnAmbarRapor.Click += async (s, ev) =>
             {
-                System.Text.StringBuilder html = new System.Text.StringBuilder();
-                html.AppendLine("<html><head><meta charset='utf-8'><style>");
-                html.AppendLine("@page { size: A4 landscape; margin: 10mm; }");
-                html.AppendLine("body { font-family: 'Calibri', Arial, sans-serif; font-size: 11px; }");
-                html.AppendLine("table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }");
-                html.AppendLine("th, td { border: 1.5px solid black; padding: 4px 6px; }");
-                html.AppendLine("th { background-color: #FFFF00; font-weight: bold; text-align: center; font-size: 12px; }");
-                html.AppendLine(".adres-hucresi { font-size: 10px; max-width: 300px; }");
-                html.AppendLine(".sari-bg { background-color: #FFFF00; font-weight: bold; text-align: center; }");
-                html.AppendLine(".sofor-tablo { width: 350px; font-weight: bold; font-size: 12px; margin-top: 30px; }");
-                html.AppendLine(".sofor-tablo th { background-color: transparent; text-align: left; width: 100px; }");
-                html.AppendLine("</style></head><body>");
-
-                html.AppendLine("<table><tr>");
-                html.AppendLine("<th style='width: 25%;'>FİRMA</th>");
-                html.AppendLine("<th style='width: 35%;'>ADRES</th>");
-
-                for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>{i}. PALET DESİ</th>");
-
-                html.AppendLine("<th>PALET ADETİ</th>");
-                html.AppendLine("</tr>");
-
-                foreach (DataGridViewRow r in dgvKonsolide.Rows)
-                {
-                    html.AppendLine("<tr>");
-                    html.AppendLine($"<td><b>{r.Cells["Firma"].Value}</b></td>");
-                    html.AppendLine($"<td class='adres-hucresi'>{r.Cells["Adres"].Value}</td>");
-
-                    for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
-
-                    html.AppendLine($"<td class='sari-bg'>{r.Cells["Adet"].Value}</td>");
-                    html.AppendLine("</tr>");
-                }
-
-                html.AppendLine("</table>");
-                html.AppendLine("<table class='sofor-tablo'>");
-                html.AppendLine($"<tr><th>ŞOFÖR</th><td>: {txtSofor.Text.Trim()}</td></tr>");
-                html.AppendLine($"<tr><th>PLAKA</th><td>: {txtPlaka.Text.Trim()}</td></tr>");
-                html.AppendLine($"<tr><th>TELEFON</th><td>: {txtTelefon.Text.Trim()}</td></tr>");
-                html.AppendLine("</table>");
-                html.AppendLine("</body></html>");
-
-                // 🌟 EXCEL KAYIT YÖNLENDİRMESİ 🌟
                 if (chkExcelKaydet.Checked)
                 {
-                    // 1. Tablodaki Toplam Palet Sayısını Hesapla
                     int toplamPaletSayisi = 0;
                     foreach (DataGridViewRow r in dgvKonsolide.Rows)
                     {
@@ -9658,31 +9728,95 @@ namespace TamgaApp
                         if (int.TryParse(adetStr, out int p)) toplamPaletSayisi += p;
                     }
 
-                    // 2. Klasör Ağacını (Masaüstü > Tamamlanan Sevkiyatlar > Ambar > Yıl > Ay > Gün) Oluştur
-                    string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                    string yil = DateTime.Now.ToString("yyyy");
-                    string ay = DateTime.Now.ToString("MM");
-                    string gun = DateTime.Now.ToString("dd");
-
-                    string klasorYolu = Path.Combine(masaustu, "TamgaApp Tamamlanan Sevkiyatlar", "Ambar", yil, ay, gun);
+                    string klasorYolu = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Tamamlanan Sevkiyatlar", "Ambar", DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
                     if (!Directory.Exists(klasorYolu)) Directory.CreateDirectory(klasorYolu);
 
-                    // 3. Dosya Adını Şablonuna Göre Ayarla (Örn: 17.07.2026 AMBAR YÜKLEMESİ 10 PALET.xls)
-                    string dosyaAdi = $"{DateTime.Now:dd.MM.yyyy} AMBAR YÜKLEMESİ {toplamPaletSayisi} PALET.xls";
-                    string tamYol = Path.Combine(klasorYolu, dosyaAdi);
+                    string tamYol = Path.Combine(klasorYolu, $"{DateTime.Now:dd.MM.yyyy} AMBAR YÜKLEMESİ {toplamPaletSayisi} PALET.xlsx");
 
-                    // 4. Excel'i Arka Planda Sessizce Kaydet
-                    string excelHtml = html.ToString().Replace("<html>", "<html xmlns:x=\"urn:schemas-microsoft-com:office:excel\">");
-                    System.IO.File.WriteAllText(tamYol, excelHtml, new System.Text.UTF8Encoding(true));
+                    using (var wb = new ClosedXML.Excel.XLWorkbook())
+                    {
+                        var ws = wb.Worksheets.Add("Ambar Raporu");
+                        ws.Style.Font.FontName = "Times New Roman";
+                        ws.Style.Font.FontSize = 11;
 
-                    MessageBox.Show($"Sevk Kontrol Raporu Excel formatında otomatik olarak kaydedildi!\n\nKayıt Yeri: {tamYol}", "Otomatik Excel Kaydı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ws.Cell(1, 1).Value = "FİRMA";
+                        ws.Cell(1, 2).Value = "ADRES";
+                        int colIndex = 3;
+                        for (int i = 1; i <= maxPalet; i++) { ws.Cell(1, colIndex).Value = $"{i}. PALET DESİ"; colIndex++; }
+                        ws.Cell(1, colIndex).Value = "PALET ADETİ";
 
-                    // Dosyayı otomatik aç
+                        int satir = 2;
+                        foreach (DataGridViewRow r in dgvKonsolide.Rows)
+                        {
+                            if (r.IsNewRow) continue;
+                            ws.Cell(satir, 1).Value = r.Cells["Firma"].Value?.ToString();
+                            ws.Cell(satir, 2).Value = r.Cells["Adres"].Value?.ToString();
+
+                            int cIdx = 3;
+                            for (int i = 1; i <= maxPalet; i++) { ws.Cell(satir, cIdx).Value = r.Cells[$"Palet{i}"].Value?.ToString(); cIdx++; }
+                            ws.Cell(satir, cIdx).Value = r.Cells["Adet"].Value?.ToString();
+                            satir++;
+                        }
+
+                        satir += 2;
+                        ws.Cell(satir, 1).Value = "ŞOFÖR:"; ws.Cell(satir, 2).Value = txtSofor.Text.Trim(); satir++;
+                        ws.Cell(satir, 1).Value = "PLAKA:"; ws.Cell(satir, 2).Value = txtPlaka.Text.Trim(); satir++;
+                        ws.Cell(satir, 1).Value = "TELEFON:"; ws.Cell(satir, 2).Value = txtTelefon.Text.Trim();
+
+                        ws.Columns().AdjustToContents();
+                        wb.SaveAs(tamYol);
+                    }
+
+                    MessageBox.Show($"Saf Excel (.xlsx) olarak kaydedildi!\n\nKayıt Yeri: {tamYol}", "Otomatik Excel Kaydı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
                 }
                 else
                 {
-                    await HtmlYaziciMotorunuCalistir(html.ToString(), "Sevk Kontrol Raporu");
+                    // 🌟 EXCEL TİKLİ DEĞİLSE ÇALIŞACAK YAZICI (HTML) MOTORU BURADA
+                    System.Text.StringBuilder html = new System.Text.StringBuilder();
+                    html.AppendLine("<html><head><meta charset='utf-8'><style>");
+                    html.AppendLine("@page { size: A4 landscape; margin: 10mm; }");
+                    html.AppendLine("body { font-family: 'Calibri', Arial, sans-serif; font-size: 11px; }");
+                    html.AppendLine("table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }");
+                    html.AppendLine("th, td { border: 1.5px solid black; padding: 4px 6px; }");
+                    html.AppendLine("th { background-color: #FFFF00; font-weight: bold; text-align: center; font-size: 12px; }");
+                    html.AppendLine(".adres-hucresi { font-size: 10px; max-width: 300px; }");
+                    html.AppendLine(".sari-bg { background-color: #FFFF00; font-weight: bold; text-align: center; }");
+                    html.AppendLine(".sofor-tablo { width: 350px; font-weight: bold; font-size: 12px; margin-top: 30px; }");
+                    html.AppendLine(".sofor-tablo th { background-color: transparent; text-align: left; width: 100px; }");
+                    html.AppendLine("</style></head><body>");
+
+                    html.AppendLine("<table><tr>");
+                    html.AppendLine("<th style='width: 25%;'>FİRMA</th>");
+                    html.AppendLine("<th style='width: 35%;'>ADRES</th>");
+
+                    for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>{i}. PALET DESİ</th>");
+
+                    html.AppendLine("<th>PALET ADETİ</th>");
+                    html.AppendLine("</tr>");
+
+                    foreach (DataGridViewRow r in dgvKonsolide.Rows)
+                    {
+                        if (r.IsNewRow) continue;
+                        html.AppendLine("<tr>");
+                        html.AppendLine($"<td><b>{r.Cells["Firma"].Value}</b></td>");
+                        html.AppendLine($"<td class='adres-hucresi'>{r.Cells["Adres"].Value}</td>");
+
+                        for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
+
+                        html.AppendLine($"<td class='sari-bg'>{r.Cells["Adet"].Value}</td>");
+                        html.AppendLine("</tr>");
+                    }
+
+                    html.AppendLine("</table>");
+                    html.AppendLine("<table class='sofor-tablo'>");
+                    html.AppendLine($"<tr><th>ŞOFÖR</th><td>: {txtSofor.Text.Trim()}</td></tr>");
+                    html.AppendLine($"<tr><th>PLAKA</th><td>: {txtPlaka.Text.Trim()}</td></tr>");
+                    html.AppendLine($"<tr><th>TELEFON</th><td>: {txtTelefon.Text.Trim()}</td></tr>");
+                    html.AppendLine("</table>");
+                    html.AppendLine("</body></html>");
+
+                    await HtmlYaziciMotorunuCalistir(html.ToString(), "Ambar Raporu");
                 }
             };
 
@@ -9691,53 +9825,77 @@ namespace TamgaApp
             // ====================================================================
             btnSevkKontrol.Click += async (s, ev) =>
             {
-                System.Text.StringBuilder html = new System.Text.StringBuilder();
-                html.AppendLine("<html><head><meta charset='utf-8'><style>");
-                html.AppendLine("@page { size: A4 portrait; margin: 10mm; }");
-                html.AppendLine("body { font-family: 'Times New Roman', serif; font-size: 13px; }");
-                html.AppendLine("table { width: 100%; border-collapse: collapse; }");
-                html.AppendLine("th, td { border: 1.5px solid black; padding: 6px; text-align: center; }");
-                html.AppendLine("th { font-weight: bold; font-size: 14px; background-color: #F0F0F0; }");
-                html.AppendLine(".sol-hizala { text-align: left; font-weight: bold; }");
-                html.AppendLine("</style></head><body>");
-
-                html.AppendLine("<table><tr>");
-                html.AppendLine("<th style='width: 45%;'>MÜŞTERİ ADI</th>");
-                html.AppendLine("<th style='width: 15%;'>PALET ADETİ</th>");
-
-                for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>DESİ</th>");
-
-                html.AppendLine("</tr>");
-
-                foreach (DataGridViewRow r in dgvKonsolide.Rows)
-                {
-                    html.AppendLine("<tr>");
-                    html.AppendLine($"<td class='sol-hizala'>{r.Cells["Firma"].Value}</td>");
-                    html.AppendLine($"<td>{r.Cells["Adet"].Value}</td>");
-
-                    for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
-
-                    html.AppendLine("</tr>");
-                }
-
-                html.AppendLine("</table></body></html>");
-
-                // 🌟 EXCEL KAYIT YÖNLENDİRMESİ 🌟
                 if (chkExcelKaydet.Checked)
                 {
-                    using (SaveFileDialog sfd = new SaveFileDialog { Filter = "Excel Dosyası|*.xls", FileName = $"Sevk_Kontrol_{DateTime.Now:ddMMyyyy_HHmm}.xls" })
+                    using (SaveFileDialog sfd = new SaveFileDialog { Filter = "Excel Dosyası|*.xlsx", FileName = $"Sevk_Kontrol_{DateTime.Now:ddMMyyyy_HHmm}.xlsx" })
                     {
                         if (sfd.ShowDialog() == DialogResult.OK)
                         {
-                            string excelHtml = html.ToString().Replace("<html>", "<html xmlns:x=\"urn:schemas-microsoft-com:office:excel\">");
-                            System.IO.File.WriteAllText(sfd.FileName, excelHtml, new System.Text.UTF8Encoding(true));
-                            MessageBox.Show("Sevk Kontrol Excel formatında başarıyla kaydedildi!", "Excel'e Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            using (var wb = new ClosedXML.Excel.XLWorkbook())
+                            {
+                                var ws = wb.Worksheets.Add("Sevk Kontrol");
+                                ws.Style.Font.FontName = "Times New Roman";
+                                ws.Style.Font.FontSize = 11;
+
+                                ws.Cell(1, 1).Value = "MÜŞTERİ ADI";
+                                ws.Cell(1, 2).Value = "PALET ADETİ";
+                                int colIndex = 3;
+                                for (int i = 1; i <= maxPalet; i++) { ws.Cell(1, colIndex).Value = "DESİ"; colIndex++; }
+
+                                int satir = 2;
+                                foreach (DataGridViewRow r in dgvKonsolide.Rows)
+                                {
+                                    if (r.IsNewRow) continue;
+                                    ws.Cell(satir, 1).Value = r.Cells["Firma"].Value?.ToString();
+                                    ws.Cell(satir, 2).Value = r.Cells["Adet"].Value?.ToString();
+                                    int cIdx = 3;
+                                    for (int i = 1; i <= maxPalet; i++) { ws.Cell(satir, cIdx).Value = r.Cells[$"Palet{i}"].Value?.ToString(); cIdx++; }
+                                    satir++;
+                                }
+
+                                ws.Columns().AdjustToContents();
+                                wb.SaveAs(sfd.FileName);
+                            }
+                            MessageBox.Show("Saf Excel (.xlsx) olarak kaydedildi!", "Aktarıldı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(sfd.FileName) { UseShellExecute = true });
                         }
                     }
                 }
                 else
                 {
+                    // 🌟 EXCEL TİKLİ DEĞİLSE ÇALIŞACAK YAZICI (HTML) MOTORU BURADA
+                    System.Text.StringBuilder html = new System.Text.StringBuilder();
+                    html.AppendLine("<html><head><meta charset='utf-8'><style>");
+                    html.AppendLine("@page { size: A4 portrait; margin: 10mm; }");
+                    html.AppendLine("body { font-family: 'Times New Roman', serif; font-size: 13px; }");
+                    html.AppendLine("table { width: 100%; border-collapse: collapse; }");
+                    html.AppendLine("th, td { border: 1.5px solid black; padding: 6px; text-align: center; }");
+                    html.AppendLine("th { font-weight: bold; font-size: 14px; background-color: #F0F0F0; }");
+                    html.AppendLine(".sol-hizala { text-align: left; font-weight: bold; }");
+                    html.AppendLine("</style></head><body>");
+
+                    html.AppendLine("<table><tr>");
+                    html.AppendLine("<th style='width: 45%;'>MÜŞTERİ ADI</th>");
+                    html.AppendLine("<th style='width: 15%;'>PALET ADETİ</th>");
+
+                    for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<th>DESİ</th>");
+
+                    html.AppendLine("</tr>");
+
+                    foreach (DataGridViewRow r in dgvKonsolide.Rows)
+                    {
+                        if (r.IsNewRow) continue;
+                        html.AppendLine("<tr>");
+                        html.AppendLine($"<td class='sol-hizala'>{r.Cells["Firma"].Value}</td>");
+                        html.AppendLine($"<td>{r.Cells["Adet"].Value}</td>");
+
+                        for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
+
+                        html.AppendLine("</tr>");
+                    }
+
+                    html.AppendLine("</table></body></html>");
+
                     await HtmlYaziciMotorunuCalistir(html.ToString(), "Sevk Kontrol Raporu");
                 }
             };
@@ -9766,6 +9924,309 @@ namespace TamgaApp
             frmYazdir.ShowDialog();
         }
 
+        #endregion
+
+        // =========================================================================================
+
+        #region 📦 27. STOK VE PİVOT YÖNETİMİ (CANLI SQL ENTEGRASYONLU)
+
+        private TabControl tabStokPivotlar;
+
+        // 🌟 1. VERİ MODELİ (Hafızaya kazınacak SQL ayarları)
+        public class StokRaporAyari
+        {
+            public string RaporAdi { get; set; }
+            public string BaglantiDizesi { get; set; }
+            public string SqlSorgusu { get; set; }
+        }
+
+        // 🌟 2. STOK SEKME VE ARAYÜZ KURULUMU
+        public void StokSisteminiKur()
+        {
+            TabPage sekmeStok = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "📦 Stok");
+            if (sekmeStok == null)
+            {
+                sekmeStok = new TabPage("📦 Stok");
+                sekmeStok.BackColor = Color.WhiteSmoke;
+                tabControl1.TabPages.Add(sekmeStok);
+            }
+            else
+            {
+                sekmeStok.Controls.Clear();
+            }
+
+            Panel pnlStokUst = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(45, 52, 54) };
+
+            Button btnYeniEkle = new Button { Text = "➕ Yeni SQL Raporu Ekle", Location = new Point(20, 15), Size = new Size(250, 40), BackColor = Color.MediumSeaGreen, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnTumuSil = new Button { Text = "❌ Tüm Raporları Sil", Location = new Point(280, 15), Size = new Size(200, 40), BackColor = Color.DarkRed, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+
+            btnYeniEkle.Click += BtnStokSqlEkle_Click;
+            btnTumuSil.Click += BtnStokTumuSil_Click;
+
+            pnlStokUst.Controls.Add(btnYeniEkle);
+            pnlStokUst.Controls.Add(btnTumuSil);
+
+            tabStokPivotlar = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), ItemSize = new Size(150, 35), SizeMode = TabSizeMode.Fixed };
+
+            tabStokPivotlar.DrawMode = TabDrawMode.OwnerDrawFixed;
+            tabStokPivotlar.DrawItem += (s, e) =>
+            {
+                e.Graphics.FillRectangle(new SolidBrush(e.State == DrawItemState.Selected ? Color.Teal : Color.LightGray), e.Bounds);
+                e.Graphics.DrawString(tabStokPivotlar.TabPages[e.Index].Text, new Font("Segoe UI", 10, FontStyle.Bold), new SolidBrush(e.State == DrawItemState.Selected ? Color.White : Color.Black), e.Bounds, new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
+            };
+
+            sekmeStok.Controls.Add(tabStokPivotlar);
+            sekmeStok.Controls.Add(pnlStokUst);
+
+            // Açılışta kayıtlı raporları diskten çek ve SQL'i çalıştırıp ekrana doldur
+            StokHafizaYukle();
+        }
+
+        // 🌟 3. DİNAMİK SQL GİRİŞ EKRANI (POPUP)
+        private async void BtnStokSqlEkle_Click(object sender, EventArgs e)
+        {
+            Form frmSql = new Form
+            {
+                Text = "⚙️ Canias / SQL Veri Çekme Motoru",
+                Size = new Size(700, 550),
+                StartPosition = FormStartPosition.CenterScreen,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = Color.WhiteSmoke
+            };
+
+            Label lbl1 = new Label { Text = "Rapor (Sekme) Adı:", Location = new Point(20, 20), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtAd = new TextBox { Location = new Point(20, 40), Width = 640, Font = new Font("Segoe UI", 11) };
+
+            Label lbl2 = new Label { Text = "Veritabanı Bağlantı Dizesi (Connection String):", Location = new Point(20, 80), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtBaglanti = new TextBox { Location = new Point(20, 100), Width = 640, Height = 60, Multiline = true, Font = new Font("Segoe UI", 10) };
+
+            // Kolaylık olsun diye sistemdeki mevcut bağlantı dizesini otomatik getiriyoruz (İstersen değiştirirsin)
+            try { txtBaglanti.Text = SqlBaglantiDizesiGetir(); } catch { }
+
+            Label lbl3 = new Label { Text = "Çalıştırılacak SQL Sorgusu (Select ...):", Location = new Point(20, 180), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtSorgu = new TextBox { Location = new Point(20, 200), Width = 640, Height = 200, Multiline = true, ScrollBars = ScrollBars.Vertical, Font = new Font("Consolas", 10), BackColor = Color.Black, ForeColor = Color.Lime };
+
+            Button btnGetir = new Button { Text = "🚀 BAĞLAN, GETİR VE KAYDET", Location = new Point(20, 420), Size = new Size(640, 50), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 12, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            btnGetir.Click += async (s, ev) =>
+            {
+                if (string.IsNullOrWhiteSpace(txtAd.Text) || string.IsNullOrWhiteSpace(txtBaglanti.Text) || string.IsNullOrWhiteSpace(txtSorgu.Text))
+                {
+                    MessageBox.Show("Lütfen tüm alanları doldurun!", "Eksik Veri", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                if (tabStokPivotlar.TabPages.Cast<TabPage>().Any(t => t.Text == txtAd.Text.Trim()))
+                {
+                    MessageBox.Show("Bu isimde bir rapor sekmesi zaten var!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                btnGetir.Enabled = false;
+                btnGetir.Text = "Veriler Çekiliyor, Lütfen Bekleyin...";
+
+                StokRaporAyari ayar = new StokRaporAyari
+                {
+                    RaporAdi = txtAd.Text.Trim(),
+                    BaglantiDizesi = txtBaglanti.Text.Trim(),
+                    SqlSorgusu = txtSorgu.Text.Trim()
+                };
+
+                DataTable dt = await SqlVeriCekAsync(ayar);
+
+                if (dt != null)
+                {
+                    StokSekmesiYarat(ayar, dt);
+                    StokHafizaKaydet(ayar); // Sadece SQL kodunu ve ayarları JSON olarak diske kaydeder (Veriyi değil!)
+                    MessageBox.Show($"'{ayar.RaporAdi}' başarıyla oluşturuldu ve veriler çekildi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    frmSql.Close();
+                }
+                else
+                {
+                    btnGetir.Enabled = true;
+                    btnGetir.Text = "🚀 BAĞLAN, GETİR VE KAYDET";
+                }
+            };
+
+            frmSql.Controls.Add(lbl1); frmSql.Controls.Add(txtAd);
+            frmSql.Controls.Add(lbl2); frmSql.Controls.Add(txtBaglanti);
+            frmSql.Controls.Add(lbl3); frmSql.Controls.Add(txtSorgu);
+            frmSql.Controls.Add(btnGetir);
+            frmSql.ShowDialog();
+        }
+
+        // 🌟 4. DİNAMİK SEKME VE DATAGRIDVIEW İNŞA MOTORU
+        private void StokSekmesiYarat(StokRaporAyari ayar, DataTable dt)
+        {
+            TabPage yeniSekme = new TabPage(ayar.RaporAdi) { BackColor = Color.WhiteSmoke, Tag = ayar };
+
+            // O Sekmeye Özel Kontrol Paneli
+            Panel pnlKontrol = new Panel { Dock = DockStyle.Top, Height = 55, BackColor = Color.FromArgb(235, 238, 240) };
+
+            Label lblAra = new Label { Text = "🔎 Canlı Filtre (A-Z):", Location = new Point(20, 18), AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            TextBox txtAra = new TextBox { Location = new Point(170, 15), Width = 300, Font = new Font("Segoe UI", 11) };
+
+            Button btnYenile = new Button { Text = "🔄 SQL'den Veriyi Yenile", Location = new Point(490, 12), Size = new Size(180, 32), BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnSekmeSil = new Button { Text = "❌ Raporu Sil", Location = new Point(690, 12), Size = new Size(130, 32), BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+
+            pnlKontrol.Controls.Add(lblAra); pnlKontrol.Controls.Add(txtAra);
+            pnlKontrol.Controls.Add(btnYenile); pnlKontrol.Controls.Add(btnSekmeSil);
+
+            // Veri Tablosu (Jilet Gibi, Otomatik Hizalanmış ve Korumalı)
+            DataGridView dgv = new DataGridView
+            {
+                Dock = DockStyle.Fill,
+                AllowUserToAddRows = false,
+                ReadOnly = true, // 🌟 KESİN ZIRH: Elle veri değiştirilemez!
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, // Sütunlar ekrana otomatik sığar
+                SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+                BackgroundColor = Color.White,
+                RowHeadersVisible = false,
+                EnableHeadersVisualStyles = false,
+                Font = new Font("Segoe UI", 10)
+            };
+
+            // Tablo Tasarımı
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(15, 76, 58);
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.White;
+            dgv.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            dgv.ColumnHeadersHeight = 40;
+            dgv.AlternatingRowsDefaultCellStyle.BackColor = Color.WhiteSmoke;
+
+            BindingSource bs = new BindingSource { DataSource = dt };
+            dgv.DataSource = bs;
+
+            // --- OLAYLAR (EVENTS) ---
+
+            // Canlı Arama/Filtreleme Motoru
+            txtAra.TextChanged += (s, ev) =>
+            {
+                try
+                {
+                    if (string.IsNullOrWhiteSpace(txtAra.Text)) { bs.Filter = ""; return; }
+                    string aranan = txtAra.Text.Replace("'", "''");
+
+                    // DataTable'daki tüm metin bazlı sütunlarda arama yap
+                    var kolonlar = ((DataTable)bs.DataSource).Columns.Cast<DataColumn>().Where(c => c.DataType == typeof(string));
+                    bs.Filter = string.Join(" OR ", kolonlar.Select(c => $"[{c.ColumnName}] LIKE '%{aranan}%'"));
+                }
+                catch { } // Veri tipleri uyumsuzsa çökmeyi önle
+            };
+
+            // Sekme Silme İşlemi
+            btnSekmeSil.Click += (s, ev) =>
+            {
+                if (MessageBox.Show($"'{ayar.RaporAdi}' raporunu silmek istediğinize emin misiniz?", "Onay", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                {
+                    tabStokPivotlar.TabPages.Remove(yeniSekme);
+                    string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "StokRaporlari", $"{ayar.RaporAdi}.json");
+                    if (File.Exists(path)) File.Delete(path); // Diskten de sil
+                }
+            };
+
+            // 🌟 CANLI SQL YENİLEME MANTIĞI
+            btnYenile.Click += async (s, ev) =>
+            {
+                btnYenile.Enabled = false;
+                btnYenile.Text = "⌛ Yenileniyor...";
+
+                DataTable yeniDt = await SqlVeriCekAsync(ayar);
+                if (yeniDt != null)
+                {
+                    bs.DataSource = yeniDt; // Ekrani anında yeni tabloyla değiştir
+                    MessageBox.Show("Veriler SQL veritabanından başarıyla güncellendi!", "Yenilendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                btnYenile.Enabled = true;
+                btnYenile.Text = "🔄 SQL'den Veriyi Yenile";
+            };
+
+            yeniSekme.Controls.Add(dgv);
+            yeniSekme.Controls.Add(pnlKontrol);
+            tabStokPivotlar.TabPages.Add(yeniSekme);
+            tabStokPivotlar.SelectedTab = yeniSekme; // Eklenen sekmeye odaklan
+        }
+
+        // 🌟 5. ARKA PLAN SQL VERİ ÇEKME MOTORU (Arayüzü Dondurmaz)
+        private Task<DataTable> SqlVeriCekAsync(StokRaporAyari ayar)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    DataTable dt = new DataTable();
+                    using (OleDbConnection baglanti = new OleDbConnection(ayar.BaglantiDizesi))
+                    {
+                        using (OleDbDataAdapter adaptor = new OleDbDataAdapter(ayar.SqlSorgusu, baglanti))
+                        {
+                            adaptor.Fill(dt);
+                        }
+                    }
+                    return dt;
+                }
+                catch (Exception ex)
+                {
+                    this.Invoke(new Action(() =>
+                    {
+                        MessageBox.Show($"SQL Sorgusu çalıştırılamadı!\n\nHata Detayı:\n{ex.Message}", "Veritabanı Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }));
+                    return null;
+                }
+            });
+        }
+
+        // 🌟 6. KALICI HAFIZA (Sadece Ayarları JSON Kaydeder)
+        private void StokHafizaKaydet(StokRaporAyari ayar)
+        {
+            try
+            {
+                string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "StokRaporlari");
+                if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
+
+                string json = Newtonsoft.Json.JsonConvert.SerializeObject(ayar, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(Path.Combine(klasor, $"{ayar.RaporAdi}.json"), json);
+            }
+            catch { }
+        }
+
+        // Program Açılışında Çalışır
+        private async void StokHafizaYukle()
+        {
+            string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "StokRaporlari");
+            if (!Directory.Exists(klasor)) return;
+
+            foreach (string dosya in Directory.GetFiles(klasor, "*.json"))
+            {
+                try
+                {
+                    string json = File.ReadAllText(dosya);
+                    StokRaporAyari ayar = Newtonsoft.Json.JsonConvert.DeserializeObject<StokRaporAyari>(json);
+
+                    if (ayar != null)
+                    {
+                        // Ayarları okuyup arka planda SQL'e vurur ve güncel veriyle tabloyu kurar
+                        DataTable dt = await SqlVeriCekAsync(ayar);
+                        if (dt != null) StokSekmesiYarat(ayar, dt);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void BtnStokTumuSil_Click(object sender, EventArgs e)
+        {
+            if (MessageBox.Show("DİKKAT! Ekli olan TÜM SQL raporları silinecek. Emin misiniz?", "Tümünü Sil", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
+            {
+                tabStokPivotlar.TabPages.Clear();
+                string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "StokRaporlari");
+                if (Directory.Exists(klasor))
+                {
+                    foreach (string dosya in Directory.GetFiles(klasor, "*.json")) File.Delete(dosya);
+                }
+            }
+        }
         #endregion
 
         #endregion
