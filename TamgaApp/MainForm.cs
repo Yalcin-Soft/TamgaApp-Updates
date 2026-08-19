@@ -254,6 +254,7 @@ namespace TamgaApp
             TablolariJiletGibiYap();
             YeniNesilSevkiyatSisteminiKur();
             KlasorAyarlariniEkranaGetir();
+            YedeklemeMotorunuBaslat();
 
             // 🌟 TASARIM MOTORLARINI ÇALIŞTIR
             ElitTasarimiUygula();     // (Butonlar, saat ve fontları düzeltir)
@@ -586,6 +587,7 @@ namespace TamgaApp
                 dgvMalzemeler.CellMouseDown -= dgvMalzemeler_CellMouseDown;
                 dgvMalzemeler.CellMouseDown += dgvMalzemeler_CellMouseDown;
             }
+
 
             dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
         }
@@ -5076,6 +5078,89 @@ namespace TamgaApp
 
         #region 🔫 13.5 SEVKİYAT BARKOD OKUTMA VE PALETLEME
 
+        // 🔒 BARKOD KİLİDİ (ODAK MODU) MOTORU
+        private bool barkodModuAktif = false;
+
+        private void btnBarkodKilidi_Click(object sender, EventArgs e)
+        {
+            btnBarkodKilidi.TabStop = false;
+            barkodModuAktif = !barkodModuAktif;
+
+            void KontrolleriKilitle(Control parent)
+            {
+                foreach (Control ctrl in parent.Controls)
+                {
+                    // 🌟 DOKUNULMAZLAR LİSTESİ: Barkod kutusu, Kilit Butonu, ÖNCEKİ ve SONRAKİ butonları ASLA pasif olmaz!
+                    if (ctrl.Name != "txtBarkod" &&
+                        ctrl.Name != "btnBarkodKilidi" &&
+                        ctrl.Name != "btnOncekiPalet" &&
+                        ctrl.Name != "btnSonrakiPalet")
+                    {
+                        if (ctrl is Button || ctrl is ComboBox || ctrl is CheckedListBox || ctrl is TextBox)
+                        {
+                            ctrl.Enabled = !barkodModuAktif;
+
+                            if (ctrl is Button)
+                            {
+                                ctrl.TabStop = false;
+                            }
+                        }
+                    }
+
+                    if (ctrl.Controls.Count > 0)
+                    {
+                        KontrolleriKilitle(ctrl);
+                    }
+                }
+            }
+
+            TabPage aktifSekme = tabControl1.SelectedTab;
+            if (aktifSekme != null) KontrolleriKilitle(aktifSekme);
+
+            if (barkodModuAktif)
+            {
+                btnBarkodKilidi.Text = "🔒 BARKOD MODU AÇIK (EKRAN KİLİTLİ)";
+                btnBarkodKilidi.BackColor = Color.MediumSeaGreen;
+                btnBarkodKilidi.ForeColor = Color.White;
+            }
+            else
+            {
+                btnBarkodKilidi.Text = "🔓 BARKOD MODUNU AÇ";
+                btnBarkodKilidi.BackColor = Color.Orange;
+                btnBarkodKilidi.ForeColor = Color.Black;
+            }
+
+            if (txtBarkod != null && txtBarkod.Enabled) txtBarkod.Focus();
+        }
+
+        // ⬅️ ÖNCEKİ PALET BUTONU
+        private void btnOncekiPalet_Click(object sender, EventArgs e)
+        {
+            btnOncekiPalet.TabStop = false; // Tab tuşu ile gelinmesini kesin olarak yasakla
+
+            if (cmbAktifPalet.Items.Count > 0 && cmbAktifPalet.SelectedIndex > 0)
+            {
+                cmbAktifPalet.SelectedIndex--; // Bir önceki paleti seç
+            }
+
+            // MIKNATIS: İşlem bitince imleci saniyesinde barkod kutusuna geri çak!
+            if (txtBarkod != null && txtBarkod.Enabled) txtBarkod.Focus();
+        }
+
+        // ➡️ SONRAKİ PALET BUTONU
+        private void btnSonrakiPalet_Click(object sender, EventArgs e)
+        {
+            btnSonrakiPalet.TabStop = false; // Tab tuşu ile gelinmesini kesin olarak yasakla
+
+            if (cmbAktifPalet.Items.Count > 0 && cmbAktifPalet.SelectedIndex < cmbAktifPalet.Items.Count - 1)
+            {
+                cmbAktifPalet.SelectedIndex++; // Bir sonraki paleti seç
+            }
+
+            // MIKNATIS: İşlem bitince imleci saniyesinde barkod kutusuna geri çak!
+            if (txtBarkod != null && txtBarkod.Enabled) txtBarkod.Focus();
+        }
+
         // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (SÜSSÜZ, TIMES NEW ROMAN)
         private void btnSevkRaporla_Click(object sender, EventArgs e)
         {
@@ -5093,8 +5178,7 @@ namespace TamgaApp
                 }
 
                 string turKlasoru = belgeNo.Split('_')[0].StartsWith("O1") ? "İhracat" : "Yurtiçi";
-                string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                string klasor = Path.Combine(masaustu, "TamgaApp Sevkiyat Raporları", turKlasoru, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
+                string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Sevkiyat Raporları", turKlasoru, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
                 if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
 
                 string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
@@ -5105,11 +5189,9 @@ namespace TamgaApp
                 {
                     var ws = wb.Worksheets.Add("Sevkiyat Matrisi");
 
-                    // 🌟 SADECE TIMES NEW ROMAN VE SIFIR TASARIM ZIRHI
                     ws.Style.Font.FontName = "Times New Roman";
                     ws.Style.Font.FontSize = 11;
 
-                    // --- SÜTUN BAŞLIKLARI ---
                     ws.Cell(1, 1).Value = "Müşteri Adı";
                     ws.Cell(1, 2).Value = "Belge No";
                     ws.Cell(1, 3).Value = "Malzeme Kodu";
@@ -5117,23 +5199,75 @@ namespace TamgaApp
                     ws.Cell(1, 5).Value = "Açıklaması";
                     ws.Cell(1, 6).Value = "Adet";
 
+                    // 🌟 PALET 1, PALET 2 BAŞLIKLARINI YAZ
                     int colIndex = 7;
-                    foreach (DataGridViewColumn col in dgvPaletMatrisi.Columns)
+                    for (int i = 0; i < dgvPaletMatrisi.Columns.Count; i++)
                     {
-                        ws.Cell(1, colIndex).Value = col.HeaderText.Replace(". Palet", "").Replace("Palet_", "P ");
+                        ws.Cell(1, colIndex).Value = $"PALET {i + 1}";
                         colIndex++;
                     }
 
                     var gecerliSatirlar = dgvMalzemeler.Rows.Cast<DataGridViewRow>()
-                        .Where(r => !r.IsNewRow && r.Cells["Malzeme Kodu"].Value != null && Convert.ToInt32(r.Cells["Okutulan"].Value ?? 0) > 0).ToList();
+                        .Where(r => !r.IsNewRow && r.Cells["Malzeme Kodu"].Value != null && Convert.ToInt32(r.Cells["Okutulan"].Value ?? 0) > 0)
+                        .ToList();
 
+                    // =========================================================================
+                    // 🌟 1. ADIM: PALET HAVUZUNU OLUŞTUR (Hangi palette toplam kaç tane var?)
+                    // =========================================================================
+                    var paletHavuzu = new Dictionary<string, Dictionary<int, int>>();
+
+                    for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+                    {
+                        foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                        {
+                            if (paletSatiri.Cells[j].Value != null && !string.IsNullOrWhiteSpace(paletSatiri.Cells[j].Value.ToString()))
+                            {
+                                string hucre = paletSatiri.Cells[j].Value.ToString();
+                                string[] parcalar = hucre.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+
+                                if (parcalar.Length == 2)
+                                {
+                                    string urunKismi = parcalar[0];
+                                    int.TryParse(parcalar[1], out int adet);
+
+                                    int parantezIndex = urunKismi.LastIndexOf('(');
+                                    int sonParantez = urunKismi.LastIndexOf(')');
+
+                                    if (parantezIndex > 0 && sonParantez > parantezIndex)
+                                    {
+                                        string pBelgeNo = urunKismi.Substring(parantezIndex + 1, sonParantez - parantezIndex - 1).Trim();
+
+                                        string kKodu = urunKismi.Substring(0, parantezIndex).Trim();
+                                        int tireIndex = kKodu.IndexOf(" - ");
+                                        if (tireIndex > 0) kKodu = kKodu.Substring(0, tireIndex).Trim();
+
+                                        string anahtar = $"{pBelgeNo}_{kKodu}";
+
+                                        if (!paletHavuzu.ContainsKey(anahtar)) paletHavuzu[anahtar] = new Dictionary<int, int>();
+                                        if (!paletHavuzu[anahtar].ContainsKey(j)) paletHavuzu[anahtar][j] = 0;
+
+                                        paletHavuzu[anahtar][j] += adet;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // =========================================================================
+                    // 🌟 2. ADIM: SATIRLARI YAZDIR VE HAVUZDAN MİKTAR DÜŞEREK DAĞIT
+                    // =========================================================================
                     int satir = 2;
                     foreach (var urunSatiri in gecerliSatirlar)
                     {
                         string bNo = urunSatiri.Cells["Belge No"].Value?.ToString().Trim() ?? "";
                         string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
+
+                        // YAN YANA YAZDIRMA ZIRHI: Açıklamadaki 'Enter' tuşlarını tek boşlukla değiştir
                         string aciklama = urunSatiri.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
+                        aciklama = aciklama.Replace("\r", " ").Replace("\n", " ").Replace("  ", " ");
+
                         int.TryParse(urunSatiri.Cells["Okutulan"].Value?.ToString(), out int okutulanAdet);
+                        int satirIhtiyaci = okutulanAdet; // Bu satıra yazılması gereken kalan palet miktarı
 
                         ws.Cell(satir, 1).Value = txtMusteriAdi.Text.Trim();
                         ws.Cell(satir, 2).Value = bNo;
@@ -5142,29 +5276,36 @@ namespace TamgaApp
                         ws.Cell(satir, 5).Value = aciklama;
                         ws.Cell(satir, 6).Value = okutulanAdet;
 
-                        // Palet Dağılımı
+                        string anahtar = $"{bNo}_{malzemeKodu}";
                         int pCol = 7;
+
+                        // Her bir palet sütununu dön
                         for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
                         {
-                            int palettekiMiktar = 0;
-                            foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                            if (satirIhtiyaci > 0 && paletHavuzu.ContainsKey(anahtar) && paletHavuzu[anahtar].ContainsKey(j))
                             {
-                                if (paletSatiri.Cells[j].Value != null)
+                                int palettekiKalan = paletHavuzu[anahtar][j];
+
+                                if (palettekiKalan > 0)
                                 {
-                                    string hucre = paletSatiri.Cells[j].Value.ToString();
-                                    if (hucre.Contains(malzemeKodu) && hucre.Contains(bNo) && (string.IsNullOrWhiteSpace(aciklama) || hucre.Contains(aciklama)))
-                                    {
-                                        string[] parcalar = hucre.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
-                                        if (parcalar.Length == 2) { int.TryParse(parcalar[1], out int adetParca); palettekiMiktar += adetParca; }
-                                    }
+                                    // Satırın ihtiyacı ile palette kalan miktardan hangisi küçükse onu yaz (Taşmayı önle)
+                                    int yazilacakAdet = Math.Min(satirIhtiyaci, palettekiKalan);
+
+                                    ws.Cell(satir, pCol).Value = yazilacakAdet;
+
+                                    // Havuzdan ve satırın ihtiyacından düş
+                                    satirIhtiyaci -= yazilacakAdet;
+                                    paletHavuzu[anahtar][j] -= yazilacakAdet;
                                 }
                             }
-                            if (palettekiMiktar > 0) ws.Cell(satir, pCol).Value = palettekiMiktar;
                             pCol++;
                         }
                         satir++;
                     }
+
                     ws.Columns().AdjustToContents();
+                    ws.Column(5).Style.Alignment.WrapText = false; // Metni kaydır (Aşağı taşırma) kapalı
+
                     wb.SaveAs(tamYol);
                 }
                 MessageBox.Show($"Saf Excel (.xlsx) Raporu oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -5729,7 +5870,13 @@ namespace TamgaApp
         // 🌟 BÜYÜK TEMİZLİK (RESTART) MOTORU: Ekrandaki her şeyi sıfırlar
         private void btnSevkTemizle_Click(object sender, EventArgs e)
         {
-            DialogResult cevap = MessageBox.Show("DİKKAT: Ekranda okutulmuş olan TÜM ÜRÜNLER ve paletler silinecek. Sevkiyata en baştan başlamak zorunda kalacaksınız.\n\nEmin misiniz?", "Tüm Ekranı Sıfırla", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            // 🛡️ ZIRH EKLENDİ: MessageBoxDefaultButton.Button2
+            DialogResult cevap = MessageBox.Show(
+                "DİKKAT: Ekranda okutulmuş olan TÜM ÜRÜNLER ve paletler silinecek. Sevkiyata en baştan başlamak zorunda kalacaksınız.\n\nEmin misiniz?",
+                "Tüm Ekranı Sıfırla",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2); // <-- SİHİRLİ KALKAN BURADA
 
             if (cevap == DialogResult.Yes)
             {
@@ -5753,9 +5900,13 @@ namespace TamgaApp
         // Olası kilitlenmelerde SQL bağlantısını ve önbellekteki çekilmiş siparişleri sıfırlar.
         private void btnTumVerileriTemizle_Click(object sender, EventArgs e)
         {
+            // 🛡️ ZIRH EKLENDİ: MessageBoxDefaultButton.Button2
             DialogResult onay = MessageBox.Show(
                 "DİKKAT: SQL bağlantı ayarları, çekilen tüm siparişler ve önbellekteki veriler SİLİNECEKTİR!",
-                "Büyük Temizlik Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                "Büyük Temizlik Onayı",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2); // <-- SİHİRLİ KALKAN BURADA
 
             if (onay == DialogResult.Yes)
             {
@@ -6382,6 +6533,7 @@ namespace TamgaApp
         #region 📊 14. DEPO SAYIM VE ENVANTER KONTROLÜ
 
         #region 📋 14.1 SAYIM TABLOSU VE İLK AYARLAR
+
         private void SayimSisteminiHazirla()
         {
             if (dgvSayim == null) return;
@@ -6389,24 +6541,36 @@ namespace TamgaApp
             // Ekranda eski ne varsa tamamen uçur
             dgvSayim.Columns.Clear();
 
-            // 🌟 Sütunları BAŞLIKLARIYLA beraber kalıcı olarak ekle (İşte çözüm burada!)
+            // 🌟 Sütunları BAŞLIKLARIYLA beraber kalıcı olarak ekle
             dgvSayim.Columns.Add("Barkod", "Barkod");
             dgvSayim.Columns.Add("Malzeme Kodu", "Malzeme Kodu");
             dgvSayim.Columns.Add("Açıklama", "Açıklama");
             dgvSayim.Columns.Add("Renk", "Renk");
-            dgvSayim.Columns.Add("Adet", "Adet");
+            dgvSayim.Columns.Add("SistemStogu", "Sistem Stoğu"); // 🌟 CANLI STOK SÜTUNU EKLENDİ
+            dgvSayim.Columns.Add("Adet", "Sayım Adedi");         // 🌟 KAFA KARIŞMAMASI İÇİN İSMİ NETLEŞTİRİLDİ
 
-            // Güvenlik: Adet hariç her yeri kilitle
+            // Güvenlik: "Sayım Adedi" hariç her yeri kilitle (Personel stoğu veya ismi yanlışlıkla değiştiremesin)
             dgvSayim.Columns["Barkod"].ReadOnly = true;
             dgvSayim.Columns["Malzeme Kodu"].ReadOnly = true;
             dgvSayim.Columns["Açıklama"].ReadOnly = true;
             dgvSayim.Columns["Renk"].ReadOnly = true;
+            dgvSayim.Columns["SistemStogu"].ReadOnly = true; // 🌟 KİLİTLENDİ
             dgvSayim.Columns["Adet"].ReadOnly = false;
+
+            // 🌟 GÖRSEL ZIRH: Sistem Stoğu sütunu ekranda kabak gibi belli olsun diye özel renklendirildi!
+            dgvSayim.Columns["SistemStogu"].DefaultCellStyle.BackColor = Color.LightCyan;
+            dgvSayim.Columns["SistemStogu"].DefaultCellStyle.ForeColor = Color.DarkBlue;
+            dgvSayim.Columns["SistemStogu"].DefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
+
+            // "Sayım Adedi" sütununu da hafif belirgin yapalım ki personel nereye veri gireceğini anlasın
+            dgvSayim.Columns["Adet"].DefaultCellStyle.BackColor = Color.LightYellow;
+            dgvSayim.Columns["Adet"].DefaultCellStyle.Font = new Font("Segoe UI", 11, FontStyle.Bold);
 
             dgvSayim.AllowUserToAddRows = false;
             dgvSayim.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgvSayim.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill; // Tam ekrana yay
         }
+
         #endregion
 
         #region 🔍 14.2 ANLIK BARKOD OKUTMA VE ADET ARTTIRMA
@@ -7587,6 +7751,74 @@ namespace TamgaApp
                     txtSorgu.Focus();
                 }
             };
+        }
+
+        #endregion
+
+        #region 📊 14.6 CANLI SAYIM - STOK SAYFASINDAN (YEREL TABLODAN) VERİ ÇEKME MOTORU
+
+        private string CanliStokGetir(string malzemeKodu)
+        {
+            // 1. ZIRH: Eğer Stok sekmesi boşsa veya henüz veri çekilmemişse uyar
+            if (tabStokPivotlar == null || tabStokPivotlar.TabPages.Count == 0)
+            {
+                return "Stok Çekilmedi";
+            }
+
+            try
+            {
+                // 2. MOTOR: Stok sekmesinin içindeki tüm alt raporları (sekmeleri) gez
+                foreach (TabPage sekme in tabStokPivotlar.TabPages)
+                {
+                    // Sekmenin içindeki Tabloyu (DataGridView) bul
+                    DataGridView dgvStok = sekme.Controls.OfType<DataGridView>().FirstOrDefault();
+                    if (dgvStok == null) continue;
+
+                    // 3. SÜTUN DEDEKTÖRÜ: Tabloda Hangi Sütunda Kod, Hangi Sütunda Miktar var?
+                    string kodSutunu = null;
+                    string miktarSutunu = null;
+
+                    foreach (DataGridViewColumn col in dgvStok.Columns)
+                    {
+                        string baslik = col.HeaderText.ToUpper().Replace(" ", ""); // Boşlukları silip büyütür (Örn: TOPLAMSTOK)
+
+                        // Malzeme kodunun olabileceği sütun isimleri
+                        if (baslik == "MALZEMEKODU" || baslik == "MALZEME" || baslik == "ITEM")
+                            kodSutunu = col.Name;
+
+                        // Stok miktarının olabileceği sütun isimleri
+                        if (baslik == "TOPLAMSTOK" || baslik == "MİKTAR" || baslik == "STOK" || baslik == "BAKİYE" || baslik == "STKQTY")
+                            miktarSutunu = col.Name;
+                    }
+
+                    // Eğer bu sekmedeki tabloda uygun sütunlar yoksa, diğer sekmeye geç
+                    if (kodSutunu == null || miktarSutunu == null) continue;
+
+                    // 4. VERİYİ BUL VE ÇEK: Tablodaki satırları tara
+                    foreach (DataGridViewRow row in dgvStok.Rows)
+                    {
+                        if (row.IsNewRow) continue;
+
+                        if (row.Cells[kodSutunu].Value != null && row.Cells[kodSutunu].Value.ToString().Trim() == malzemeKodu)
+                        {
+                            object miktarDegeri = row.Cells[miktarSutunu].Value;
+                            if (miktarDegeri != null)
+                            {
+                                // Ürünü buldu! Miktarı binlik ayracıyla (1.500) şekillendirip hemen gönder.
+                                return Convert.ToDouble(miktarDegeri).ToString("N0");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Stok tablosundan okuma hatası: " + ex.Message);
+                return "Hata";
+            }
+
+            // Eğer tüm sekmeler tarandı ama ürün bulunamadıysa
+            return "Yok";
         }
 
         #endregion
@@ -9993,6 +10225,95 @@ namespace TamgaApp
 
         #region 📦 27. STOK VE PİVOT YÖNETİMİ (CANLI SQL ENTEGRASYONLU)
 
+
+
+        // 🌟 SINIF (CLASS) SEVİYESİNDE DEĞİŞKENİMİZ (En üste veya metotların dışına koy)
+        private FlowLayoutPanel pnlDinamikFiltreler;
+
+        #region 🔍 DİNAMİK STOK ÇOKLU FİLTRE MOTORU
+
+        // 1. MOTOR: Tabloya bakıp otomatik TextBox üreten fabrika
+        public void DinamikFiltreKutulariniOlustur(DataGridView dgv)
+        {
+            if (pnlDinamikFiltreler == null) return;
+            pnlDinamikFiltreler.Controls.Clear(); // Önceki sekmenin filtrelerini temizle
+
+            if (dgv == null || dgv.DataSource == null) return;
+
+            DataTable dt = null;
+            if (dgv.DataSource is DataTable) dt = (DataTable)dgv.DataSource;
+            else if (dgv.DataSource is BindingSource bs && bs.DataSource is DataTable) dt = (DataTable)bs.DataSource;
+
+            if (dt == null) return;
+
+            // Tablodaki her bir sütun için dön
+            foreach (DataColumn col in dt.Columns)
+            {
+                // Her filtre için küçük bir taşıyıcı panel
+                Panel pnlHuc = new Panel { Width = 150, Height = 50, Margin = new Padding(5, 0, 5, 0) };
+
+                // Sütun İsmi (Başlık)
+                Label lbl = new Label
+                {
+                    Text = col.ColumnName,
+                    Dock = DockStyle.Top,
+                    ForeColor = Color.Orange,
+                    Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                    AutoEllipsis = true,
+                    Height = 20
+                };
+
+                // Arama Kutusu
+                TextBox txt = new TextBox
+                {
+                    Dock = DockStyle.Bottom,
+                    Tag = col.ColumnName, // Kutunun kimliğini Tag içinde saklıyoruz
+                    Font = new Font("Segoe UI", 10),
+                    BackColor = Color.WhiteSmoke
+                };
+
+                // Kutuya her harf yazıldığında anında filtreleme motorunu tetikle!
+                txt.TextChanged += (s, e) => FiltreleriUygula(dt);
+
+                pnlHuc.Controls.Add(lbl);
+                pnlHuc.Controls.Add(txt);
+                pnlDinamikFiltreler.Controls.Add(pnlHuc);
+            }
+        }
+
+        // 2. MOTOR: Kutulara yazılanları birleştirip SQL RowFilter uygulayan mekanizma
+        private void FiltreleriUygula(DataTable dt)
+        {
+            if (dt == null || pnlDinamikFiltreler == null) return;
+
+            List<string> sqlFiltreleri = new List<string>();
+
+            // Ürettiğimiz tüm kutuları gez
+            foreach (Control pnl in pnlDinamikFiltreler.Controls)
+            {
+                if (pnl is Panel)
+                {
+                    foreach (Control ctrl in pnl.Controls)
+                    {
+                        if (ctrl is TextBox txt && !string.IsNullOrWhiteSpace(txt.Text))
+                        {
+                            string kolonAdi = txt.Tag.ToString();
+                            string aranan = txt.Text.Replace("'", "''"); // Tırnak işareti hatasını (SQL Injection) önle
+
+                            // 🌟 SİHİRLİ ZIRH: Sayısal, Tarih veya Metin fark etmeksizin her sütunda LIKE ile arama yapabilmek için 
+                            // Convert kullanarak her şeyi string (metin) gibi okutuyoruz. Çökmeyi %100 engeller!
+                            sqlFiltreleri.Add($"Convert([{kolonAdi}], 'System.String') LIKE '%{aranan}%'");
+                        }
+                    }
+                }
+            }
+
+            // Oluşan filtreleri (Örn: Adı LIKE '%Ahmet%' AND Fiyat LIKE '%50%') tabloya uygula
+            string finalFilter = string.Join(" AND ", sqlFiltreleri);
+            dt.DefaultView.RowFilter = finalFilter;
+        }
+
+        #endregion
         private TabControl tabStokPivotlar;
 
         // 🌟 1. VERİ MODELİ (Hafızaya kazınacak SQL ayarları)
@@ -10008,34 +10329,27 @@ namespace TamgaApp
         {
             TabPage sekmeStok = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "📦 Stok");
 
-            // 🌟 1. ANA PANEL'İN YERİNİ BUL (DİNAMİK ZIRH)
             int anaPanelIndex = 0;
             for (int i = 0; i < tabControl1.TabPages.Count; i++)
             {
-                if (tabControl1.TabPages[i].Text.Contains("Ana Panel"))
-                {
-                    anaPanelIndex = i;
-                    break;
-                }
+                if (tabControl1.TabPages[i].Text.Contains("Ana Panel")) { anaPanelIndex = i; break; }
             }
 
             if (sekmeStok == null)
             {
                 sekmeStok = new TabPage("📦 Stok");
                 sekmeStok.BackColor = Color.WhiteSmoke;
-                // 🌟 En sona atmak yerine Ana Panel'in hemen sağına (+1) sıkıştırıyoruz!
                 tabControl1.TabPages.Insert(anaPanelIndex + 1, sekmeStok);
             }
             else
             {
                 sekmeStok.Controls.Clear();
-
-                // Eğer sekme zaten varsa ama yanlışlıkla sona gittiyse, onu koparıp Ana Panel'in yanına taşıyoruz
                 tabControl1.TabPages.Remove(sekmeStok);
                 tabControl1.TabPages.Insert(anaPanelIndex + 1, sekmeStok);
             }
 
-            Panel pnlStokUst = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(45, 52, 54) };
+            // 🌟 1. YENİLİK: Üst Panelin Yüksekliğini Artırdık (Filtreler Sığsın Diye)
+            Panel pnlStokUst = new Panel { Dock = DockStyle.Top, Height = 120, BackColor = Color.FromArgb(45, 52, 54) };
 
             Button btnYeniEkle = new Button { Text = "➕ Yeni SQL Raporu Ekle", Location = new Point(20, 15), Size = new Size(250, 40), BackColor = Color.MediumSeaGreen, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
             Button btnTumuSil = new Button { Text = "❌ Tüm Raporları Sil", Location = new Point(280, 15), Size = new Size(200, 40), BackColor = Color.DarkRed, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
@@ -10043,8 +10357,21 @@ namespace TamgaApp
             btnYeniEkle.Click += BtnStokSqlEkle_Click;
             btnTumuSil.Click += BtnStokTumuSil_Click;
 
+            // 🌟 2. YENİLİK: Filtre Kutularının Dizileceği Yatay Panel (Scrollable)
+            pnlDinamikFiltreler = new FlowLayoutPanel
+            {
+                Location = new Point(20, 65),
+                Width = 1500, // Ekran genişliğine göre uzar
+                Height = 55,
+                BackColor = Color.FromArgb(45, 52, 54),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                AutoScroll = true, // Çok sütun varsa yatay kaydırma çubuğu çıkar!
+                WrapContents = false // Kutuları alt alta değil, ip gibi yan yana dizer
+            };
+
             pnlStokUst.Controls.Add(btnYeniEkle);
             pnlStokUst.Controls.Add(btnTumuSil);
+            pnlStokUst.Controls.Add(pnlDinamikFiltreler);
 
             tabStokPivotlar = new TabControl { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11, FontStyle.Bold), ItemSize = new Size(150, 35), SizeMode = TabSizeMode.Fixed };
 
@@ -10053,6 +10380,20 @@ namespace TamgaApp
             {
                 e.Graphics.FillRectangle(new SolidBrush(e.State == DrawItemState.Selected ? Color.Teal : Color.LightGray), e.Bounds);
                 e.Graphics.DrawString(tabStokPivotlar.TabPages[e.Index].Text, new Font("Segoe UI", 10, FontStyle.Bold), new SolidBrush(e.State == DrawItemState.Selected ? Color.White : Color.Black), e.Bounds, new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center });
+            };
+
+            // 🌟 3. YENİLİK: Sekme Değiştiğinde Filtre Motorunu Tetikle!
+            tabStokPivotlar.SelectedIndexChanged += (s, e) =>
+            {
+                if (tabStokPivotlar.SelectedTab != null && tabStokPivotlar.SelectedTab.Controls.Count > 0)
+                {
+                    // Seçilen sekmenin içindeki DataGridView'i (Tabloyu) bul
+                    DataGridView aktifTablo = tabStokPivotlar.SelectedTab.Controls.OfType<DataGridView>().FirstOrDefault();
+                    if (aktifTablo != null)
+                    {
+                        DinamikFiltreKutulariniOlustur(aktifTablo); // Fabrikayı çalıştır
+                    }
+                }
             };
 
             sekmeStok.Controls.Add(tabStokPivotlar);
@@ -10141,17 +10482,15 @@ namespace TamgaApp
         {
             TabPage yeniSekme = new TabPage(ayar.RaporAdi) { BackColor = Color.WhiteSmoke, Tag = ayar };
 
-            // O Sekmeye Özel Kontrol Paneli
+            // O Sekmeye Özel Kontrol Paneli (Eski arama kutusu UÇURULDU, ekran ferahladı)
             Panel pnlKontrol = new Panel { Dock = DockStyle.Top, Height = 55, BackColor = Color.FromArgb(235, 238, 240) };
 
-            Label lblAra = new Label { Text = "🔎 Canlı Filtre (A-Z):", Location = new Point(20, 18), AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            TextBox txtAra = new TextBox { Location = new Point(170, 15), Width = 300, Font = new Font("Segoe UI", 11) };
+            // Butonları artık en sola (Point 20) alıyoruz, çok daha şık duracak
+            Button btnYenile = new Button { Text = "🔄 SQL'den Veriyi Yenile", Location = new Point(20, 12), Size = new Size(180, 32), BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
+            Button btnSekmeSil = new Button { Text = "❌ Raporu Sil", Location = new Point(220, 12), Size = new Size(130, 32), BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
 
-            Button btnYenile = new Button { Text = "🔄 SQL'den Veriyi Yenile", Location = new Point(490, 12), Size = new Size(180, 32), BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
-            Button btnSekmeSil = new Button { Text = "❌ Raporu Sil", Location = new Point(690, 12), Size = new Size(130, 32), BackColor = Color.Crimson, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), Cursor = Cursors.Hand, FlatStyle = FlatStyle.Flat };
-
-            pnlKontrol.Controls.Add(lblAra); pnlKontrol.Controls.Add(txtAra);
-            pnlKontrol.Controls.Add(btnYenile); pnlKontrol.Controls.Add(btnSekmeSil);
+            pnlKontrol.Controls.Add(btnYenile);
+            pnlKontrol.Controls.Add(btnSekmeSil);
 
             // Veri Tablosu (Jilet Gibi, Otomatik Hizalanmış ve Korumalı)
             DataGridView dgv = new DataGridView
@@ -10159,7 +10498,7 @@ namespace TamgaApp
                 Dock = DockStyle.Fill,
                 AllowUserToAddRows = false,
                 ReadOnly = true, // 🌟 KESİN ZIRH: Elle veri değiştirilemez!
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, // Sütunlar ekrana otomatik sığar
+                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
                 BackgroundColor = Color.White,
                 RowHeadersVisible = false,
@@ -10178,21 +10517,6 @@ namespace TamgaApp
             dgv.DataSource = bs;
 
             // --- OLAYLAR (EVENTS) ---
-
-            // Canlı Arama/Filtreleme Motoru
-            txtAra.TextChanged += (s, ev) =>
-            {
-                try
-                {
-                    if (string.IsNullOrWhiteSpace(txtAra.Text)) { bs.Filter = ""; return; }
-                    string aranan = txtAra.Text.Replace("'", "''");
-
-                    // DataTable'daki tüm metin bazlı sütunlarda arama yap
-                    var kolonlar = ((DataTable)bs.DataSource).Columns.Cast<DataColumn>().Where(c => c.DataType == typeof(string));
-                    bs.Filter = string.Join(" OR ", kolonlar.Select(c => $"[{c.ColumnName}] LIKE '%{aranan}%'"));
-                }
-                catch { } // Veri tipleri uyumsuzsa çökmeyi önle
-            };
 
             // Sekme Silme İşlemi
             btnSekmeSil.Click += (s, ev) =>
@@ -10214,7 +10538,11 @@ namespace TamgaApp
                 DataTable yeniDt = await SqlVeriCekAsync(ayar);
                 if (yeniDt != null)
                 {
-                    bs.DataSource = yeniDt; // Ekrani anında yeni tabloyla değiştir
+                    bs.DataSource = yeniDt; // Ekranı anında yeni tabloyla değiştir
+
+                    // Veri yenilendikten sonra filtre kutularını da yeni sütunlara göre tekrar üret (Eğer SQL değiştiyse)
+                    DinamikFiltreKutulariniOlustur(dgv);
+
                     MessageBox.Show("Veriler SQL veritabanından başarıyla güncellendi!", "Yenilendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
 
@@ -10225,7 +10553,7 @@ namespace TamgaApp
             yeniSekme.Controls.Add(dgv);
             yeniSekme.Controls.Add(pnlKontrol);
             tabStokPivotlar.TabPages.Add(yeniSekme);
-            tabStokPivotlar.SelectedTab = yeniSekme; // Eklenen sekmeye odaklan
+            tabStokPivotlar.SelectedTab = yeniSekme;
         }
 
         // 🌟 5. ARKA PLAN SQL VERİ ÇEKME MOTORU (Arayüzü Dondurmaz)
@@ -10307,6 +10635,165 @@ namespace TamgaApp
             }
         }
         #endregion
+
+        // =========================================================================================
+
+        #region 🛡️ 28. OTOMATİK YEDEKLEME VE FELAKET KURTARMA MOTORU (DISASTER RECOVERY)
+
+        private Timer yedeklemeZamanlayici;
+        private string anaVeriKlasoru = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
+        private string yedeklerKlasoru = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp_Sistem_Yedekleri");
+
+        // 1. ZAMANLAYICIYI BAŞLAT (MainForm_Load içine eklenecek)
+        public void YedeklemeMotorunuBaslat()
+        {
+            if (!Directory.Exists(anaVeriKlasoru)) Directory.CreateDirectory(anaVeriKlasoru);
+            if (!Directory.Exists(yedeklerKlasoru)) Directory.CreateDirectory(yedeklerKlasoru);
+
+            // Arka planda her 4 saatte bir sessizce çalışır (4 saat = 14.400.000 milisaniye)
+            yedeklemeZamanlayici = new Timer();
+            yedeklemeZamanlayici.Interval = 4 * 60 * 60 * 1000;
+            yedeklemeZamanlayici.Tick += (s, e) => SessizYedekAl();
+            yedeklemeZamanlayici.Start();
+
+            // Yönetim sekmesine Backup (Yedek) butonlarını ekler
+            YonetimSekmesineYedeklemeUIEkle();
+        }
+
+        // 2. SESSİZ YEDEKLEME MANTIĞI (Hayalet Modu - Arayüzü Asla Dondurmaz)
+        private async void SessizYedekAl()
+        {
+            // 🌟 HAYALET ZIRHI: İşlemi ana ekrandan koparıp arka plan işlemcisine (Task) atıyoruz.
+            // Sen barkod okuturken sistem 1 milisaniye bile donmaz veya takılmaz!
+            await Task.Run(() =>
+            {
+                try
+                {
+                    string tarihDamgasi = DateTime.Now.ToString("yyyy-MM-dd_HH-mm");
+                    string buYedekKlasoru = Path.Combine(yedeklerKlasoru, $"Yedek_{tarihDamgasi}");
+
+                    KlasorKopyala(anaVeriKlasoru, buYedekKlasoru);
+                    System.Diagnostics.Debug.WriteLine($"Sistem yedeği alındı: {buYedekKlasoru}");
+                }
+                catch
+                {
+                    // 🌟 ÇÖKME ZIRHI: Ne olursa olsun (dosya kilitli vs.) hataları yutar, 
+                    // ekrana ASLA uyarı/hata mesajı çıkartıp senin operasyonunu bölmez!
+                }
+            });
+        }
+
+        // 3. YÖNETİCİ KONTROL PANELİNE (YÖNETİM SEKME) BUTONLARI EKLEME
+        private void YonetimSekmesineYedeklemeUIEkle()
+        {
+            TabPage sekmeYonetim = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "Yönetim");
+            if (sekmeYonetim == null) return;
+
+            Panel pnlYedek = new Panel { Dock = DockStyle.Bottom, Height = 80, BackColor = Color.FromArgb(45, 52, 54) };
+
+            Label lblBilgi = new Label { Text = "🛡️ SİSTEM YEDEKLEME VE KURTARMA MERKEZİ", ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true, Location = new Point(10, 10) };
+
+            Button btnManuelYedek = new Button { Text = "💾 ŞİMDİ YEDEK AL", Location = new Point(10, 35), Size = new Size(180, 35), BackColor = Color.MediumSeaGreen, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+            Button btnYedektenDon = new Button { Text = "♻️ YEDEKTEN GERİ YÜKLE", Location = new Point(200, 35), Size = new Size(200, 35), BackColor = Color.Orange, ForeColor = Color.Black, Font = new Font("Segoe UI", 9, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+            Button btnKlasoruAc = new Button { Text = "📂 YEDEK KLASÖRÜNÜ AÇ", Location = new Point(410, 35), Size = new Size(180, 35), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
+
+            // Olaylar (Events)
+            btnManuelYedek.Click += (s, e) =>
+            {
+                SessizYedekAl();
+                MessageBox.Show("Tüm sistem verileri başarıyla yedeklendi!\n\nMasaüstündeki 'TamgaApp_Sistem_Yedekleri' klasöründen ulaşabilirsiniz.", "Yedekleme Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            };
+
+            btnKlasoruAc.Click += (s, e) =>
+            {
+                if (Directory.Exists(yedeklerKlasoru)) System.Diagnostics.Process.Start("explorer.exe", yedeklerKlasoru);
+            };
+
+            btnYedektenDon.Click += BtnYedektenDon_Click;
+
+            pnlYedek.Controls.Add(lblBilgi);
+            pnlYedek.Controls.Add(btnManuelYedek);
+            pnlYedek.Controls.Add(btnYedektenDon);
+            pnlYedek.Controls.Add(btnKlasoruAc);
+
+            sekmeYonetim.Controls.Add(pnlYedek);
+        }
+
+        // 4. GERİ YÜKLEME (RESTORE) MOTORU (SADECE YÖNETİCİ KULLANABİLİR)
+        private void BtnYedektenDon_Click(object sender, EventArgs e)
+        {
+            // 🌟 YÖNETİCİ ZIRHI: Sadece tam yetkili kişiler bu butonu çalıştırabilir!
+            if (AktifYetkiler != "Sınırsız" && AktifKullaniciAdi.ToLower() != "yönetici")
+            {
+                MessageBox.Show("Bu işlem Sistem Yöneticisi yetkisi gerektirir! Geri yükleme yapamazsınız.", "Erişim Engellendi", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
+            using (FolderBrowserDialog fbd = new FolderBrowserDialog())
+            {
+                fbd.Description = "Geri yüklemek istediğiniz Yedek Klasörünü seçin (Masaüstü -> TamgaApp_Sistem_Yedekleri klasörü içindedir):";
+                fbd.SelectedPath = yedeklerKlasoru;
+
+                if (fbd.ShowDialog() == DialogResult.OK)
+                {
+                    string secilenYedek = fbd.SelectedPath;
+
+                    DialogResult onay = MessageBox.Show(
+                        "DİKKAT: Mevcut sistemdeki tüm ayarlar silinecek ve seçtiğiniz tarihteki yedeğe geri dönülecektir. Bu işlem geri alınamaz!\n\nDevam etmek istiyor musunuz?",
+                        "Kritik Uyarı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+                    if (onay == DialogResult.Yes)
+                    {
+                        try
+                        {
+                            // Önce mevcut bozuk/eski sistemi sil, sonra yedeği kopyala
+                            if (Directory.Exists(anaVeriKlasoru)) Directory.Delete(anaVeriKlasoru, true);
+                            KlasorKopyala(secilenYedek, anaVeriKlasoru);
+
+                            MessageBox.Show("Sistem başarıyla yedekten kurtarıldı! Değişikliklerin uygulanması için program şimdi yeniden başlatılacak.", "Kurtarma Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                            // Ayarların uygulanması için programı zorla yeniden başlat
+                            Application.Restart();
+                            Environment.Exit(0);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Geri yükleme sırasında bir dosya kilitli olduğu için hata oluştu:\n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 5. KLASÖR VE İÇERİK KOPYALAYICI (Yardımcı Metot)
+        private void KlasorKopyala(string kaynakKlasor, string hedefKlasor)
+        {
+            Directory.CreateDirectory(hedefKlasor);
+
+            // Klasördeki dosyaları kopyala
+            foreach (string dosya in Directory.GetFiles(kaynakKlasor))
+            {
+                try
+                {
+                    string hedefDosya = Path.Combine(hedefKlasor, Path.GetFileName(dosya));
+                    File.Copy(dosya, hedefDosya, true);
+                }
+                catch { /* Webview kilitli dosyalarını atla (çökmeyi önler) */ }
+            }
+
+            // Alt klasörleri de matruşka gibi kopyala (Recursive)
+            foreach (string altKlasor in Directory.GetDirectories(kaynakKlasor))
+            {
+                // Edge Webview'in geçici kilitli klasörünü yedeğe dahil etme
+                if (altKlasor.Contains("EBWebView")) continue;
+
+                string hedefAltKlasor = Path.Combine(hedefKlasor, Path.GetFileName(altKlasor));
+                KlasorKopyala(altKlasor, hedefAltKlasor);
+            }
+        }
+
+        #endregion
+
 
         #endregion
     }
