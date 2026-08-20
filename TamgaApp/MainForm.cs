@@ -7157,134 +7157,171 @@ namespace TamgaApp
                 cmbAktifPalet.SelectedIndex = yeniSayi - 1;
             }
         }
-        
 
-        // 🌟 Anında Palet Etiketi Basma ve Barkod Hafızaya Alma (ŞİŞKİN TASARIM VE KODLU)
+
+        // 🌟 Anında Palet Etiketi Basma (TEKLİ VEYA SERİ) ve Barkod Hafızaya Alma
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
-            if (cmbAktifPalet.SelectedItem == null)
+            if (dgvPaletMatrisi.Columns.Count == 0)
+            {
+                MessageBox.Show("Yazdırılacak palet bulunamadı!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 🌟 1. KULLANICIYA NE İSTEDİĞİNİ SORUYORUZ
+            DialogResult secim = MessageBox.Show(
+                "Tüm paletlerin etiketlerini tek seferde SERİ yazdırmak ister misiniz?\n\n" +
+                "[EVET] = Tüm Paletler (Seri Yazdırma)\n" +
+                "[HAYIR] = Sadece Seçili Palet (Tekli Yazdırma)",
+                "Yazdırma Türü Seçimi",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question);
+
+            if (secim == DialogResult.Cancel) return;
+
+            bool seriYazdir = (secim == DialogResult.Yes);
+
+            // Eğer Tekli dediyse ama sağdan palet seçmediyse uyar
+            if (!seriYazdir && cmbAktifPalet.SelectedItem == null)
             {
                 MessageBox.Show("Lütfen etiketini basmak istediğiniz paleti seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            int aktifPaletIndex = cmbAktifPalet.SelectedIndex;
-            string paletAdi = cmbAktifPalet.SelectedItem.ToString();
-
-            // 🌟 SİHİRLİ DOKUNUŞ: Eğer toplam palet sayısı 1 ise yazıyı "1 Palet Dolap" yap
-            string gosterilenPaletAdi = paletAdi;
-            if (cmbAktifPalet.Items.Count == 1)
-            {
-                gosterilenPaletAdi = "1 Palet Dolap";
-            }
-
-            // 🌟 VERİTABANI BAĞLANTISI: Eski kayıtlar için ürün isimlerini veritabanından çekeceğiz
             var yerelUrunler = DataAccess.GetAllUrunler();
-
-            List<string> paletIcerigi = new List<string>();
-            foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
-            {
-                if (row.Cells[aktifPaletIndex].Value != null && !string.IsNullOrWhiteSpace(row.Cells[aktifPaletIndex].Value.ToString()))
-                {
-                    string hamVeri = row.Cells[aktifPaletIndex].Value.ToString();
-
-                    // 1. Adeti ayır
-                    string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
-                    string urunKismi = parcalar[0];
-                    string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
-
-                    // 2. Parantez içindeki Belge Numarasını Uçur: (SE-001) vs.
-                    int parantezIndex = urunKismi.LastIndexOf('(');
-                    if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
-
-                    // 🌟 3. ÜRÜN KODU VE ÜRÜN ADINI AYIRMA VEYA VERİTABANINDAN BULMA MANTIĞI
-                    string uKodu = urunKismi;
-                    string uAdi = "";
-                    int tireIndex = urunKismi.IndexOf(" - ");
-
-                    if (tireIndex > 0)
-                    {
-                        // Yeni sistem kaydıysa (Tire varsa direkt böl)
-                        uKodu = urunKismi.Substring(0, tireIndex).Trim();
-                        uAdi = urunKismi.Substring(tireIndex + 3).Trim();
-                    }
-                    else
-                    {
-                        // 🌟 ESKİ KAYIT ZIRHI: Eski arşivde isim yoksa, veritabanından koda göre bul!
-                        uKodu = urunKismi.Trim();
-                        var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == uKodu || u.Barkod == uKodu);
-                        if (urun != null) uAdi = urun.Aciklama;
-                        else uAdi = "Bilinmeyen Ürün"; // Eğer veritabanında bile silinmişse
-                    }
-
-                    // 🌟 4. YENİ LİSTE TASARIMINA EKLE
-                    paletIcerigi.Add($"<li><span class='k-kod'>• {uKodu}</span><span class='k-ad'>{uAdi}</span><span class='k-adet'>Adet: {adetKismi}</span></li>");
-                }
-            }
-
-            if (paletIcerigi.Count == 0)
-            {
-                MessageBox.Show("Bu palet şu an BOŞ! Lütfen önce ürün okutun.", "Boş Palet", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            string paletBarkodu = "";
-            if (aktifPaletBarkodlari.ContainsKey(paletAdi))
-                paletBarkodu = aktifPaletBarkodlari[paletAdi];
-            else
-            {
-                paletBarkodu = Ean13Olustur();
-                aktifPaletBarkodlari.Add(paletAdi, paletBarkodu);
-            }
-
             string musteriAdi = txtMusteriAdi.Text.Trim();
             string sevkMusteriAdi = txtSevkMusteri.Text.Trim();
             if (string.IsNullOrEmpty(sevkMusteriAdi)) sevkMusteriAdi = "Belirtilmedi";
-
             string belgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>());
-            string listeHtml = string.Join("", paletIcerigi);
 
-            // 🌟 FİRMA ADI 2 SATIRA SINIRLANDI, KUTU İÇİ "KOD | AD | ADET" OLARAK DÜZENLENDİ
-            string html = $@"<html>
+            // 🌟 2. HTML BAŞLANGICI VE CSS (Sayfa Kesme Özelliği Eklendi)
+            System.Text.StringBuilder html = new System.Text.StringBuilder();
+            html.AppendLine(@"<html>
     <head>
        <meta charset='utf-8'>
        <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
        <style>
-          body {{ font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 10px; }}
-          
-          /* Firma adı küçültüldü ve maks 2 satır kilidi konuldu */
-          .firma {{ font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }}
-          .sevk-musteri {{ font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }}
-          .belge {{ font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }}
-          .palet {{ font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }}
-          
-          /* YENİ: Kutu ve İçindeki Listelerin 3'lü Dağılımı */
-          .urunler {{ text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }}
-          ul {{ margin: 0; padding-left: 0; list-style-type: none; }}
-          
-          /* YENİ: Tek Satır, Taşmayan Esnek Tasarım */
-          li {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }}
-          .k-kod {{ flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }}
-          .k-ad {{ flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }}
-          .k-adet {{ flex: 2; text-align: right; font-size: 20px; color: black; }}
-          
-          .barkod-alani {{ margin-top: 20px; }} 
+          body { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
+          .sayfa { width: 100%; height: 100vh; box-sizing: border-box; padding: 20px; page-break-after: always; background: white; }
+          .firma { font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+          .sevk-musteri { font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }
+          .belge { font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }
+          .palet { font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }
+          .urunler { text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }
+          ul { margin: 0; padding-left: 0; list-style-type: none; }
+          li { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }
+          .k-kod { flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }
+          .k-ad { flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }
+          .k-adet { flex: 2; text-align: right; font-size: 20px; color: black; }
+          .barkod-alani { margin-top: 20px; } 
        </style>
     </head>
-    <body>
-       <div class='firma'>{musteriAdi}</div>
-       <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
-       <div class='belge'>Belge No: {belgeNo}</div>
-       <div class='palet'>{gosterilenPaletAdi}</div>
-       
-       <div class='urunler'><ul>{listeHtml}</ul></div>
-       
-       <div class='barkod-alani'><svg id='barkod'></svg></div>
-       <script>
-          JsBarcode('#barkod', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
-       </script>
-    </body></html>";
+    <body>");
 
+            // 🌟 3. HANGİ PALETLERİN YAZDIRILACAĞINI BELİRLE
+            List<int> basilacakSutunlar = new List<int>();
+            if (seriYazdir)
+            {
+                // Seri ise tüm sütunları döngüye al
+                for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++) basilacakSutunlar.Add(j);
+            }
+            else
+            {
+                // Tekli ise sadece seçili sütunu al
+                basilacakSutunlar.Add(cmbAktifPalet.SelectedIndex);
+            }
+
+            bool enAzBirPaletDolu = false;
+
+            // 🌟 4. PALETLERİ OKU VE HTML'E DİZ
+            foreach (int j in basilacakSutunlar)
+            {
+                string paletAdi = "";
+                if (cmbAktifPalet.Items.Count > j) paletAdi = cmbAktifPalet.Items[j].ToString();
+                else paletAdi = $"{j + 1}. Palet";
+
+                string gosterilenPaletAdi = paletAdi;
+                if (dgvPaletMatrisi.Columns.Count == 1) gosterilenPaletAdi = "1 Palet Dolap";
+
+                List<string> paletIcerigi = new List<string>();
+                foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
+                {
+                    if (row.Cells[j].Value != null && !string.IsNullOrWhiteSpace(row.Cells[j].Value.ToString()))
+                    {
+                        string hamVeri = row.Cells[j].Value.ToString();
+                        string[] parcalar = hamVeri.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+                        string urunKismi = parcalar[0];
+                        string adetKismi = parcalar.Length > 1 ? parcalar[1] : "1";
+
+                        int parantezIndex = urunKismi.LastIndexOf('(');
+                        if (parantezIndex > 0) urunKismi = urunKismi.Substring(0, parantezIndex).Trim();
+
+                        string uKodu = urunKismi;
+                        string uAdi = "";
+                        int tireIndex = urunKismi.IndexOf(" - ");
+
+                        if (tireIndex > 0)
+                        {
+                            uKodu = urunKismi.Substring(0, tireIndex).Trim();
+                            uAdi = urunKismi.Substring(tireIndex + 3).Trim();
+                        }
+                        else
+                        {
+                            uKodu = urunKismi.Trim();
+                            var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == uKodu || u.Barkod == uKodu);
+                            if (urun != null) uAdi = urun.Aciklama;
+                            else uAdi = "Bilinmeyen Ürün";
+                        }
+
+                        paletIcerigi.Add($"<li><span class='k-kod'>• {uKodu}</span><span class='k-ad'>{uAdi}</span><span class='k-adet'>Adet: {adetKismi}</span></li>");
+                    }
+                }
+
+                // Palet boşsa diğer palete geç, boş kağıt israf etme
+                if (paletIcerigi.Count == 0) continue;
+
+                enAzBirPaletDolu = true;
+
+                // EAN13 Barkod Ataması
+                string paletBarkodu = "";
+                if (aktifPaletBarkodlari.ContainsKey(paletAdi))
+                    paletBarkodu = aktifPaletBarkodlari[paletAdi];
+                else
+                {
+                    paletBarkodu = Ean13Olustur();
+                    aktifPaletBarkodlari.Add(paletAdi, paletBarkodu);
+                }
+
+                string listeHtml = string.Join("", paletIcerigi);
+
+                // Birden çok SVG (Barkod) aynı kağıda basılacağı için her birine benzersiz bir kimlik (ID) veriyoruz!
+                string barkodId = "barkod_" + j.ToString();
+
+                html.AppendLine($@"
+       <div class='sayfa'>
+           <div class='firma'>{musteriAdi}</div>
+           <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
+           <div class='belge'>Belge No: {belgeNo}</div>
+           <div class='palet'>{gosterilenPaletAdi}</div>
+           
+           <div class='urunler'><ul>{listeHtml}</ul></div>
+           
+           <div class='barkod-alani'><svg id='{barkodId}'></svg></div>
+           <script>
+              JsBarcode('#{barkodId}', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
+           </script>
+       </div>");
+            }
+
+            if (!enAzBirPaletDolu)
+            {
+                MessageBox.Show("Seçilen kriterlere uygun DOLU palet bulunamadı! Lütfen önce ürün okutun.", "Boş Palet", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            html.AppendLine("</body></html>");
+
+            // 🌟 5. WEBVIEW2 EDGE İLE YAZDIR
             Form frmYazdir = new Form { Text = "Palet Etiketi Çıkartılıyor...", Width = 800, Height = 600, StartPosition = FormStartPosition.CenterParent, Icon = this.Icon };
             Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
             frmYazdir.Controls.Add(web);
@@ -7295,7 +7332,7 @@ namespace TamgaApp
                 var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "EtiketPrintAktif"));
                 await web.EnsureCoreWebView2Async(ozelHafiza);
                 web.NavigationCompleted += (s2, e2) => { web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser); };
-                web.NavigateToString(html);
+                web.NavigateToString(html.ToString());
             };
 
             frmYazdir.ShowDialog();
