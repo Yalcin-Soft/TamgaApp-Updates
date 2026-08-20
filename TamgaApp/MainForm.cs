@@ -536,6 +536,13 @@ namespace TamgaApp
                 cmbMusteri.SelectedIndexChanged += cmbMusteri_SelectedIndexChanged;
             }
 
+            // 🌟 RENK MOTORU: A-Z Sıralamada renklerin kaybolmasını önler
+            if (dgvMalzemeler != null)
+            {
+                dgvMalzemeler.CellFormatting -= dgvMalzemeler_CellFormatting;
+                dgvMalzemeler.CellFormatting += dgvMalzemeler_CellFormatting;
+            }
+
             // Sevkiyat ve Yarım Kalanlar (Askı) Sistemi
             if (btnYarimGetir != null) { btnYarimGetir.Click -= btnYarimGetir_Click; btnYarimGetir.Click += btnYarimGetir_Click; }
             if (btnYarimAc != null) { btnYarimAc.Click -= btnYarimAc_Click; btnYarimAc.Click += btnYarimAc_Click; }
@@ -564,6 +571,10 @@ namespace TamgaApp
                 dgvPaletMatrisi.AllowUserToAddRows = false;
                 dgvPaletMatrisi.KeyPress -= Dgv_BarkodYonlendir_KeyPress;
                 dgvPaletMatrisi.KeyPress += Dgv_BarkodYonlendir_KeyPress;
+
+                // 🌟 YENİ EKLENEN: ÜST TABLO (PALET) SAĞ TIK VE DÜZENLEME MOTORU 🌟
+                dgvPaletMatrisi.CellMouseDown -= DgvPaletMatrisi_CellMouseDown;
+                dgvPaletMatrisi.CellMouseDown += DgvPaletMatrisi_CellMouseDown;
             }
 
             if (btnManuelEkle != null) { btnManuelEkle.Click -= btnManuelEkle_Click; btnManuelEkle.Click += btnManuelEkle_Click; }
@@ -588,8 +599,7 @@ namespace TamgaApp
                 dgvMalzemeler.CellMouseDown += dgvMalzemeler_CellMouseDown;
             }
 
-
-            dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
+            if (dgvPaletler != null) dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
         }
         #endregion
 
@@ -4908,6 +4918,25 @@ namespace TamgaApp
         #endregion
 
         #region 🔍 13.4 ARAMA VE EŞLEŞTİRME (BELGE NO DOLDURMA)
+
+        // 🌟 SİHİRLİ BOYA MOTORU (Sıralama yapıldığında renklerin kaybolmasını %100 engeller)
+        private void DgvMalzemeler_Renklendir(object sender, EventArgs e)
+        {
+            if (dgvMalzemeler == null) return;
+            foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+            {
+                if (row.IsNewRow) continue;
+                int sip = 0, oku = 0;
+
+                if (row.Cells["Sipariş Adedi"].Value != null) int.TryParse(row.Cells["Sipariş Adedi"].Value.ToString(), out sip);
+                if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out oku);
+
+                if (oku >= sip && sip > 0) row.DefaultCellStyle.BackColor = Color.LightGreen;
+                else if (oku > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
+                else row.DefaultCellStyle.BackColor = Color.White;
+            }
+        }
+
         // Kullanıcı bir "Müşteri" seçtiğinde, sadece o müşteriye ait Belge Numaralarını altındaki kutuya doldurur.
         private void cmbMusteri_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -4952,37 +4981,38 @@ namespace TamgaApp
             }
         }
 
-        // Belge No kutusundaki TİKLİ BELGELERİ arar ve tabloyu ürünlerle doldurur.
         private void btnSevkAra_Click(object sender, EventArgs e)
         {
-            // Hiçbir şeye tik atılmadıysa uyar
             if (clbBelgeNo.CheckedItems.Count == 0)
             {
-                MessageBox.Show("Lütfen listelemek için en az bir Belge No işaretleyin (Kutuya tik atın).", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                MessageBox.Show("Lütfen listelemek için en az bir Belge No işaretleyin.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning); return;
             }
 
-            // 🌟 SİHİRLİ ZIRH: Mevcut Ekrandaki "Okutulan" (Okuma) Geçmişini Hafızaya Al!
             Dictionary<string, int> oncekiOkutulanlar = new Dictionary<string, int>();
             if (dgvMalzemeler.Rows.Count > 0)
             {
                 foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                 {
                     if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
+
                     string bNo = row.Cells["Belge No"].Value.ToString();
                     string mKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                    string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? "";
+
+                    // 🌟 ZIRH: Sipariş adedine bakmadan renk ve belge ile havuz oluşturur!
+                    string anahtar = $"{bNo}_{mKodu}_{aciklama}";
 
                     int okutulan = 0;
                     if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
 
                     if (okutulan > 0)
                     {
-                        oncekiOkutulanlar[$"{bNo}_{mKodu}"] = okutulan;
+                        if (!oncekiOkutulanlar.ContainsKey(anahtar)) oncekiOkutulanlar[anahtar] = okutulan;
+                        else oncekiOkutulanlar[anahtar] += okutulan;
                     }
                 }
             }
 
-            // Tabloyu sıfırdan kur
             DataTable dtEkran = new DataTable();
             dtEkran.Columns.Add("Belge No", typeof(string));
             dtEkran.Columns.Add("Malzeme Kodu", typeof(string));
@@ -4993,17 +5023,15 @@ namespace TamgaApp
             dtEkran.Columns.Add("Okutulan", typeof(int));
 
             var yerelUrunler = DataAccess.GetAllUrunler();
-
-            // Müşteri bilgisini ilk tikli belgeden al
             string ilkBelge = clbBelgeNo.CheckedItems[0].ToString();
             DataRow[] ilkBelgeSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{ilkBelge}%'");
+
             if (ilkBelgeSatirlari.Length > 0)
             {
                 txtMusteriAdi.Text = ilkBelgeSatirlari[0]["MusteriAdi"].ToString().Trim();
                 txtSevkMusteri.Text = ilkBelgeSatirlari[0]["SevkMusteri"].ToString().Trim();
             }
 
-            // Tiklenen TÜM belgeleri sırayla tabloya ekle
             foreach (var isaretliBelge in clbBelgeNo.CheckedItems)
             {
                 string secilenBelge = isaretliBelge.ToString();
@@ -5014,64 +5042,36 @@ namespace TamgaApp
                     string malzemeKodu = satir["Malzeme"].ToString().Trim();
                     string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
 
-                    var urun = yerelUrunler.FirstOrDefault(u =>
-                        u.UrunKodu == malzemeKodu &&
-                        (
-                            (siparisRengi.IndexOf("Beyaz", StringComparison.OrdinalIgnoreCase) >= 0 && string.IsNullOrWhiteSpace(u.Renk))
-                            ||
-                            u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase)
-                            ||
-                            (!string.IsNullOrWhiteSpace(u.Renk) && siparisRengi.IndexOf(u.Renk.Replace("2K-", "").Replace("2N-", "").Replace("2L-", "").Replace("2C-", "").Trim(), StringComparison.OrdinalIgnoreCase) >= 0)
-                        )
-                    );
+                    var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu &&
+                        ((siparisRengi.IndexOf("Beyaz", StringComparison.OrdinalIgnoreCase) >= 0 && string.IsNullOrWhiteSpace(u.Renk)) ||
+                        u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase) ||
+                        (!string.IsNullOrWhiteSpace(u.Renk) && siparisRengi.IndexOf(u.Renk.Replace("2K-", "").Replace("2N-", "").Replace("2L-", "").Replace("2C-", "").Trim(), StringComparison.OrdinalIgnoreCase) >= 0)));
 
-                    if (urun == null)
-                    {
-                        urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
-                    }
+                    if (urun == null) urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
 
                     string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
-                    // 🌟 ESKİ OKUTULAN DEĞERİ HAFIZADAN ÇEK
+                    int sAdet = Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"]));
                     int yazilacakOkutulan = 0;
-                    string anahtar = $"{secilenBelge}_{malzemeKodu}";
-                    if (oncekiOkutulanlar.ContainsKey(anahtar))
+
+                    // 🌟 KUSURSUZ ŞELALE DAĞITIMI
+                    string anahtar = $"{secilenBelge}_{malzemeKodu}_{siparisRengi}";
+
+                    if (oncekiOkutulanlar.ContainsKey(anahtar) && oncekiOkutulanlar[anahtar] > 0)
                     {
-                        yazilacakOkutulan = oncekiOkutulanlar[anahtar];
+                        yazilacakOkutulan = Math.Min(sAdet, oncekiOkutulanlar[anahtar]);
+                        oncekiOkutulanlar[anahtar] -= yazilacakOkutulan; // Havuzdan düş ki diğer satıra kalsın
                     }
 
-                    dtEkran.Rows.Add(
-                        secilenBelge,
-                        malzemeKodu,
-                        barkod,
-                        satir["MalzemeAdi"].ToString().Trim(),
-                        satir["SecenekAciklamasi"].ToString().Trim(),
-                        Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])),
-                        yazilacakOkutulan // Sıfır yerine korunan değeri yaz
-                    );
+                    dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), siparisRengi, sAdet, yazilacakOkutulan);
                 }
             }
 
             dgvMalzemeler.DataSource = dtEkran;
             dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            DgvMalzemeler_Renklendir(null, null); // Renkleri zorla çalıştır
 
-            // 🌟 BOYA ZIRHI: Tablo yüklendikten sonra eski okunanların renklerini yeşil/sarıya geri boya
-            foreach (DataGridViewRow row in dgvMalzemeler.Rows)
-            {
-                if (row.IsNewRow) continue;
-                int sip = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
-                int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
-
-                if (oku >= sip && sip > 0) row.DefaultCellStyle.BackColor = Color.LightGreen;
-                else if (oku > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
-                else row.DefaultCellStyle.BackColor = Color.White;
-            }
-
-            // Kullanıcıyı boşa uyarıp yormamak için, metod otomatik (Askı/Ambar) tetiklenmediyse mesaj ver
-            if (sender != null)
-            {
-                MessageBox.Show($"{clbBelgeNo.CheckedItems.Count} adet sipariş fişi (İhracat kurallarıyla) listeye eklendi!\nÖnceki okutulan ürünleriniz başarıyla korundu.", "Siparişler Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
+            if (sender != null) MessageBox.Show($"{clbBelgeNo.CheckedItems.Count} adet sipariş fişi eklendi!\nÖnceki okutulan ürünleriniz başarıyla korundu.", "Siparişler Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         #endregion
@@ -5161,23 +5161,296 @@ namespace TamgaApp
             if (txtBarkod != null && txtBarkod.Enabled) txtBarkod.Focus();
         }
 
-        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (SÜSSÜZ, TIMES NEW ROMAN)
-        private void btnSevkRaporla_Click(object sender, EventArgs e)
+        // 🌟 ÜST TABLOYA (PALET MATRİSİ) SAĞ TIKLANDIĞINDA AÇILAN DÜZENLEME MENÜSÜ
+        private void DgvPaletMatrisi_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
         {
-            if (dgvMalzemeler.Rows.Count == 0 || dgvPaletMatrisi.Columns.Count == 0) return;
-
-            try
+            if (e.Button == MouseButtons.Right && e.RowIndex >= 0 && e.ColumnIndex >= 0)
             {
-                string belgeNo = "SE";
-                foreach (DataGridViewRow r in dgvMalzemeler.Rows)
+                if (dgvPaletMatrisi.Rows[e.RowIndex].Cells[e.ColumnIndex].Value == null || string.IsNullOrWhiteSpace(dgvPaletMatrisi.Rows[e.RowIndex].Cells[e.ColumnIndex].Value.ToString()))
+                    return; // Boş hücreye tıklandıysa işlem yapma
+
+                dgvPaletMatrisi.ClearSelection();
+                dgvPaletMatrisi.Rows[e.RowIndex].Cells[e.ColumnIndex].Selected = true;
+                dgvPaletMatrisi.CurrentCell = dgvPaletMatrisi.Rows[e.RowIndex].Cells[e.ColumnIndex];
+
+                ContextMenuStrip menu = new ContextMenuStrip();
+                menu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                ToolStripMenuItem btnDuzenle = new ToolStripMenuItem("✏️ İçindeki Miktarı Değiştir (Düzenle)");
+                btnDuzenle.ForeColor = Color.DarkBlue;
+                btnDuzenle.Click += (s, ev) => { MatrisHucreDuzenle(e.RowIndex, e.ColumnIndex); };
+
+                ToolStripMenuItem btnSil = new ToolStripMenuItem("❌ Bu Ürünü Paletten Tamamen Sil");
+                btnSil.ForeColor = Color.DarkRed;
+                btnSil.Click += (s, ev) => { MatrisHucreSil(e.RowIndex, e.ColumnIndex); };
+
+                menu.Items.Add(btnDuzenle);
+                menu.Items.Add(new ToolStripSeparator());
+                menu.Items.Add(btnSil);
+
+                menu.Show(Cursor.Position);
+            }
+        }
+
+        // 🌟 MİKTARI ELLE DEĞİŞTİRME MOTORU (ALT TABLOYU DA OTOMATİK DÜZELTİR)
+        private void MatrisHucreDuzenle(int rowIndex, int colIndex)
+        {
+            string hucreMetni = dgvPaletMatrisi.Rows[rowIndex].Cells[colIndex].Value.ToString();
+            string[] parcalar = hucreMetni.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+            if (parcalar.Length != 2) return;
+
+            string urunVeBelge = parcalar[0];
+            int.TryParse(parcalar[1], out int eskiAdet);
+
+            int sonParantezAc = urunVeBelge.LastIndexOf('(');
+            int sonParantezKapat = urunVeBelge.LastIndexOf(')');
+            string belgeNo = "";
+            if (sonParantezAc > 0 && sonParantezKapat > sonParantezAc)
+                belgeNo = urunVeBelge.Substring(sonParantezAc + 1, sonParantezKapat - sonParantezAc - 1).Trim();
+
+            string malzemeKodu = urunVeBelge;
+            int tireIndex = urunVeBelge.IndexOf(" - ");
+            if (tireIndex > 0) malzemeKodu = urunVeBelge.Substring(0, tireIndex).Trim();
+            else if (sonParantezAc > 0) malzemeKodu = urunVeBelge.Substring(0, sonParantezAc).Trim();
+
+            // Sayı girme ekranı
+            Form prompt = new Form() { Width = 350, Height = 200, FormBorderStyle = FormBorderStyle.FixedDialog, Text = "Miktarı Düzenle", StartPosition = FormStartPosition.CenterParent, ShowIcon = false };
+            Label lbl = new Label() { Left = 20, Top = 20, Text = "Ürünün bu paletteki yeni miktarını girin:", Width = 300, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+            NumericUpDown num = new NumericUpDown() { Left = 20, Top = 50, Width = 150, Minimum = 1, Maximum = 99999, Value = eskiAdet, Font = new Font("Segoe UI", 12) };
+            Button btnOnay = new Button() { Text = "KAYDET", Left = 20, Top = 90, Width = 150, Height = 40, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+            btnOnay.Click += (sender, e) =>
+            {
+                int yeniAdet = (int)num.Value;
+                if (yeniAdet == eskiAdet) { prompt.Close(); return; }
+
+                int fark = yeniAdet - eskiAdet;
+                int kalanFark = Math.Abs(fark);
+
+                // Alt tabloyla senkronize et
+                if (fark > 0) // Ekleniyor
                 {
-                    if (!r.IsNewRow && r.Cells["Belge No"].Value != null)
+                    foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                     {
-                        belgeNo = r.Cells["Belge No"].Value.ToString(); break;
+                        if (row.IsNewRow) continue;
+                        if (row.Cells["Malzeme Kodu"].Value?.ToString().Trim() == malzemeKodu && row.Cells["Belge No"].Value?.ToString().Trim() == belgeNo)
+                        {
+                            int sip = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+                            int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
+
+                            if (oku < sip)
+                            {
+                                int eklenecekMiktar = Math.Min(sip - oku, kalanFark);
+                                row.Cells["Okutulan"].Value = oku + eklenecekMiktar;
+                                kalanFark -= eklenecekMiktar;
+                                if (kalanFark == 0) break;
+                            }
+                        }
+                    }
+                    if (kalanFark > 0) // Taşırma (Siparişten fazla okutulduysa ilk satıra zorla bindir)
+                    {
+                        foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                        {
+                            if (row.IsNewRow) continue;
+                            if (row.Cells["Malzeme Kodu"].Value?.ToString().Trim() == malzemeKodu && row.Cells["Belge No"].Value?.ToString().Trim() == belgeNo)
+                            {
+                                row.Cells["Okutulan"].Value = Convert.ToInt32(row.Cells["Okutulan"].Value) + kalanFark;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else // Eksiltiliyor
+                {
+                    foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                    {
+                        if (row.IsNewRow) continue;
+                        if (row.Cells["Malzeme Kodu"].Value?.ToString().Trim() == malzemeKodu && row.Cells["Belge No"].Value?.ToString().Trim() == belgeNo)
+                        {
+                            int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
+                            if (oku > 0)
+                            {
+                                int dusulecek = Math.Min(oku, kalanFark);
+                                row.Cells["Okutulan"].Value = oku - dusulecek;
+                                kalanFark -= dusulecek;
+                                if (kalanFark == 0) break;
+                            }
+                        }
                     }
                 }
 
-                string turKlasoru = belgeNo.Split('_')[0].StartsWith("O1") ? "İhracat" : "Yurtiçi";
+                dgvPaletMatrisi.Rows[rowIndex].Cells[colIndex].Value = $"{urunVeBelge} | Adet: {yeniAdet}";
+                DgvMalzemeler_Renklendir(null, null); // Renkleri güncelle
+                prompt.Close();
+            };
+
+            prompt.Controls.Add(lbl); prompt.Controls.Add(num); prompt.Controls.Add(btnOnay);
+            prompt.ShowDialog();
+        }
+
+        // 🌟 PALETTEN TAMAMEN SİLME MOTORU
+        private void MatrisHucreSil(int rowIndex, int colIndex)
+        {
+            string hucreMetni = dgvPaletMatrisi.Rows[rowIndex].Cells[colIndex].Value.ToString();
+            string[] parcalar = hucreMetni.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+            if (parcalar.Length != 2) return;
+
+            string urunVeBelge = parcalar[0];
+            int.TryParse(parcalar[1], out int eskiAdet);
+
+            int sonParantezAc = urunVeBelge.LastIndexOf('(');
+            int sonParantezKapat = urunVeBelge.LastIndexOf(')');
+            string belgeNo = "";
+            if (sonParantezAc > 0 && sonParantezKapat > sonParantezAc)
+                belgeNo = urunVeBelge.Substring(sonParantezAc + 1, sonParantezKapat - sonParantezAc - 1).Trim();
+
+            string malzemeKodu = urunVeBelge;
+            int tireIndex = urunVeBelge.IndexOf(" - ");
+            if (tireIndex > 0) malzemeKodu = urunVeBelge.Substring(0, tireIndex).Trim();
+            else if (sonParantezAc > 0) malzemeKodu = urunVeBelge.Substring(0, sonParantezAc).Trim();
+
+            DialogResult onay = MessageBox.Show($"Bu ürünü ({eskiAdet} adet) paletten tamamen silmek istiyor musunuz?", "Silme Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (onay == DialogResult.Yes)
+            {
+                int kalanFark = eskiAdet;
+
+                foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                {
+                    if (row.IsNewRow) continue;
+                    if (row.Cells["Malzeme Kodu"].Value?.ToString().Trim() == malzemeKodu && row.Cells["Belge No"].Value?.ToString().Trim() == belgeNo)
+                    {
+                        int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
+                        if (oku > 0)
+                        {
+                            int dusulecek = Math.Min(oku, kalanFark);
+                            row.Cells["Okutulan"].Value = oku - dusulecek;
+                            kalanFark -= dusulecek;
+                            if (kalanFark == 0) break;
+                        }
+                    }
+                }
+
+                dgvPaletMatrisi.Rows[rowIndex].Cells[colIndex].Value = ""; // Hücreyi temizle
+                DgvMalzemeler_Renklendir(null, null); // Renkleri düzelt
+            }
+        }
+
+        // 🌟 RAPORLAMA İÇİN YARDIMCI VERİ MODELİ (Metodun hemen üstünde durabilir)
+        private class MatrisRaporVerisi
+        {
+            public string BelgeNo { get; set; }
+            public string MalzemeKodu { get; set; }
+            public string MalzemeAdi { get; set; }
+            public string Aciklama { get; set; }
+            public int[] PaletAdetleri { get; set; }
+        }
+
+        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (SADECE PALET MATRİSİNİ BAZ ALIR)
+        private void btnSevkRaporla_Click(object sender, EventArgs e)
+        {
+            if (dgvPaletMatrisi.Columns.Count == 0) return;
+
+            // Matrisin içi boş mu kontrolü
+            bool matrisDoluMu = false;
+            foreach (DataGridViewRow r in dgvPaletMatrisi.Rows)
+            {
+                for (int c = 0; c < dgvPaletMatrisi.Columns.Count; c++)
+                {
+                    if (r.Cells[c].Value != null && !string.IsNullOrWhiteSpace(r.Cells[c].Value.ToString()))
+                    {
+                        matrisDoluMu = true; break;
+                    }
+                }
+            }
+            if (!matrisDoluMu)
+            {
+                MessageBox.Show("Raporlanacak palet verisi bulunamadı!", "Liste Boş", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                // 🌟 1. ADIM: SADECE PALET MATRİSİNİ OKU VE İÇİNDEKİLERİ TOPLA
+                int paletSayisi = dgvPaletMatrisi.Columns.Count;
+                var raporHavuzu = new Dictionary<string, MatrisRaporVerisi>();
+
+                for (int j = 0; j < paletSayisi; j++)
+                {
+                    foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
+                    {
+                        if (paletSatiri.Cells[j].Value != null && !string.IsNullOrWhiteSpace(paletSatiri.Cells[j].Value.ToString()))
+                        {
+                            string hucreMetni = paletSatiri.Cells[j].Value.ToString();
+
+                            // Örnek Metin: "8691234 - Kasa [Beyaz] (SE-001) | Adet: 5"
+                            string[] parcalar = hucreMetni.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+
+                            if (parcalar.Length == 2)
+                            {
+                                string urunVeBelge = parcalar[0];
+                                int.TryParse(parcalar[1], out int adet);
+
+                                // Belge Numarasını Çıkar
+                                string bNo = "SE";
+                                int parantezIndex = urunVeBelge.LastIndexOf('(');
+                                int sonParantez = urunVeBelge.LastIndexOf(')');
+                                if (parantezIndex > 0 && sonParantez > parantezIndex)
+                                {
+                                    bNo = urunVeBelge.Substring(parantezIndex + 1, sonParantez - parantezIndex - 1).Trim();
+                                    urunVeBelge = urunVeBelge.Substring(0, parantezIndex).Trim();
+                                }
+
+                                // Malzeme Kodunu ve Adını Çıkar
+                                string mKodu = urunVeBelge;
+                                int tireIndex = urunVeBelge.IndexOf(" - ");
+                                if (tireIndex > 0) mKodu = urunVeBelge.Substring(0, tireIndex).Trim();
+
+                                // 🌟 BENZERSİZ ANAHTAR: Belge No ve Malzeme Kodu
+                                string anahtar = $"{bNo}_{mKodu}";
+
+                                if (!raporHavuzu.ContainsKey(anahtar))
+                                {
+                                    raporHavuzu[anahtar] = new MatrisRaporVerisi
+                                    {
+                                        BelgeNo = bNo,
+                                        MalzemeKodu = mKodu,
+                                        PaletAdetleri = new int[paletSayisi]
+                                    };
+
+                                    // Excel'de temiz görünmesi için İsim ve Açıklamayı sol tablodan (dgvMalzemeler) Cımbızla
+                                    // Sol tablonun "Okutulan" adediyle İLGİLENMİYORUZ, sadece isimleri almak için bakıyoruz!
+                                    foreach (DataGridViewRow solSatir in dgvMalzemeler.Rows)
+                                    {
+                                        if (solSatir.IsNewRow) continue;
+                                        if (solSatir.Cells["Belge No"].Value?.ToString().Trim() == bNo &&
+                                            solSatir.Cells["Malzeme Kodu"].Value?.ToString().Trim() == mKodu)
+                                        {
+                                            raporHavuzu[anahtar].MalzemeAdi = solSatir.Cells["Malzeme Adı"].Value?.ToString() ?? "";
+                                            raporHavuzu[anahtar].Aciklama = solSatir.Cells["Açıklama"].Value?.ToString() ?? "";
+                                            break;
+                                        }
+                                    }
+
+                                    // Sol tabloda bulamazsa kendi parçaladığı metni yazsın
+                                    if (string.IsNullOrEmpty(raporHavuzu[anahtar].MalzemeAdi))
+                                    {
+                                        raporHavuzu[anahtar].MalzemeAdi = tireIndex > 0 ? urunVeBelge.Substring(tireIndex + 3).Trim() : "Ürün Adı Yok";
+                                        raporHavuzu[anahtar].Aciklama = "";
+                                    }
+                                }
+
+                                // 🌟 MATRİSTEKİ GERÇEK ADETİ HAVUZA YAZ
+                                raporHavuzu[anahtar].PaletAdetleri[j] += adet;
+                            }
+                        }
+                    }
+                }
+
+                if (raporHavuzu.Count == 0) return;
+
+                // 🌟 2. ADIM: EXCEL'İ OLUŞTUR (SADECE MATRİS HAVUZUNDAN)
+                string anaBelgeNo = raporHavuzu.Values.FirstOrDefault()?.BelgeNo ?? "SE";
+                string turKlasoru = anaBelgeNo.StartsWith("O1") ? "İhracat" : "Yurtiçi";
                 string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Sevkiyat Raporları", turKlasoru, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
                 if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
 
@@ -5188,115 +5461,45 @@ namespace TamgaApp
                 using (var wb = new ClosedXML.Excel.XLWorkbook())
                 {
                     var ws = wb.Worksheets.Add("Sevkiyat Matrisi");
-
                     ws.Style.Font.FontName = "Times New Roman";
                     ws.Style.Font.FontSize = 11;
 
+                    // Başlıklar
                     ws.Cell(1, 1).Value = "Müşteri Adı";
                     ws.Cell(1, 2).Value = "Belge No";
                     ws.Cell(1, 3).Value = "Malzeme Kodu";
                     ws.Cell(1, 4).Value = "Malzeme Adı";
                     ws.Cell(1, 5).Value = "Açıklaması";
-                    ws.Cell(1, 6).Value = "Adet";
+                    ws.Cell(1, 6).Value = "Toplam Adet"; // Eski "Adet" yerine "Toplam Adet"
 
-                    // 🌟 PALET 1, PALET 2 BAŞLIKLARINI YAZ
+                    // Palet Başlıkları
                     int colIndex = 7;
-                    for (int i = 0; i < dgvPaletMatrisi.Columns.Count; i++)
+                    for (int i = 0; i < paletSayisi; i++)
                     {
                         ws.Cell(1, colIndex).Value = $"PALET {i + 1}";
                         colIndex++;
                     }
 
-                    var gecerliSatirlar = dgvMalzemeler.Rows.Cast<DataGridViewRow>()
-                        .Where(r => !r.IsNewRow && r.Cells["Malzeme Kodu"].Value != null && Convert.ToInt32(r.Cells["Okutulan"].Value ?? 0) > 0)
-                        .ToList();
-
-                    // =========================================================================
-                    // 🌟 1. ADIM: PALET HAVUZUNU OLUŞTUR (Hangi palette toplam kaç tane var?)
-                    // =========================================================================
-                    var paletHavuzu = new Dictionary<string, Dictionary<int, int>>();
-
-                    for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
-                    {
-                        foreach (DataGridViewRow paletSatiri in dgvPaletMatrisi.Rows)
-                        {
-                            if (paletSatiri.Cells[j].Value != null && !string.IsNullOrWhiteSpace(paletSatiri.Cells[j].Value.ToString()))
-                            {
-                                string hucre = paletSatiri.Cells[j].Value.ToString();
-                                string[] parcalar = hucre.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
-
-                                if (parcalar.Length == 2)
-                                {
-                                    string urunKismi = parcalar[0];
-                                    int.TryParse(parcalar[1], out int adet);
-
-                                    int parantezIndex = urunKismi.LastIndexOf('(');
-                                    int sonParantez = urunKismi.LastIndexOf(')');
-
-                                    if (parantezIndex > 0 && sonParantez > parantezIndex)
-                                    {
-                                        string pBelgeNo = urunKismi.Substring(parantezIndex + 1, sonParantez - parantezIndex - 1).Trim();
-
-                                        string kKodu = urunKismi.Substring(0, parantezIndex).Trim();
-                                        int tireIndex = kKodu.IndexOf(" - ");
-                                        if (tireIndex > 0) kKodu = kKodu.Substring(0, tireIndex).Trim();
-
-                                        string anahtar = $"{pBelgeNo}_{kKodu}";
-
-                                        if (!paletHavuzu.ContainsKey(anahtar)) paletHavuzu[anahtar] = new Dictionary<int, int>();
-                                        if (!paletHavuzu[anahtar].ContainsKey(j)) paletHavuzu[anahtar][j] = 0;
-
-                                        paletHavuzu[anahtar][j] += adet;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // =========================================================================
-                    // 🌟 2. ADIM: SATIRLARI YAZDIR VE HAVUZDAN MİKTAR DÜŞEREK DAĞIT
-                    // =========================================================================
+                    // Verileri Doldur
                     int satir = 2;
-                    foreach (var urunSatiri in gecerliSatirlar)
+                    foreach (var rv in raporHavuzu.Values)
                     {
-                        string bNo = urunSatiri.Cells["Belge No"].Value?.ToString().Trim() ?? "";
-                        string malzemeKodu = urunSatiri.Cells["Malzeme Kodu"].Value?.ToString().Trim() ?? "";
-
-                        // YAN YANA YAZDIRMA ZIRHI: Açıklamadaki 'Enter' tuşlarını tek boşlukla değiştir
-                        string aciklama = urunSatiri.Cells["Açıklama"].Value?.ToString().Trim() ?? "";
-                        aciklama = aciklama.Replace("\r", " ").Replace("\n", " ").Replace("  ", " ");
-
-                        int.TryParse(urunSatiri.Cells["Okutulan"].Value?.ToString(), out int okutulanAdet);
-                        int satirIhtiyaci = okutulanAdet; // Bu satıra yazılması gereken kalan palet miktarı
+                        int genelToplam = rv.PaletAdetleri.Sum(); // O ürünün tüm paletlerdeki toplam gerçek adedi
+                        if (genelToplam == 0) continue;
 
                         ws.Cell(satir, 1).Value = txtMusteriAdi.Text.Trim();
-                        ws.Cell(satir, 2).Value = bNo;
-                        ws.Cell(satir, 3).Value = malzemeKodu;
-                        ws.Cell(satir, 4).Value = urunSatiri.Cells["Malzeme Adı"].Value?.ToString().Trim() ?? "";
-                        ws.Cell(satir, 5).Value = aciklama;
-                        ws.Cell(satir, 6).Value = okutulanAdet;
+                        ws.Cell(satir, 2).Value = rv.BelgeNo;
+                        ws.Cell(satir, 3).Value = rv.MalzemeKodu;
+                        ws.Cell(satir, 4).Value = rv.MalzemeAdi;
+                        ws.Cell(satir, 5).Value = rv.Aciklama;
+                        ws.Cell(satir, 6).Value = genelToplam;
 
-                        string anahtar = $"{bNo}_{malzemeKodu}";
                         int pCol = 7;
-
-                        // Her bir palet sütununu dön
-                        for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+                        for (int j = 0; j < paletSayisi; j++)
                         {
-                            if (satirIhtiyaci > 0 && paletHavuzu.ContainsKey(anahtar) && paletHavuzu[anahtar].ContainsKey(j))
+                            if (rv.PaletAdetleri[j] > 0)
                             {
-                                int palettekiKalan = paletHavuzu[anahtar][j];
-
-                                if (palettekiKalan > 0)
-                                {
-                                    // Satırın ihtiyacı ile palette kalan miktardan hangisi küçükse onu yaz (Taşmayı önle)
-                                    int yazilacakAdet = Math.Min(satirIhtiyaci, palettekiKalan);
-
-                                    ws.Cell(satir, pCol).Value = yazilacakAdet;
-
-                                    // Havuzdan ve satırın ihtiyacından düş
-                                    satirIhtiyaci -= yazilacakAdet;
-                                    paletHavuzu[anahtar][j] -= yazilacakAdet;
-                                }
+                                ws.Cell(satir, pCol).Value = rv.PaletAdetleri[j];
                             }
                             pCol++;
                         }
@@ -5304,14 +5507,17 @@ namespace TamgaApp
                     }
 
                     ws.Columns().AdjustToContents();
-                    ws.Column(5).Style.Alignment.WrapText = false; // Metni kaydır (Aşağı taşırma) kapalı
-
+                    ws.Column(5).Style.Alignment.WrapText = false; // Kaydırmayı kapat
                     wb.SaveAs(tamYol);
                 }
+
                 MessageBox.Show($"Saf Excel (.xlsx) Raporu oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
             }
-            catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error); }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Raporlama sırasında hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // 🌟 OTOMATİK BARKOD YÖNLENDİRİCİ ZIRHI (Mıknatıs Motoru)
@@ -6403,31 +6609,13 @@ namespace TamgaApp
 
         private void btnTumBelgeleriSec_Click(object sender, EventArgs e)
         {
-            if (cmbMusteri.SelectedItem == null)
-            {
-                MessageBox.Show("Lütfen önce bir Müşteri seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (cmbMusteri.SelectedItem == null) { MessageBox.Show("Lütfen önce bir Müşteri seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+            if (clbBelgeNo.Items.Count == 0) { MessageBox.Show("Seçilen müşteriye ait Belge No bulunamadı.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
 
-            if (clbBelgeNo.Items.Count == 0)
-            {
-                MessageBox.Show("Seçilen müşteriye ait Belge No bulunamadı.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            DialogResult onay = MessageBox.Show(
-                "Bu müşteriye ait TÜM SİPARİŞLER seçilecek ve en eskisinden başlanacak şekilde sıralanacaktır.\n\nEmin misiniz?",
-                "Tümünü Seç Onayı",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question);
-
+            DialogResult onay = MessageBox.Show("Bu müşteriye ait TÜM SİPARİŞLER seçilecek ve sıralanacaktır.\n\nEmin misiniz?", "Tümünü Seç Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
             if (onay == DialogResult.Yes)
             {
-                // Kutudaki tüm belgelere tik at
-                for (int i = 0; i < clbBelgeNo.Items.Count; i++)
-                {
-                    clbBelgeNo.SetItemChecked(i, true);
-                }
+                for (int i = 0; i < clbBelgeNo.Items.Count; i++) clbBelgeNo.SetItemChecked(i, true);
 
                 // 🌟 SİHİRLİ ZIRH: Mevcut Ekrandaki Geçmişi Hafızaya Al!
                 Dictionary<string, int> oncekiOkutulanlar = new Dictionary<string, int>();
@@ -6438,11 +6626,19 @@ namespace TamgaApp
                         if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
                         string bNo = row.Cells["Belge No"].Value.ToString();
                         string mKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                        string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? "";
+
+                        // 🌟 ZIRH: Sipariş adedi kaldırıldı! Sadece Belge, Kod ve Açıklamaya(Renge) bakar.
+                        string anahtar = $"{bNo}_{mKodu}_{aciklama}";
 
                         int okutulan = 0;
                         if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
 
-                        if (okutulan > 0) oncekiOkutulanlar[$"{bNo}_{mKodu}"] = okutulan;
+                        if (okutulan > 0)
+                        {
+                            if (!oncekiOkutulanlar.ContainsKey(anahtar)) oncekiOkutulanlar[anahtar] = okutulan;
+                            else oncekiOkutulanlar[anahtar] += okutulan; // Ezme, üstüne topla!
+                        }
                     }
                 }
 
@@ -6456,7 +6652,6 @@ namespace TamgaApp
                 dtEkran.Columns.Add("Okutulan", typeof(int));
 
                 var yerelUrunler = DataAccess.GetAllUrunler();
-
                 string ilkBelge = clbBelgeNo.Items[0].ToString();
                 DataRow[] ilkBelgeSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{ilkBelge}%'");
                 if (ilkBelgeSatirlari.Length > 0)
@@ -6465,62 +6660,58 @@ namespace TamgaApp
                     txtSevkMusteri.Text = ilkBelgeSatirlari[0]["SevkMusteri"].ToString().Trim();
                 }
 
-                // FIFO Sıralama (En eskiden yeniye)
                 var siraliBelgeler = clbBelgeNo.CheckedItems.Cast<string>().OrderBy(b => b.Trim()).ToList();
-
                 foreach (string secilenBelge in siraliBelgeler)
                 {
                     DataRow[] filtrelenmisSatirlar = dtTumSiparisler.Select($"BelgeNo LIKE '%{secilenBelge}%'");
-
                     foreach (DataRow satir in filtrelenmisSatirlar)
                     {
                         string malzemeKodu = satir["Malzeme"].ToString().Trim();
                         string siparisRengi = satir["SecenekAciklamasi"].ToString().Trim();
+                        if (string.IsNullOrEmpty(siparisRengi) || siparisRengi.Equals("BEYAZ", StringComparison.OrdinalIgnoreCase)) siparisRengi = "Beyaz";
 
-                        if (string.IsNullOrEmpty(siparisRengi) || siparisRengi.Equals("BEYAZ", StringComparison.OrdinalIgnoreCase))
-                        {
-                            siparisRengi = "Beyaz";
-                        }
-
-                        var urun = yerelUrunler.FirstOrDefault(u =>
-                            u.UrunKodu == malzemeKodu &&
-                            u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase));
-
-                        if (urun == null)
-                        {
-                            urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
-                        }
+                        var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu && u.Renk.Equals(siparisRengi, StringComparison.OrdinalIgnoreCase));
+                        if (urun == null) urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == malzemeKodu);
 
                         string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
 
-                        // 🌟 ESKİ OKUTULAN DEĞERİ HAFIZADAN ÇEK
+                        int sAdet = Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"]));
                         int yazilacakOkutulan = 0;
-                        string anahtar = $"{secilenBelge}_{malzemeKodu}";
-                        if (oncekiOkutulanlar.ContainsKey(anahtar))
+
+                        // 🌟 HAVUZDAN DAĞITMA MANTIĞI (Sipariş adedi kaldırıldı)
+                        string anahtar = $"{secilenBelge}_{malzemeKodu}_{siparisRengi}";
+                        if (oncekiOkutulanlar.ContainsKey(anahtar) && oncekiOkutulanlar[anahtar] > 0)
                         {
-                            yazilacakOkutulan = oncekiOkutulanlar[anahtar];
+                            yazilacakOkutulan = Math.Min(sAdet, oncekiOkutulanlar[anahtar]);
+                            oncekiOkutulanlar[anahtar] -= yazilacakOkutulan; // Havuzdan düş ki diğerine kalsın
                         }
 
-                        dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), Convert.ToInt32(Convert.ToDecimal(satir["Bakiye"])), yazilacakOkutulan);
+                        dtEkran.Rows.Add(secilenBelge, malzemeKodu, barkod, satir["MalzemeAdi"].ToString().Trim(), satir["SecenekAciklamasi"].ToString().Trim(), sAdet, yazilacakOkutulan);
                     }
                 }
 
                 dgvMalzemeler.DataSource = dtEkran;
                 dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
 
-                // 🌟 BOYA ZIRHI
-                foreach (DataGridViewRow row in dgvMalzemeler.Rows)
-                {
-                    if (row.IsNewRow) continue;
-                    int sip = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
-                    int oku = Convert.ToInt32(row.Cells["Okutulan"].Value);
-
-                    if (oku >= sip && sip > 0) row.DefaultCellStyle.BackColor = Color.LightGreen;
-                    else if (oku > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
-                    else row.DefaultCellStyle.BackColor = Color.White;
-                }
-
                 MessageBox.Show("Tüm belgeler eklendi ve sıralandı! Önceki okutulan ürünleriniz korundu.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        // 🌟 BOYA MOTORU (Sıralamada Renklerin Kaybolmasını Engeller)
+        private void dgvMalzemeler_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.RowIndex < dgvMalzemeler.Rows.Count)
+            {
+                DataGridViewRow row = dgvMalzemeler.Rows[e.RowIndex];
+                if (row.IsNewRow) return;
+
+                int sip = 0, oku = 0;
+                if (row.Cells["Sipariş Adedi"].Value != null) int.TryParse(row.Cells["Sipariş Adedi"].Value.ToString(), out sip);
+                if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out oku);
+
+                if (oku >= sip && sip > 0) row.DefaultCellStyle.BackColor = Color.LightGreen;
+                else if (oku > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
+                else row.DefaultCellStyle.BackColor = Color.White;
             }
         }
 
@@ -7133,13 +7324,19 @@ namespace TamgaApp
 
                 string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
                 string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
-                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+                string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? ""; // 🌟 ZIRH EKLENDİ
+
+                // 🌟 KUSURSUZ ANAHTAR ZIRHI: Artık sadece koda değil, renge/açıklamaya da bakıyor!
+                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
 
                 int okutulan = 0;
                 if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
 
+                // 🌟 TOPLAMA ZIRHI: Aynı üründen 2 satır varsa sayıları birbirinin üstüne ezmez, toplayarak havuz yapar!
                 if (!hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
                     hafiza.AnaOkutulanlar.Add(benzersizAnahtar, okutulan);
+                else
+                    hafiza.AnaOkutulanlar[benzersizAnahtar] += okutulan;
             }
 
             for (int i = 0; i < dgvPaletMatrisi.Rows.Count; i++)
@@ -7317,26 +7514,36 @@ namespace TamgaApp
 
                 btnSevkAra_Click(null, null);
 
+                // 🌟 MÜKEMMEL DAĞITIM: Eski verileri satır satır nokta atışıyla bul ve yapıştır
                 foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                 {
                     if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
 
                     string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
                     string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
-                    string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+                    string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? ""; // 🌟 ZIRH EKLENDİ
 
-                    if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
+                    // 🌟 KUSURSUZ ANAHTAR ZIRHI: Artık renge ve açıklamaya da bakıyor!
+                    string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
+
+                    if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar) && hafiza.AnaOkutulanlar[benzersizAnahtar] > 0)
                     {
-                        int eskiOkutulan = hafiza.AnaOkutulanlar[benzersizAnahtar];
                         int siparisAdedi = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+                        int havuzdaki = hafiza.AnaOkutulanlar[benzersizAnahtar];
 
-                        row.Cells["Okutulan"].Value = eskiOkutulan;
-
-                        if (eskiOkutulan >= siparisAdedi) row.DefaultCellStyle.BackColor = Color.LightGreen;
-                        else if (eskiOkutulan > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
-                        else row.DefaultCellStyle.BackColor = Color.White;
+                        // 🌟 ŞELALE MANTIĞI: Siparişten fazlasını aynı satıra ezmez, dağıtarak ilerler!
+                        int yazilacak = Math.Min(siparisAdedi, havuzdaki);
+                        row.Cells["Okutulan"].Value = yazilacak;
+                        hafiza.AnaOkutulanlar[benzersizAnahtar] -= yazilacak; // Havuzdan düş
+                    }
+                    else
+                    {
+                        row.Cells["Okutulan"].Value = 0;
                     }
                 }
+
+                // Renklendirme motorunu tabloya zorla uygulat
+                DgvMalzemeler_Renklendir(null, null);
 
                 dgvPaletMatrisi.Rows.Clear();
                 int maxSatirIndex = hafiza.PaletMatrisiDurumu.Keys.Count > 0 ? hafiza.PaletMatrisiDurumu.Keys.Max() : -1;
@@ -9383,20 +9590,26 @@ namespace TamgaApp
                 KayitTarihi = DateTime.Now
             };
 
-            // Sol tabloyu topla
+            // 🌟 SOL TABLOYU TOPLA (RENK ZIRHLI VE MÜKERRER KORUMALI)
             foreach (DataGridViewRow row in dgvMalzemeler.Rows)
             {
                 if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
 
                 string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
                 string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
-                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+                string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? ""; // 🌟 ZIRH EKLENDİ
+
+                // 🌟 KUSURSUZ ANAHTAR ZIRHI: Artık sadece koda değil, renge/açıklamaya da bakıyor!
+                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
 
                 int okutulan = 0;
                 if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
 
+                // 🌟 TOPLAMA ZIRHI: Aynı üründen 2 satır varsa sayıları birbirinin üstüne ezmez, toplayarak havuz yapar!
                 if (!hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
                     hafiza.AnaOkutulanlar.Add(benzersizAnahtar, okutulan);
+                else
+                    hafiza.AnaOkutulanlar[benzersizAnahtar] += okutulan;
             }
 
             // Sağ tabloyu topla
@@ -9502,28 +9715,39 @@ namespace TamgaApp
                         }
                     }
 
+                    // Tablonun ana iskeletini kursun diye arama butonunu sanal olarak tetikliyoruz
                     btnSevkAra_Click(null, null);
 
+                    // 🌟 MÜKEMMEL DAĞITIM ZIRHI: Eski verileri satır satır nokta atışıyla bul ve yapıştır
                     foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                     {
                         if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
 
                         string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
                         string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
-                        string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}";
+                        string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? ""; // 🌟 RENK ZIRHI
 
-                        if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
+                        // 🌟 ANAHTAR DÜZELTİLDİ
+                        string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
+
+                        if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar) && hafiza.AnaOkutulanlar[benzersizAnahtar] > 0)
                         {
-                            int eskiOkutulan = hafiza.AnaOkutulanlar[benzersizAnahtar];
                             int siparisAdedi = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
+                            int havuzdaki = hafiza.AnaOkutulanlar[benzersizAnahtar];
 
-                            row.Cells["Okutulan"].Value = eskiOkutulan;
+                            // 🌟 ŞELALE MANTIĞI: Taşırmayı önle, sadece sipariş adedi kadarını yaz
+                            int yazilacak = Math.Min(siparisAdedi, havuzdaki);
 
-                            if (eskiOkutulan >= siparisAdedi) row.DefaultCellStyle.BackColor = Color.LightGreen;
-                            else if (eskiOkutulan > 0) row.DefaultCellStyle.BackColor = Color.LightYellow;
-                            else row.DefaultCellStyle.BackColor = Color.White;
+                            row.Cells["Okutulan"].Value = yazilacak;
+                            hafiza.AnaOkutulanlar[benzersizAnahtar] -= yazilacak; // Dağıtılanı havuzdan düş
+                        }
+                        else
+                        {
+                            row.Cells["Okutulan"].Value = 0;
                         }
                     }
+
+                    DgvMalzemeler_Renklendir(null, null); // 🌟 Boya motorunu zorla tetikle ki renkler canlansın!
 
                     dgvPaletMatrisi.Rows.Clear();
                     int maxSatirIndex = hafiza.PaletMatrisiDurumu.Keys.Count > 0 ? hafiza.PaletMatrisiDurumu.Keys.Max() : -1;
