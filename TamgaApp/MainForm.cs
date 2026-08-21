@@ -600,6 +600,13 @@ namespace TamgaApp
             }
 
             if (dgvPaletler != null) dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
+
+            // 🌟 ASKI LİSTESİ SAĞ TIK MOTORUNU BAĞLA
+            if (lstYarimSevkler != null)
+            {
+                lstYarimSevkler.MouseDown -= lstYarimSevkler_MouseDown;
+                lstYarimSevkler.MouseDown += lstYarimSevkler_MouseDown;
+            }
         }
         #endregion
 
@@ -5335,7 +5342,7 @@ namespace TamgaApp
             }
         }
 
-        // 🌟 RAPORLAMA İÇİN YARDIMCI VERİ MODELİ (Metodun hemen üstünde durabilir)
+        // 🌟 RAPORLAMA İÇİN YARDIMCI VERİ MODELİ (Metodun hemen üstünde durur)
         private class MatrisRaporVerisi
         {
             public string BelgeNo { get; set; }
@@ -5345,7 +5352,7 @@ namespace TamgaApp
             public int[] PaletAdetleri { get; set; }
         }
 
-        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (SADECE PALET MATRİSİNİ BAZ ALIR)
+        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (AYNI ÜRÜNLERİ BİRLEŞTİRİR)
         private void btnSevkRaporla_Click(object sender, EventArgs e)
         {
             if (dgvPaletMatrisi.Columns.Count == 0) return;
@@ -5405,8 +5412,8 @@ namespace TamgaApp
                                 int tireIndex = urunVeBelge.IndexOf(" - ");
                                 if (tireIndex > 0) mKodu = urunVeBelge.Substring(0, tireIndex).Trim();
 
-                                // 🌟 BENZERSİZ ANAHTAR: Belge No ve Malzeme Kodu
-                                string anahtar = $"{bNo}_{mKodu}";
+                                // 🌟 SİHİRLİ ZIRH: Anahtardan Belge No'yu SİLDİK! Sadece Malzeme Kodu'na bakarak birleştirir.
+                                string anahtar = mKodu;
 
                                 if (!raporHavuzu.ContainsKey(anahtar))
                                 {
@@ -5417,13 +5424,12 @@ namespace TamgaApp
                                         PaletAdetleri = new int[paletSayisi]
                                     };
 
-                                    // Excel'de temiz görünmesi için İsim ve Açıklamayı sol tablodan (dgvMalzemeler) Cımbızla
-                                    // Sol tablonun "Okutulan" adediyle İLGİLENMİYORUZ, sadece isimleri almak için bakıyoruz!
+                                    // İsim ve Açıklamayı sol tablodan bul
                                     foreach (DataGridViewRow solSatir in dgvMalzemeler.Rows)
                                     {
                                         if (solSatir.IsNewRow) continue;
-                                        if (solSatir.Cells["Belge No"].Value?.ToString().Trim() == bNo &&
-                                            solSatir.Cells["Malzeme Kodu"].Value?.ToString().Trim() == mKodu)
+                                        // 🌟 Sadece Malzeme Koduna bak!
+                                        if (solSatir.Cells["Malzeme Kodu"].Value?.ToString().Trim() == mKodu)
                                         {
                                             raporHavuzu[anahtar].MalzemeAdi = solSatir.Cells["Malzeme Adı"].Value?.ToString() ?? "";
                                             raporHavuzu[anahtar].Aciklama = solSatir.Cells["Açıklama"].Value?.ToString() ?? "";
@@ -5438,8 +5444,16 @@ namespace TamgaApp
                                         raporHavuzu[anahtar].Aciklama = "";
                                     }
                                 }
+                                else
+                                {
+                                    // 🌟 BİRLEŞTİRME ZIRHI: Aynı ürün farklı faturadan geldiyse Belge No'sunu yanına virgülle ekle
+                                    if (!raporHavuzu[anahtar].BelgeNo.Contains(bNo))
+                                    {
+                                        raporHavuzu[anahtar].BelgeNo += ", " + bNo;
+                                    }
+                                }
 
-                                // 🌟 MATRİSTEKİ GERÇEK ADETİ HAVUZA YAZ
+                                // 🌟 MATRİSTEKİ GERÇEK ADETİ HAVUZA YAZ VE TOPLA
                                 raporHavuzu[anahtar].PaletAdetleri[j] += adet;
                             }
                         }
@@ -5449,7 +5463,7 @@ namespace TamgaApp
                 if (raporHavuzu.Count == 0) return;
 
                 // 🌟 2. ADIM: EXCEL'İ OLUŞTUR (SADECE MATRİS HAVUZUNDAN)
-                string anaBelgeNo = raporHavuzu.Values.FirstOrDefault()?.BelgeNo ?? "SE";
+                string anaBelgeNo = raporHavuzu.Values.FirstOrDefault()?.BelgeNo.Split(',')[0] ?? "SE";
                 string turKlasoru = anaBelgeNo.StartsWith("O1") ? "İhracat" : "Yurtiçi";
                 string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Sevkiyat Raporları", turKlasoru, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
                 if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
@@ -5511,7 +5525,7 @@ namespace TamgaApp
                     wb.SaveAs(tamYol);
                 }
 
-                MessageBox.Show($"Saf Excel (.xlsx) Raporu oluşturuldu!\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Saf Excel (.xlsx) Raporu oluşturuldu!\nAynı ürünler birleştirildi.\n\nKayıt Yeri:\n{tamYol}", "Rapor Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tamYol) { UseShellExecute = true });
             }
             catch (Exception ex)
@@ -7336,6 +7350,71 @@ namespace TamgaApp
             };
 
             frmYazdir.ShowDialog();
+        }
+
+        // 🌟 YARIM KALAN SEVKİYATI KLONLAMA (SAĞ TIK) MOTORU
+        private void lstYarimSevkler_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                // Tıklanan satırın indeksini bul
+                int index = lstYarimSevkler.IndexFromPoint(e.Location);
+                if (index != ListBox.NoMatches)
+                {
+                    // Sağ tıklanan satırı otomatik olarak maviyle seçili hale getir
+                    lstYarimSevkler.SelectedIndex = index;
+
+                    ContextMenuStrip sagTikMenu = new ContextMenuStrip();
+                    sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                    ToolStripMenuItem btnKopyala = new ToolStripMenuItem("📄 Bu Kaydın Kopyasını Çıkar (Klonla)");
+                    btnKopyala.ForeColor = Color.DarkBlue;
+                    btnKopyala.Click += (s, ev) =>
+                    {
+                        try
+                        {
+                            // Seçili dosyanın içini tamamen oku
+                            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedValue;
+                            string jsonIcerik = File.ReadAllText(secilenDosya.FullName);
+
+                            // JSON'u C# modeline çevir
+                            YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(jsonIcerik);
+                            if (hafiza == null) return;
+
+                            // Zaman damgasını şu anki saniyeye güncelle ki yeni bir kayıt gibi algılansın
+                            hafiza.KayitTarihi = DateTime.Now;
+
+                            string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
+                            string musteriTemiz = string.Join("_", hafiza.MusteriAdi.Split(Path.GetInvalidFileNameChars()));
+                            if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
+
+                            // 🌟 SİHİRLİ DOKUNUŞ: Orijinal dosyanın üzerine yazmasın diye ismine (KOPYA) ve Saniye ekliyoruz
+                            string yeniDosyaAdi = $"{musteriTemiz} (KOPYA) - {DateTime.Now:dd.MM.yyyy HH-mm-ss}.json";
+                            string yeniTamYol = Path.Combine(anaYol, yeniDosyaAdi);
+
+                            // Klonlanmış veriyi yeni dosya olarak kaydet
+                            File.WriteAllText(yeniTamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
+
+                            // Listeyi otomatik yenile ki kopyalanan dosya ekrana düşsün
+                            btnYarimGetir_Click(null, null);
+
+                            MessageBox.Show("Sevkiyat başarıyla kopyalandı ve listeye eklendi!", "Kopya Oluşturuldu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("Kopyalama sırasında hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    };
+
+                    sagTikMenu.Items.Add(btnKopyala);
+
+                    // RAM Sızıntısını önleyen zırh
+                    sagTikMenu.Closed += (senderMenu, argsMenu) => { this.BeginInvoke(new Action(() => sagTikMenu.Dispose())); };
+
+                    // Menüyü farenin ucunda göster
+                    sagTikMenu.Show(Cursor.Position);
+                }
+            }
         }
 
         // 1. Sevkiyatı askıya alırken dosyayı Müşteri ve Tarih adıyla kaydeder
