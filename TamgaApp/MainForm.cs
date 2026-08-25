@@ -428,6 +428,30 @@ namespace TamgaApp
             this.CenterToScreen();
 
         }
+
+        // 🌟 PROGRAMDAN ÇIKIŞTA ONAY İSTEYEN GÜVENLİK MOTORU
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            // Sadece kullanıcı kendisi (Çarpıya veya Çıkışa basarak) kapatmaya çalışıyorsa sor
+            // (Bilgisayar yeniden başlatılıyorsa veya görev yöneticisinden kapatılıyorsa sormaz)
+            if (e.CloseReason == CloseReason.UserClosing)
+            {
+                DialogResult onay = MessageBox.Show(
+                    "Programı kapatmak istediğinize emin misiniz?\n\nKaydedilmemiş veya askıya alınmamış tüm verileriniz kaybolabilir!",
+                    "Çıkış Onayı",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2); // Yanlışlıkla Enter'a basarsa kapanmasın diye "Hayır" butonu varsayılan seçili gelir
+
+                if (onay == DialogResult.No)
+                {
+                    e.Cancel = true; // 🌟 Kapanma işlemini anında iptal et ve ekranda kal!
+                }
+            }
+
+            // Normal kapanış prosedürüne devam et
+            base.OnFormClosing(e);
+        }
         #endregion
 
         #region 🖥️ 02.2 DİNAMİK EKRAN YÖNETİMİ
@@ -601,12 +625,12 @@ namespace TamgaApp
 
             if (dgvPaletler != null) dgvPaletler.CellEndEdit += dgvPaletler_CellEndEdit;
 
-            // 🌟 ASKI LİSTESİ SAĞ TIK MOTORUNU BAĞLA
-            if (lstYarimSevkler != null)
+            if (dgvYarimSevkler != null)
             {
-                lstYarimSevkler.MouseDown -= lstYarimSevkler_MouseDown;
-                lstYarimSevkler.MouseDown += lstYarimSevkler_MouseDown;
+                dgvYarimSevkler.CellMouseDown -= dgvYarimSevkler_CellMouseDown;
+                dgvYarimSevkler.CellMouseDown += dgvYarimSevkler_CellMouseDown;
             }
+
         }
         #endregion
 
@@ -7352,68 +7376,54 @@ namespace TamgaApp
             frmYazdir.ShowDialog();
         }
 
-        // 🌟 YARIM KALAN SEVKİYATI KLONLAMA (SAĞ TIK) MOTORU
-        private void lstYarimSevkler_MouseDown(object sender, MouseEventArgs e)
+        // 🌟 TABLO ÜZERİNDE SAĞ TIKLA KLONLAMA MOTORU
+        private void dgvYarimSevkler_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Right)
+            if (e.Button == MouseButtons.Right && e.RowIndex >= 0)
             {
-                // Tıklanan satırın indeksini bul
-                int index = lstYarimSevkler.IndexFromPoint(e.Location);
-                if (index != ListBox.NoMatches)
+                dgvYarimSevkler.ClearSelection();
+                dgvYarimSevkler.Rows[e.RowIndex].Selected = true;
+
+                ContextMenuStrip sagTikMenu = new ContextMenuStrip();
+                sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+                ToolStripMenuItem btnKopyala = new ToolStripMenuItem("📄 Bu Kaydın Kopyasını Çıkar (Klonla)");
+                btnKopyala.ForeColor = Color.DarkBlue;
+                btnKopyala.Click += (s, ev) =>
                 {
-                    // Sağ tıklanan satırı otomatik olarak maviyle seçili hale getir
-                    lstYarimSevkler.SelectedIndex = index;
-
-                    ContextMenuStrip sagTikMenu = new ContextMenuStrip();
-                    sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-
-                    ToolStripMenuItem btnKopyala = new ToolStripMenuItem("📄 Bu Kaydın Kopyasını Çıkar (Klonla)");
-                    btnKopyala.ForeColor = Color.DarkBlue;
-                    btnKopyala.Click += (s, ev) =>
+                    try
                     {
-                        try
-                        {
-                            // Seçili dosyanın içini tamamen oku
-                            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedValue;
-                            string jsonIcerik = File.ReadAllText(secilenDosya.FullName);
+                        string secilenDosyaYolu = dgvYarimSevkler.Rows[e.RowIndex].Cells["DosyaYolu"].Value.ToString();
+                        string jsonIcerik = File.ReadAllText(secilenDosyaYolu);
 
-                            // JSON'u C# modeline çevir
-                            YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(jsonIcerik);
-                            if (hafiza == null) return;
+                        YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(jsonIcerik);
+                        if (hafiza == null) return;
 
-                            // Zaman damgasını şu anki saniyeye güncelle ki yeni bir kayıt gibi algılansın
-                            hafiza.KayitTarihi = DateTime.Now;
+                        hafiza.KayitTarihi = DateTime.Now;
 
-                            string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
-                            string musteriTemiz = string.Join("_", hafiza.MusteriAdi.Split(Path.GetInvalidFileNameChars()));
-                            if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
+                        string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
+                        string musteriTemiz = string.Join("_", hafiza.MusteriAdi.Split(Path.GetInvalidFileNameChars()));
+                        if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
 
-                            // 🌟 SİHİRLİ DOKUNUŞ: Orijinal dosyanın üzerine yazmasın diye ismine (KOPYA) ve Saniye ekliyoruz
-                            string yeniDosyaAdi = $"{musteriTemiz} (KOPYA) - {DateTime.Now:dd.MM.yyyy HH-mm-ss}.json";
-                            string yeniTamYol = Path.Combine(anaYol, yeniDosyaAdi);
+                        string yeniDosyaAdi = $"{musteriTemiz} (KOPYA) - {DateTime.Now:dd.MM.yyyy HH-mm-ss}.json";
 
-                            // Klonlanmış veriyi yeni dosya olarak kaydet
-                            File.WriteAllText(yeniTamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
+                        // Eğer orijinal dosya [BEKLET] etiketi taşıyorsa, kopya da taşısın
+                        if (Path.GetFileName(secilenDosyaYolu).StartsWith("[BEKLET]"))
+                            yeniDosyaAdi = "[BEKLET] " + yeniDosyaAdi;
 
-                            // Listeyi otomatik yenile ki kopyalanan dosya ekrana düşsün
-                            btnYarimGetir_Click(null, null);
+                        string yeniTamYol = Path.Combine(anaYol, yeniDosyaAdi);
 
-                            MessageBox.Show("Sevkiyat başarıyla kopyalandı ve listeye eklendi!", "Kopya Oluşturuldu", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Kopyalama sırasında hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    };
+                        File.WriteAllText(yeniTamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
 
-                    sagTikMenu.Items.Add(btnKopyala);
+                        btnYarimGetir_Click(null, null);
+                        MessageBox.Show("Sevkiyat başarıyla kopyalandı ve listeye eklendi!", "Kopya Oluşturuldu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+                };
 
-                    // RAM Sızıntısını önleyen zırh
-                    sagTikMenu.Closed += (senderMenu, argsMenu) => { this.BeginInvoke(new Action(() => sagTikMenu.Dispose())); };
-
-                    // Menüyü farenin ucunda göster
-                    sagTikMenu.Show(Cursor.Position);
-                }
+                sagTikMenu.Items.Add(btnKopyala);
+                sagTikMenu.Closed += (senderMenu, argsMenu) => { this.BeginInvoke(new Action(() => sagTikMenu.Dispose())); };
+                sagTikMenu.Show(Cursor.Position);
             }
         }
 
@@ -7497,63 +7507,99 @@ namespace TamgaApp
             aktifPaletBarkodlari.Clear();
         }
 
-        // 2. Askıdaki kayıtları getirirken uzantıyı (.json) gizler, sadece şık ismi gösterir
+        // 🌟 ASKI VE BEKLETME LİSTESİNİ DOLDURUR (GİZLİ SÜTUN VE YEŞİL BOYA MOTORU İÇERİR)
         private void btnYarimGetir_Click(object sender, EventArgs e)
         {
-            string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
-            if (!Directory.Exists(anaYol))
+            // Tablo ilk kez yükleniyorsa iskeletini ve şıklığını kur
+            if (dgvYarimSevkler.Columns.Count == 0)
             {
-                MessageBox.Show("Henüz askıya alınmış hiçbir yarım sevkiyat bulunamadı.", "Kayıt Yok", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                dgvYarimSevkler.Columns.Add("GorunenAd", "Askıdaki Sevkiyatlar");
+                dgvYarimSevkler.Columns.Add("DosyaYolu", "GizliYol");
+                dgvYarimSevkler.Columns["DosyaYolu"].Visible = false; // Gerçek dosya yolunu arka planda saklar
+
+                dgvYarimSevkler.AllowUserToAddRows = false;
+                dgvYarimSevkler.ReadOnly = true;
+                dgvYarimSevkler.RowHeadersVisible = false;
+                dgvYarimSevkler.ColumnHeadersVisible = false; // Başlıkları gizle ki ListBox gibi sade dursun
+                dgvYarimSevkler.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+                dgvYarimSevkler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                dgvYarimSevkler.BackgroundColor = Color.White;
+                dgvYarimSevkler.BorderStyle = BorderStyle.Fixed3D;
+                dgvYarimSevkler.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal; // Sadece alt çizgi olsun
+                dgvYarimSevkler.DefaultCellStyle.SelectionBackColor = Color.DodgerBlue;
+                dgvYarimSevkler.DefaultCellStyle.SelectionForeColor = Color.White;
+                dgvYarimSevkler.RowTemplate.Height = 35; // Satırlar ferah olsun
             }
 
-            DirectoryInfo di = new DirectoryInfo(anaYol);
-            FileInfo[] dosyalar = di.GetFiles("*.json").OrderByDescending(f => f.LastWriteTime).ToArray();
+            dgvYarimSevkler.Rows.Clear();
 
-            // 🌟 YENİ: Görsel zırh! Ekranda temiz isim görünür, arkada dosya tutulur.
-            var gosterimListesi = dosyalar.Select(f => new
+            string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
+            if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
+
+            FileInfo[] dosyalar = new DirectoryInfo(anaYol).GetFiles("*.json").OrderByDescending(f => f.CreationTime).ToArray();
+
+            foreach (FileInfo dosya in dosyalar)
             {
-                GercekDosya = f,
-                EkranAdi = Path.GetFileNameWithoutExtension(f.Name) // .json yazısını siler
-            }).ToList();
+                string gosterilecekAd = Path.GetFileNameWithoutExtension(dosya.Name);
+                bool bekletMi = gosterilecekAd.StartsWith("[BEKLET]");
 
-            lstYarimSevkler.DataSource = null;
-            lstYarimSevkler.DataSource = gosterimListesi;
-            lstYarimSevkler.DisplayMember = "EkranAdi";
-            lstYarimSevkler.ValueMember = "GercekDosya";
+                int index = dgvYarimSevkler.Rows.Add(gosterilecekAd, dosya.FullName);
+                DataGridViewRow row = dgvYarimSevkler.Rows[index];
+
+                // 🌟 [BEKLET] zırhı: Yeşile boyar ve kalın harf yapar
+                if (bekletMi)
+                {
+                    row.DefaultCellStyle.BackColor = Color.LightGreen;
+                    row.DefaultCellStyle.ForeColor = Color.DarkGreen;
+                    row.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                }
+                else
+                {
+                    row.DefaultCellStyle.BackColor = Color.White;
+                    row.DefaultCellStyle.ForeColor = Color.Black;
+                    row.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+                }
+            }
         }
 
-        // 3. Askıdaki Seçili Kaydı Silme
+        // 🌟 ASKI VE BEKLETME LİSTESİNDEN (TABLODAN) KAYIT SİLME MOTORU
         private void btnAskidanSil_Click(object sender, EventArgs e)
         {
-            if (lstYarimSevkler.SelectedItem == null)
+            // Eski lstYarimSevkler yerine yeni dgvYarimSevkler tablomuzu kontrol ediyoruz
+            if (dgvYarimSevkler.SelectedRows.Count == 0)
             {
-                MessageBox.Show("Lütfen silmek istediğiniz askı kaydını listeden seçin!", "Seçim Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Lütfen silmek istediğiniz askı kaydını tablodan seçin!", "Seçim Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // 🌟 YENİ: ValueMember üzerinden gerçek dosyayı yakala
-            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedValue;
+            // 🌟 Tablodaki gizli sütundan gerçek dosya yolunu yakala
+            string secilenDosyaYolu = dgvYarimSevkler.SelectedRows[0].Cells["DosyaYolu"].Value.ToString();
+            FileInfo secilenDosya = new FileInfo(secilenDosyaYolu);
 
-            if (MessageBox.Show($"'{Path.GetFileNameWithoutExtension(secilenDosya.Name)}' kalıcı olarak silinecek. Emin misiniz?", "Askı Kaydını Sil", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+            // Ekranda görünen adı (Örn: [BEKLET] Evtim Yapı) mesaj kutusu için al
+            string gosterilecekAd = dgvYarimSevkler.SelectedRows[0].Cells["GorunenAd"].Value.ToString();
+
+            if (MessageBox.Show($"'{gosterilecekAd}' kalıcı olarak silinecek. Emin misiniz?", "Askı Kaydını Sil", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
             {
                 try
                 {
                     File.Delete(secilenDosya.FullName);
                     MessageBox.Show("Askıdaki kayıt başarıyla silindi!", "Silindi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                    // Tabloyu otomatik yenile ki silinen kayıt ekrandan uçsun
                     btnYarimGetir_Click(null, null);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Silme işlemi sırasında hata oluştu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Silme işlemi sırasında hata oluştu: " + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
-        // 4. Askıdaki kayıtı Geri Yükleme (Açma)
+        // 🌟 ASKI VEYA BEKLETİLEN KAYDI EKRANA GERİ GETİRME (AÇMA)
         private void btnYarimAc_Click(object sender, EventArgs e)
         {
-            if (lstYarimSevkler.SelectedItem == null)
+            if (dgvYarimSevkler.SelectedRows.Count == 0)
             {
                 MessageBox.Show("Lütfen devam etmek istediğiniz yarım sevkiyatı listeden seçin!", "Seçim Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
@@ -7562,103 +7608,67 @@ namespace TamgaApp
             if (dtTumSiparisler == null || dtTumSiparisler.Columns.Count == 0 || dtTumSiparisler.Rows.Count == 0)
             {
                 btnSiparisYenile_Click(null, null);
-
-                if (dtTumSiparisler == null || dtTumSiparisler.Columns.Count == 0)
-                {
-                    MessageBox.Show("Güncel siparişler veritabanından çekilemediği için askıdaki kayıt açılamaz.", "Veri Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
+                if (dtTumSiparisler == null || dtTumSiparisler.Columns.Count == 0) return;
             }
 
-            // 🌟 YENİ: ValueMember üzerinden gerçek dosyayı yakala
-            FileInfo secilenDosya = (FileInfo)lstYarimSevkler.SelectedValue;
+            // 🌟 Gizli sütundan dosya yolunu çek
+            string secilenDosyaYolu = dgvYarimSevkler.SelectedRows[0].Cells["DosyaYolu"].Value.ToString();
+            FileInfo secilenDosya = new FileInfo(secilenDosyaYolu);
 
             try
             {
                 string jsonIcerik = File.ReadAllText(secilenDosya.FullName);
                 YarimSevkiyatHafizasi hafiza = Newtonsoft.Json.JsonConvert.DeserializeObject<YarimSevkiyatHafizasi>(jsonIcerik);
-
                 if (hafiza == null) return;
 
                 int musteriIndex = -1;
                 for (int i = 0; i < cmbMusteri.Items.Count; i++)
                 {
-                    if (cmbMusteri.Items[i].ToString().Trim().Equals(hafiza.MusteriAdi.Trim(), StringComparison.OrdinalIgnoreCase))
-                    {
-                        musteriIndex = i;
-                        break;
-                    }
+                    if (cmbMusteri.Items[i].ToString().Trim().Equals(hafiza.MusteriAdi.Trim(), StringComparison.OrdinalIgnoreCase)) { musteriIndex = i; break; }
                 }
 
-                if (musteriIndex >= 0)
-                {
-                    cmbMusteri.SelectedIndex = musteriIndex;
-                }
-                else
-                {
-                    cmbMusteri.Items.Add(hafiza.MusteriAdi);
-                    cmbMusteri.SelectedIndex = cmbMusteri.Items.Count - 1;
-                }
+                if (musteriIndex >= 0) cmbMusteri.SelectedIndex = musteriIndex;
+                else { cmbMusteri.Items.Add(hafiza.MusteriAdi); cmbMusteri.SelectedIndex = cmbMusteri.Items.Count - 1; }
 
                 txtMusteriAdi.Text = hafiza.MusteriAdi;
                 txtSevkMusteri.Text = hafiza.SevkMusteri;
                 cmbSevkPaletSayisi.SelectedItem = hafiza.PaletSayisi.ToString();
 
                 string[] kaydedilenBelgeler = hafiza.BelgeNo.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                if (clbBelgeNo.Items.Count == 0)
-                {
-                    foreach (string b in kaydedilenBelgeler) clbBelgeNo.Items.Add(b);
-                }
+                if (clbBelgeNo.Items.Count == 0) foreach (string b in kaydedilenBelgeler) clbBelgeNo.Items.Add(b);
 
                 foreach (string belge in kaydedilenBelgeler)
                 {
                     for (int i = 0; i < clbBelgeNo.Items.Count; i++)
                     {
-                        if (clbBelgeNo.Items[i].ToString().IndexOf(belge, StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            clbBelgeNo.SetItemChecked(i, true);
-                        }
+                        if (clbBelgeNo.Items[i].ToString().IndexOf(belge, StringComparison.OrdinalIgnoreCase) >= 0) clbBelgeNo.SetItemChecked(i, true);
                     }
-                }
-
-                if (clbBelgeNo.CheckedItems.Count == 0)
-                {
-                    MessageBox.Show($"Bu askı kaydına ait belge numaraları listeyle eşleştirilemedi!", "Kritik Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
                 }
 
                 btnSevkAra_Click(null, null);
 
-                // 🌟 MÜKEMMEL DAĞITIM: Eski verileri satır satır nokta atışıyla bul ve yapıştır
+                // MÜKEMMEL DAĞITIM VE ŞELALE MANTIĞI
                 foreach (DataGridViewRow row in dgvMalzemeler.Rows)
                 {
                     if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
 
                     string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
                     string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
-                    string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? ""; // 🌟 ZIRH EKLENDİ
+                    string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? "";
 
-                    // 🌟 KUSURSUZ ANAHTAR ZIRHI: Artık renge ve açıklamaya da bakıyor!
                     string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
 
                     if (hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar) && hafiza.AnaOkutulanlar[benzersizAnahtar] > 0)
                     {
                         int siparisAdedi = Convert.ToInt32(row.Cells["Sipariş Adedi"].Value);
                         int havuzdaki = hafiza.AnaOkutulanlar[benzersizAnahtar];
-
-                        // 🌟 ŞELALE MANTIĞI: Siparişten fazlasını aynı satıra ezmez, dağıtarak ilerler!
                         int yazilacak = Math.Min(siparisAdedi, havuzdaki);
                         row.Cells["Okutulan"].Value = yazilacak;
-                        hafiza.AnaOkutulanlar[benzersizAnahtar] -= yazilacak; // Havuzdan düş
+                        hafiza.AnaOkutulanlar[benzersizAnahtar] -= yazilacak;
                     }
-                    else
-                    {
-                        row.Cells["Okutulan"].Value = 0;
-                    }
+                    else row.Cells["Okutulan"].Value = 0;
                 }
 
-                // Renklendirme motorunu tabloya zorla uygulat
                 DgvMalzemeler_Renklendir(null, null);
 
                 dgvPaletMatrisi.Rows.Clear();
@@ -7670,15 +7680,20 @@ namespace TamgaApp
                     int satirIndex = satirKvp.Key;
                     foreach (var sutunKvp in satirKvp.Value)
                     {
-                        int sutunIndex = sutunKvp.Key;
-                        dgvPaletMatrisi.Rows[satirIndex].Cells[sutunIndex].Value = sutunKvp.Value;
+                        dgvPaletMatrisi.Rows[satirIndex].Cells[sutunKvp.Key].Value = sutunKvp.Value;
                     }
                 }
 
                 aktifPaletBarkodlari = hafiza.PaletBarkodlari ?? new Dictionary<string, string>();
 
-                File.Delete(secilenDosya.FullName);
-                btnYarimGetir_Click(null, null);
+                // 🌟 GÜVENLİK AĞI ZIRHI (SİLMEK YERİNE KURTARMA KLASÖRÜNE AT)
+                string kurtarmaKlasoru = Path.Combine(secilenDosya.DirectoryName, "Kurtarma_Yedekleri");
+                if (!Directory.Exists(kurtarmaKlasoru)) Directory.CreateDirectory(kurtarmaKlasoru);
+                string kurtarmaDosyaYolu = Path.Combine(kurtarmaKlasoru, secilenDosya.Name);
+                if (File.Exists(kurtarmaDosyaYolu)) File.Delete(kurtarmaDosyaYolu);
+                File.Move(secilenDosya.FullName, kurtarmaDosyaYolu);
+
+                btnYarimGetir_Click(null, null); // Listeyi yenile
 
                 MessageBox.Show($"Sevkiyat başarıyla geri yüklendi. Kaldığınız yerden devam edebilirsiniz!", "Sistem Hazır", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
