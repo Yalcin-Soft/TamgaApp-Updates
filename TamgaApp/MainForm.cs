@@ -6301,32 +6301,46 @@ namespace TamgaApp
 
         #region 📝 13.6 TAM VE KISMİ SEVKİYAT İŞLEMLERİ
 
-        // 🌟 TAM SEVKİYAT MOTORU (Önce Excel Raporu Alır, Sonra Kapatır)
+        // 🌟 TAM SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
         private void btnTamSevk_Click(object sender, EventArgs e)
         {
-            if (dgvMalzemeler.Rows.Count == 0) return;
+            // 🌟 HAYALET YÜKLEYİCİ: Ekran boşsa ama listede seçili bir iş varsa devreye girer
+            if (dgvMalzemeler.Rows.Count == 0)
+            {
+                if (dgvYarimSevkler.SelectedRows.Count > 0)
+                {
+                    string kayitAdi = dgvYarimSevkler.SelectedRows[0].Cells["GorunenAd"].Value.ToString();
+                    DialogResult otoOnay = MessageBox.Show($"Ekranda açık bir sevkiyat yok.\n\nListeden seçtiğiniz '{kayitAdi}' kaydını masaya yükleyip doğrudan TAM SEVKİYAT işlemini başlatmak ister misiniz?", "Otomatik Hızlı Sevkiyat", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (otoOnay == DialogResult.Yes)
+                    {
+                        btnYarimAc_Click(null, null); // Ekrana saniyesinde yükle
+                        if (dgvMalzemeler.Rows.Count == 0) return; // Yükleme hatası varsa devam etme
+                    }
+                    else return;
+                }
+                else return;
+            }
 
             bool eksikVarMi = false;
             foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
             {
                 if (satir.IsNewRow || satir.Cells["Malzeme Kodu"].Value == null) continue;
 
-                // Sipariş edilen ile okutulan arasında fark var mı diye kontrol et
                 if (Convert.ToInt32(satir.Cells["Okutulan"].Value) < Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value))
                 {
                     eksikVarMi = true; break;
                 }
             }
 
-            if (eksikVarMi) MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (eksikVarMi) MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!\nLütfen eksikleri tamamlayın veya 'Kısmi Sevk' yapın.", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
             else
             {
-                // 🌟 SİHİRLİ DOKUNUŞ: EKRAN TEMİZLENMEDEN ÖNCE OTOMATİK EXCEL RAPORUNU ÇIKART!
+                // Raporu çıkar
                 btnSevkRaporla_Click(null, null);
 
                 MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                // 🌟 ÇOKLU BELGE (KONSOLİDE) KAPATMA MANTIĞI
                 HashSet<string> bitenBelgeler = new HashSet<string>();
                 foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                 {
@@ -6334,17 +6348,12 @@ namespace TamgaApp
                         bitenBelgeler.Add(satir.Cells["Belge No"].Value.ToString());
                 }
 
-                // Birleştirilmiş tek bir isim yarat (Örn: SE-001_SE-002)
                 string birlesikBelgeIsmi = string.Join("_", bitenBelgeler);
-
-                // İşlemi geçmiş arşivi (CSV) olarak tek bir dosya halinde kaydet
                 string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
                 SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "TAM_SEVK", secilenPalet);
 
-                // 🌟 PERFORMANS ZIRHI: Toplu Ekleme Motorunu Kullanıyoruz
                 KaliciKaraListeyeTopluEkle(bitenBelgeler);
 
-                // Her bir belgeyi SQL'den çektiğimiz RAM listesinden uçuruyoruz ki ekrandan silinsin
                 foreach (string bitenBelge in bitenBelgeler)
                 {
                     for (int i = dtTumSiparisler.Rows.Count - 1; i >= 0; i--)
@@ -6357,20 +6366,19 @@ namespace TamgaApp
                 }
                 dtTumSiparisler.AcceptChanges();
 
-                // 🧹 Başarılı işlem sonrası sessiz arayüz temizliği
+                // Ekranı temizle
                 txtMusteriAdi.Clear();
                 txtSevkMusteri.Clear();
                 txtBarkod.Clear();
                 clbBelgeNo.Items.Clear();
                 cmbSevkPaletSayisi.SelectedIndex = -1;
 
-                dgvMalzemeler.DataSource = null; // ZIRH: Tabloyu tam sıfırlar
+                dgvMalzemeler.DataSource = null;
 
                 dgvPaletMatrisi.Columns.Clear();
                 dgvPaletMatrisi.Rows.Clear();
                 cmbAktifPalet.Items.Clear();
 
-                // Müşteri kutusunu kalan güncel siparişlere göre yeniden doldur
                 cmbMusteri.Items.Clear();
                 var kalanMusteriler = dtTumSiparisler.AsEnumerable()
                                                     .Select(r => r.Field<string>("MusteriAdi")?.Trim())
@@ -6382,20 +6390,35 @@ namespace TamgaApp
             }
         }
 
-        // 🌟 KISMİ SEVKİYAT MOTORU (Önce Excel Raporu Alır, Sonra Kapatır)
+        // 🌟 KISMİ SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
         private void btnKismiSevk_Click(object sender, EventArgs e)
         {
-            if (dgvMalzemeler.Rows.Count == 0) return;
+            // 🌟 HAYALET YÜKLEYİCİ: Ekran boşsa ama listede seçili bir iş varsa devreye girer
+            if (dgvMalzemeler.Rows.Count == 0)
+            {
+                if (dgvYarimSevkler.SelectedRows.Count > 0)
+                {
+                    string kayitAdi = dgvYarimSevkler.SelectedRows[0].Cells["GorunenAd"].Value.ToString();
+                    DialogResult otoOnay = MessageBox.Show($"Ekranda açık bir sevkiyat yok.\n\nListeden seçtiğiniz '{kayitAdi}' kaydını masaya yükleyip doğrudan KISMİ SEVKİYAT işlemini başlatmak ister misiniz?", "Otomatik Hızlı Sevkiyat", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (otoOnay == DialogResult.Yes)
+                    {
+                        btnYarimAc_Click(null, null); // Ekrana saniyesinde yükle
+                        if (dgvMalzemeler.Rows.Count == 0) return; // Yükleme hatası varsa devam etme
+                    }
+                    else return;
+                }
+                else return;
+            }
 
             List<string> eksikListesi = new List<string>();
             foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
             {
-                if (satir.IsNewRow || satir.Cells["Malzeme Kodu"].Value == null) continue; // Boşluklarda çökmeyi önleyen zırh
+                if (satir.IsNewRow || satir.Cells["Malzeme Kodu"].Value == null) continue;
 
                 int siparis = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
                 int okutulan = Convert.ToInt32(satir.Cells["Okutulan"].Value);
 
-                // Hangi ürünlerin eksik olduğunu rapora/mesaja yansıtmak için topla
                 if (okutulan < siparis)
                 {
                     eksikListesi.Add($"- {satir.Cells["Malzeme Kodu"].Value} | Gerekli: {siparis}, Okutulan: {okutulan}");
@@ -6406,12 +6429,11 @@ namespace TamgaApp
             {
                 if (MessageBox.Show("Eksik ürünler var. Yine de Kısmi Sevk yapılsın mı?\n\nEksikler:\n" + string.Join("\n", eksikListesi), "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
-                    // 🌟 SİHİRLİ DOKUNUŞ: EKRAN TEMİZLENMEDEN ÖNCE OTOMATİK EXCEL RAPORUNU ÇIKART!
+                    // Raporu çıkar
                     btnSevkRaporla_Click(null, null);
 
                     MessageBox.Show("Kısmi Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    // 🌟 ÇOKLU BELGE (KONSOLİDE) KAPATMA MANTIĞI
                     HashSet<string> bitenBelgeler = new HashSet<string>();
                     foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                     {
@@ -6423,7 +6445,6 @@ namespace TamgaApp
                     string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
                     SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "KISMI_SEVK", secilenPalet);
 
-                    // 🌟 PERFORMANS ZIRHI: Toplu Ekleme Motorunu Kullanıyoruz
                     KaliciKaraListeyeTopluEkle(bitenBelgeler);
 
                     foreach (string bitenBelge in bitenBelgeler)
@@ -6438,7 +6459,7 @@ namespace TamgaApp
                     }
                     dtTumSiparisler.AcceptChanges();
 
-                    // 🧹 Başarılı işlem sonrası sessiz arayüz temizliği
+                    // Ekranı temizle
                     txtMusteriAdi.Clear();
                     txtSevkMusteri.Clear();
                     txtBarkod.Clear();
@@ -6446,13 +6467,12 @@ namespace TamgaApp
 
                     cmbSevkPaletSayisi.SelectedIndex = -1;
 
-                    dgvMalzemeler.DataSource = null; // ZIRH: Tabloyu tam sıfırlar
+                    dgvMalzemeler.DataSource = null;
 
                     dgvPaletMatrisi.Columns.Clear();
                     dgvPaletMatrisi.Rows.Clear();
                     cmbAktifPalet.Items.Clear();
 
-                    // Müşteri kutusunu güncel siparişlere göre yeniden doldur
                     cmbMusteri.Items.Clear();
                     var kalanMusteriler = dtTumSiparisler.AsEnumerable()
                                                         .Select(r => r.Field<string>("MusteriAdi")?.Trim())
@@ -6465,7 +6485,6 @@ namespace TamgaApp
             }
             else
             {
-                // Hiç eksik yoksa Kısmi Sevk butonunu kullanmak saçma olur, o yüzden Tam Sevk'e yönlendir
                 MessageBox.Show("Hiçbir ürün eksik değil! Lütfen siparişi bitirmek için 'Tam Sevket' butonunu kullanın.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -7512,7 +7531,7 @@ namespace TamgaApp
             frmYazdir.ShowDialog();
         }
 
-        // 🌟 TABLO ÜZERİNDE SAĞ TIKLA KLONLAMA MOTORU
+        // 🌟 TABLO ÜZERİNDE SAĞ TIKLA KLONLAMA VE YENİDEN ADLANDIRMA MOTORU
         private void dgvYarimSevkler_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
         {
             if (e.Button == MouseButtons.Right && e.RowIndex >= 0)
@@ -7523,7 +7542,8 @@ namespace TamgaApp
                 ContextMenuStrip sagTikMenu = new ContextMenuStrip();
                 sagTikMenu.Font = new Font("Segoe UI", 10, FontStyle.Bold);
 
-                ToolStripMenuItem btnKopyala = new ToolStripMenuItem("📄 Bu Kaydın Kopyasını Çıkar (Klonla)");
+                // 🌟 1. SEÇENEK: KOPYALA (KLONLA)
+                ToolStripMenuItem btnKopyala = new ToolStripMenuItem("📄 Kopyala (Klonla)");
                 btnKopyala.ForeColor = Color.DarkBlue;
                 btnKopyala.Click += (s, ev) =>
                 {
@@ -7543,7 +7563,6 @@ namespace TamgaApp
 
                         string yeniDosyaAdi = $"{musteriTemiz} (KOPYA) - {DateTime.Now:dd.MM.yyyy HH-mm-ss}.json";
 
-                        // Eğer orijinal dosya [BEKLET] etiketi taşıyorsa, kopya da taşısın
                         if (Path.GetFileName(secilenDosyaYolu).StartsWith("[BEKLET]"))
                             yeniDosyaAdi = "[BEKLET] " + yeniDosyaAdi;
 
@@ -7557,7 +7576,57 @@ namespace TamgaApp
                     catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
                 };
 
+                // 🌟 2. SEÇENEK: YENİDEN ADLANDIR (İSİM DEĞİŞTİRME EKRANI)
+                ToolStripMenuItem btnYenidenAdlandir = new ToolStripMenuItem("✏️ Yeniden Adlandır");
+                btnYenidenAdlandir.ForeColor = Color.DarkOrange;
+                btnYenidenAdlandir.Click += (s, ev) =>
+                {
+                    try
+                    {
+                        string secilenDosyaYolu = dgvYarimSevkler.Rows[e.RowIndex].Cells["DosyaYolu"].Value.ToString();
+                        string eskiDosyaAdi = Path.GetFileNameWithoutExtension(secilenDosyaYolu);
+                        string anaYol = Path.GetDirectoryName(secilenDosyaYolu);
+
+                        // Yeniden adlandırma için şık ve küçük bir popup form çıkartıyoruz
+                        Form frmRename = new Form { Width = 400, Height = 180, Text = "Kaydı Yeniden Adlandır", FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.CenterParent, ShowIcon = false, MaximizeBox = false, MinimizeBox = false, BackColor = Color.WhiteSmoke };
+                        Label lbl = new Label { Left = 20, Top = 20, Text = "Kayıt için yeni bir isim girin:", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
+                        TextBox txtNewName = new TextBox { Left = 20, Top = 50, Width = 340, Font = new Font("Segoe UI", 11), Text = eskiDosyaAdi };
+                        Button btnOnay = new Button { Text = "KAYDET", Left = 20, Top = 90, Width = 340, Height = 35, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
+
+                        btnOnay.Click += (senderObj, args) =>
+                        {
+                            string yeniAd = txtNewName.Text.Trim();
+                            if (string.IsNullOrWhiteSpace(yeniAd)) { MessageBox.Show("Geçerli bir isim girin!"); return; }
+
+                            // Windows'un dosya isminde sevmediği karakterleri (\, /, : vb.) temizle
+                            foreach (char c in Path.GetInvalidFileNameChars()) { yeniAd = yeniAd.Replace(c, '_'); }
+
+                            string yeniTamYol = Path.Combine(anaYol, yeniAd + ".json");
+
+                            // Eğer isim aynıysa hiçbir şey yapmadan kapat
+                            if (secilenDosyaYolu.Equals(yeniTamYol, StringComparison.OrdinalIgnoreCase)) { frmRename.Close(); return; }
+
+                            // Eğer bu isimde başka bir dosya varsa uyar
+                            if (File.Exists(yeniTamYol)) { MessageBox.Show("Bu isimde bir kayıt zaten var!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+
+                            // 🌟 GERÇEK ADLANDIRMA: Dosyayı yeni ismiyle diske taşıyor ve ekranı kapatıyor
+                            File.Move(secilenDosyaYolu, yeniTamYol);
+                            frmRename.Close();
+
+                            // Listeyi anında yenile
+                            btnYarimGetir_Click(null, null);
+                        };
+
+                        frmRename.Controls.Add(lbl); frmRename.Controls.Add(txtNewName); frmRename.Controls.Add(btnOnay);
+                        frmRename.ShowDialog();
+                    }
+                    catch (Exception ex) { MessageBox.Show("Hata: " + ex.Message); }
+                };
+
                 sagTikMenu.Items.Add(btnKopyala);
+                sagTikMenu.Items.Add(new ToolStripSeparator());
+                sagTikMenu.Items.Add(btnYenidenAdlandir);
+
                 sagTikMenu.Closed += (senderMenu, argsMenu) => { this.BeginInvoke(new Action(() => sagTikMenu.Dispose())); };
                 sagTikMenu.Show(Cursor.Position);
             }
@@ -7643,7 +7712,7 @@ namespace TamgaApp
             aktifPaletBarkodlari.Clear();
         }
 
-        // 🌟 ASKI VE BEKLETME LİSTESİNİ DOLDURUR (GİZLİ SÜTUN VE YEŞİL BOYA MOTORU İÇERİR)
+        // 🌟 ASKI VE BEKLETME LİSTESİNİ DOLDURUR (Punto Küçültüldü ve Şıklaştırıldı)
         private void btnYarimGetir_Click(object sender, EventArgs e)
         {
             // Tablo ilk kez yükleniyorsa iskeletini ve şıklığını kur
@@ -7664,7 +7733,9 @@ namespace TamgaApp
                 dgvYarimSevkler.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal; // Sadece alt çizgi olsun
                 dgvYarimSevkler.DefaultCellStyle.SelectionBackColor = Color.DodgerBlue;
                 dgvYarimSevkler.DefaultCellStyle.SelectionForeColor = Color.White;
-                dgvYarimSevkler.RowTemplate.Height = 35; // Satırlar ferah olsun
+
+                // 🌟 YENİLİK: Punto küçüldüğü için satır aralıkları ferahlatıldı (35'ten 28'e düşürüldü)
+                dgvYarimSevkler.RowTemplate.Height = 28;
             }
 
             dgvYarimSevkler.Rows.Clear();
@@ -7682,18 +7753,18 @@ namespace TamgaApp
                 int index = dgvYarimSevkler.Rows.Add(gosterilecekAd, dosya.FullName);
                 DataGridViewRow row = dgvYarimSevkler.Rows[index];
 
-                // 🌟 [BEKLET] zırhı: Yeşile boyar ve kalın harf yapar
+                // 🌟 YENİLİK: Fontlar (Puntolar) 10'dan 8'e düşürüldü, daha çok kayıt sığar!
                 if (bekletMi)
                 {
                     row.DefaultCellStyle.BackColor = Color.LightGreen;
                     row.DefaultCellStyle.ForeColor = Color.DarkGreen;
-                    row.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                    row.DefaultCellStyle.Font = new Font("Segoe UI", 8, FontStyle.Bold);
                 }
                 else
                 {
                     row.DefaultCellStyle.BackColor = Color.White;
                     row.DefaultCellStyle.ForeColor = Color.Black;
-                    row.DefaultCellStyle.Font = new Font("Segoe UI", 10, FontStyle.Regular);
+                    row.DefaultCellStyle.Font = new Font("Segoe UI", 8, FontStyle.Regular);
                 }
             }
         }
