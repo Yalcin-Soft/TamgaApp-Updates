@@ -7928,15 +7928,15 @@ namespace TamgaApp
             return base12 + check.ToString();
         }
 
-        // Sevkiyatı ağaç hiyerarşisine kaydeder
+        // 🌟 SEVKİYAT ARŞİVLEME MOTORU (GİZLİ ENTER VE NOKTALI VİRGÜL HATASINI DÜZELTEN ZIRH EKLENDİ)
         private void SevkiyatArsivle(string belgeNo, string musteri, string sevkMusteri, string sevkTuru, string paletSayisi)
         {
             try
             {
-                string belgeKontrol = belgeNo.Split(new[] { '_', ',' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                string belgeKontrol = string.IsNullOrEmpty(belgeNo) ? "SE" : belgeNo.Split(new[] { ',', '_' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
                 string turKlasoru = "Yurtiçi"; // Varsayılan
 
-                // 🌟 GERÇEK ÇÖZÜM: İsme değil, arka plandaki SQL Belge Tipi (O1) sütununa bak!
+                // 🌟 Belge Tipi kontrolü (İhracat / Yurtiçi)
                 if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
                 {
                     DataRow[] dbSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{belgeKontrol}%'");
@@ -7984,7 +7984,12 @@ namespace TamgaApp
                         {
                             if (row.Cells[j].Value != null && !string.IsNullOrWhiteSpace(row.Cells[j].Value.ToString()))
                             {
-                                sw.WriteLine($"{paletAdi};{row.Cells[j].Value};{paletBarkodu}");
+                                // 🌟 İŞTE HAYAT KURTARAN ZIRH: 
+                                // Hem Excel'i hem CSV'yi bozan o gizli "Enter" tuşlarını boşluğa çeviriyoruz.
+                                // Ayrıca ürün isminin içinde yanlışlıkla ";" (noktalı virgül) varsa onu da tireye çeviriyoruz ki barkod satırı kaymasın!
+                                string icerik = row.Cells[j].Value.ToString().Replace("\r", " ").Replace("\n", " ").Replace(";", "-");
+
+                                sw.WriteLine($"{paletAdi};{icerik};{paletBarkodu}");
                             }
                         }
                     }
@@ -8022,38 +8027,38 @@ namespace TamgaApp
                 yeniSekme.Controls.Clear(); // Yenilemelerde butonlar üst üste binmesin diye
             }
 
-            // Ana Bölücü (Sola Ağaç, Sağa Detaylar)
-            SplitContainer split = new SplitContainer { Dock = DockStyle.Fill, SplitterDistance = 300 };
+            // 🌟 Ana Bölücü (Sola Dev Tablo, Sağa İnce Ağaç)
+            SplitContainer split = new SplitContainer { Dock = DockStyle.Fill, FixedPanel = FixedPanel.Panel2 };
             yeniSekme.Controls.Add(split);
 
-            // --- SOL PANEL: HİYERARŞİK KLASÖR AĞACI (TREEVIEW) ---
+            // 🌟 Ekran ne kadar büyürse büyüsün Sağdaki Ağaç Paneli hep ince (300px) kalacak, Sol taraf devasa genişleyecek!
+            split.Resize += (s, e) => { split.SplitterDistance = Math.Max(500, split.Width - 300); };
+
+            // --- SAĞ PANEL: HİYERARŞİK KLASÖR AĞACI (TREEVIEW) ---
             TreeView tvArsiv = new TreeView { Dock = DockStyle.Fill, Font = new Font("Segoe UI", 11) };
             Button btnAgiYenile = new Button { Dock = DockStyle.Bottom, Height = 40, Text = "🔄 Klasörleri Yenile", BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
-            split.Panel1.Controls.Add(tvArsiv);
-            split.Panel1.Controls.Add(btnAgiYenile);
 
-            // --- SAĞ PANEL: DETAYLAR, YAZDIRMA VE BARKOD SORGULAMA ---
+            split.Panel2.Controls.Add(tvArsiv);
+            split.Panel2.Controls.Add(btnAgiYenile);
+
+            // --- SOL PANEL: DETAYLAR, YAZDIRMA VE BARKOD SORGULAMA ---
             Panel pnlUst = new Panel { Dock = DockStyle.Top, Height = 100, BackColor = Color.FromArgb(45, 52, 54) };
 
             Label lblSorgu = new Label { Text = "🔍 Palet Barkodu Okut:", ForeColor = Color.White, Location = new Point(20, 20), Font = new Font("Segoe UI", 11, FontStyle.Bold), AutoSize = true };
             TextBox txtSorgu = new TextBox { Location = new Point(220, 18), Width = 300, Font = new Font("Segoe UI", 12) };
-
-
 
             Label lblFirmaSorgu = new Label { Text = "Müşteri / Palet Ara:", ForeColor = Color.White, Location = new Point(20, 60), Font = new Font("Segoe UI", 10, FontStyle.Bold), AutoSize = true };
             TextBox txtFirmaSorgu = new TextBox { Location = new Point(220, 58), Width = 300, Font = new Font("Segoe UI", 11) };
 
             Button btnEtiketYazdir = new Button { Text = "🖨️ Seçili Paletin Etiketini (EAN13) Yazdır", Location = new Point(550, 18), Width = 350, Height = 60, BackColor = Color.Orange, Font = new Font("Segoe UI", 11, FontStyle.Bold) };
 
-            // 🌟 İŞTE EKLENECEK OLAN YENİ BUTON
             Button btnTopluBarkodArsivi = new Button { Text = "📊 Gelişmiş Barkod Listesi", Location = new Point(915, 18), Width = 260, Height = 60, BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 11, FontStyle.Bold), Cursor = Cursors.Hand };
 
             pnlUst.Controls.Add(lblSorgu); pnlUst.Controls.Add(txtSorgu);
             pnlUst.Controls.Add(lblFirmaSorgu); pnlUst.Controls.Add(txtFirmaSorgu);
             pnlUst.Controls.Add(btnEtiketYazdir);
-            pnlUst.Controls.Add(btnTopluBarkodArsivi); // YENİ BUTONU PANELE MONTE ETTİK
+            pnlUst.Controls.Add(btnTopluBarkodArsivi);
 
-            // Yeni butona basıldığında açılacak motor:
             btnTopluBarkodArsivi.Click += (s, e) => { GelistirilmisBarkodArsiviniAc(); };
 
             DataGridView dgvDetay = new DataGridView { Dock = DockStyle.Fill, AllowUserToAddRows = false, ReadOnly = true, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill, SelectionMode = DataGridViewSelectionMode.FullRowSelect, BackgroundColor = Color.White };
@@ -8061,8 +8066,9 @@ namespace TamgaApp
             dgvDetay.Columns.Add("Icerik", "Ürün İçeriği");
             dgvDetay.Columns.Add("Barkod", "EAN13 Barkod");
 
-            split.Panel2.Controls.Add(dgvDetay);
-            split.Panel2.Controls.Add(pnlUst);
+            // 🌟 EŞLEŞTİRMEYİ TERSİNE ÇEVİRDİK (Sola Tabloyu, Sağa Ağacı koyduk)
+            split.Panel1.Controls.Add(dgvDetay);
+            split.Panel1.Controls.Add(pnlUst);
 
             // === OLAYLAR (EVENTS) ===
 
