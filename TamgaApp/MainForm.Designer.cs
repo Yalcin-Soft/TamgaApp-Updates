@@ -40,6 +40,8 @@ namespace TamgaApp
             this.tabPage13 = new System.Windows.Forms.TabPage();
             this.splitContainer6 = new System.Windows.Forms.SplitContainer();
             this.panel8 = new System.Windows.Forms.Panel();
+            this.dgvYarimSevkler = new System.Windows.Forms.DataGridView();
+            this.btnSevkBeklet = new System.Windows.Forms.Button();
             this.btnAmbarGetir = new System.Windows.Forms.Button();
             this.btnAmbarGoruntule = new System.Windows.Forms.Button();
             this.btnAmbarKaydet = new System.Windows.Forms.Button();
@@ -355,14 +357,13 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.button1 = new System.Windows.Forms.Button();
-            this.dgvYarimSevkler = new System.Windows.Forms.DataGridView();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
             this.splitContainer6.Panel1.SuspendLayout();
             this.splitContainer6.Panel2.SuspendLayout();
             this.splitContainer6.SuspendLayout();
             this.panel8.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).BeginInit();
             this.panel6.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.dgvMalzemeler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
@@ -436,7 +437,6 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).BeginInit();
             this.panel4.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).BeginInit();
             this.SuspendLayout();
             // 
             // printPreviewDialog1
@@ -486,7 +486,7 @@ namespace TamgaApp
             // panel8
             // 
             this.panel8.Controls.Add(this.dgvYarimSevkler);
-            this.panel8.Controls.Add(this.button1);
+            this.panel8.Controls.Add(this.btnSevkBeklet);
             this.panel8.Controls.Add(this.btnAmbarGetir);
             this.panel8.Controls.Add(this.btnAmbarGoruntule);
             this.panel8.Controls.Add(this.btnAmbarKaydet);
@@ -504,6 +504,24 @@ namespace TamgaApp
             this.panel8.Name = "panel8";
             this.panel8.Size = new System.Drawing.Size(519, 333);
             this.panel8.TabIndex = 53;
+            // 
+            // dgvYarimSevkler
+            // 
+            this.dgvYarimSevkler.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvYarimSevkler.Location = new System.Drawing.Point(5, 52);
+            this.dgvYarimSevkler.Name = "dgvYarimSevkler";
+            this.dgvYarimSevkler.Size = new System.Drawing.Size(254, 208);
+            this.dgvYarimSevkler.TabIndex = 53;
+            // 
+            // btnSevkBeklet
+            // 
+            this.btnSevkBeklet.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkBeklet.Location = new System.Drawing.Point(265, 160);
+            this.btnSevkBeklet.Name = "btnSevkBeklet";
+            this.btnSevkBeklet.Size = new System.Drawing.Size(118, 47);
+            this.btnSevkBeklet.TabIndex = 52;
+            this.btnSevkBeklet.Text = "SEVK BEKLET";
+            this.btnSevkBeklet.UseVisualStyleBackColor = true;
             // 
             // btnAmbarGetir
             // 
@@ -3964,24 +3982,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // button1
-            // 
-            this.button1.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.button1.Location = new System.Drawing.Point(265, 160);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(118, 47);
-            this.button1.TabIndex = 52;
-            this.button1.Text = "SEVK BEKLET";
-            this.button1.UseVisualStyleBackColor = true;
-            // 
-            // dgvYarimSevkler
-            // 
-            this.dgvYarimSevkler.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvYarimSevkler.Location = new System.Drawing.Point(5, 52);
-            this.dgvYarimSevkler.Name = "dgvYarimSevkler";
-            this.dgvYarimSevkler.Size = new System.Drawing.Size(254, 208);
-            this.dgvYarimSevkler.TabIndex = 53;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -4001,6 +4001,7 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).EndInit();
             this.splitContainer6.ResumeLayout(false);
             this.panel8.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).EndInit();
             this.panel6.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.dgvMalzemeler)).EndInit();
             this.splitContainer5.Panel1.ResumeLayout(false);
@@ -4094,7 +4095,6 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).EndInit();
             this.panel4.ResumeLayout(false);
             this.panel4.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).EndInit();
             this.ResumeLayout(false);
 
         }
@@ -4423,7 +4423,7 @@ namespace TamgaApp
         private Button btnBarkodKilidi;
         private Button btnSonrakiPalet;
         private Button btnOncekiPalet;
-        private Button button1;
+        private Button btnSevkBeklet;
         private DataGridView dgvYarimSevkler;
     }
 }

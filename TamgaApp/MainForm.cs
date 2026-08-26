@@ -429,28 +429,38 @@ namespace TamgaApp
 
         }
 
-        // 🌟 PROGRAMDAN ÇIKIŞTA ONAY İSTEYEN GÜVENLİK MOTORU
+        // 🌟 SAĞ ÜSTTEKİ ÇARPI (X) TUŞUYLA KAPATILIRSA DEVREYE GİREN ZIRH
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // Sadece kullanıcı kendisi (Çarpıya veya Çıkışa basarak) kapatmaya çalışıyorsa sor
-            // (Bilgisayar yeniden başlatılıyorsa veya görev yöneticisinden kapatılıyorsa sormaz)
+            // Animasyon başladıysa ve Windows sistemi kapatıyorsa karışma, kapanmasına izin ver
+            if (kapanisBasladi)
+            {
+                base.OnFormClosing(e);
+                return;
+            }
+
+            // Eğer sağ üstteki çarpıya basıldıysa
             if (e.CloseReason == CloseReason.UserClosing)
             {
+                e.Cancel = true; // 🌟 Önce Windows'un kaba kapanışını iptal et!
+
                 DialogResult onay = MessageBox.Show(
                     "Programı kapatmak istediğinize emin misiniz?\n\nKaydedilmemiş veya askıya alınmamış tüm verileriniz kaybolabilir!",
                     "Çıkış Onayı",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning,
-                    MessageBoxDefaultButton.Button2); // Yanlışlıkla Enter'a basarsa kapanmasın diye "Hayır" butonu varsayılan seçili gelir
+                    MessageBoxDefaultButton.Button2);
 
-                if (onay == DialogResult.No)
+                if (onay == DialogResult.Yes)
                 {
-                    e.Cancel = true; // 🌟 Kapanma işlemini anında iptal et ve ekranda kal!
+                    // 🌟 Onay verirse Windows'un kaba kapanışı yerine senin şık animasyonunu tetikle!
+                    CikisAnimasyonuVeKapat();
                 }
             }
-
-            // Normal kapanış prosedürüne devam et
-            base.OnFormClosing(e);
+            else
+            {
+                base.OnFormClosing(e);
+            }
         }
         #endregion
 
@@ -629,6 +639,13 @@ namespace TamgaApp
             {
                 dgvYarimSevkler.CellMouseDown -= dgvYarimSevkler_CellMouseDown;
                 dgvYarimSevkler.CellMouseDown += dgvYarimSevkler_CellMouseDown;
+            }
+
+            // Sevk Beklet Butonu Bağlantısı
+            if (this.Controls.Find("btnSevkBeklet", true).FirstOrDefault() is Button btnBeklet)
+            {
+                btnBeklet.Click -= btnSevkBeklet_Click;
+                btnBeklet.Click += btnSevkBeklet_Click;
             }
 
         }
@@ -4017,11 +4034,23 @@ namespace TamgaApp
             }
         }
 
-        // Sol menüdeki "Güvenli Çıkış" butonuna basıldığında tetiklenir
+        // Sol menüdeki kırmızı çıkış butonuna basıldığında
         private void btnCikisYap_Click(object sender, EventArgs e)
         {
-            // Kullanıcı butona art arda 5 kere bassa bile sadece 1 kere çalışmasını sağlayan zırh
-            if (!kapanisBasladi) CikisAnimasyonuVeKapat();
+            if (kapanisBasladi) return;
+
+            DialogResult onay = MessageBox.Show(
+                "Programı kapatmak istediğinize emin misiniz?\n\nKaydedilmemiş veya askıya alınmamış tüm verileriniz kaybolabilir!",
+                "Çıkış Onayı",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2);
+
+            if (onay == DialogResult.Yes)
+            {
+                // 🌟 SADECE ANİMASYONU ÇAĞIRIYORUZ (Flag'i o kendi içinde yönetecek)
+                CikisAnimasyonuVeKapat();
+            }
         }
 
         // Ana formu gizleyip ekrana Splash (Veda) ekranını getiren ve 1.5 saniye sonra sistemi tamamen öldüren YENİ NESİL ASENKRON motor
@@ -5012,6 +5041,88 @@ namespace TamgaApp
             }
         }
 
+        // 🌟 YENİ BUTON: SEVK BEKLET (Askıya almanın Yeşil renkli versiyonu)
+        private void btnSevkBeklet_Click(object sender, EventArgs e)
+        {
+            if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
+            {
+                MessageBox.Show("Beklemeye alınacak açık bir sevkiyat yok!", "Hata"); return;
+            }
+
+            YarimSevkiyatHafizasi hafiza = new YarimSevkiyatHafizasi
+            {
+                MusteriAdi = txtMusteriAdi.Text,
+                BelgeNo = string.Join(", ", clbBelgeNo.CheckedItems.Cast<string>()),
+                SevkMusteri = txtSevkMusteri.Text,
+                PaletSayisi = cmbSevkPaletSayisi.SelectedIndex != -1 ? Convert.ToInt32(cmbSevkPaletSayisi.SelectedItem) : 0,
+                KayitTarihi = DateTime.Now
+            };
+
+            foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+            {
+                if (row.IsNewRow || row.Cells["Malzeme Kodu"].Value == null) continue;
+
+                string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
+                string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
+                string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? "";
+
+                string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
+
+                int okutulan = 0;
+                if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
+
+                if (!hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
+                    hafiza.AnaOkutulanlar.Add(benzersizAnahtar, okutulan);
+                else
+                    hafiza.AnaOkutulanlar[benzersizAnahtar] += okutulan;
+            }
+
+            for (int i = 0; i < dgvPaletMatrisi.Rows.Count; i++)
+            {
+                hafiza.PaletMatrisiDurumu[i] = new Dictionary<int, string>();
+                for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+                {
+                    if (dgvPaletMatrisi.Rows[i].Cells[j].Value != null)
+                        hafiza.PaletMatrisiDurumu[i][j] = dgvPaletMatrisi.Rows[i].Cells[j].Value.ToString();
+                }
+            }
+
+            hafiza.PaletBarkodlari = aktifPaletBarkodlari;
+
+            string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
+            if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
+
+            string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
+            if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
+
+            // 🌟 SİHİRLİ ZIRH: Dosya isminin başına [BEKLET] tagı ekliyoruz ki sistem onu yeşile boyayacağını anlasın!
+            string dosyaAdi = $"[BEKLET] {musteriTemiz} - {DateTime.Now:dd.MM.yyyy HH-mm}.json";
+            string tamYol = Path.Combine(anaYol, dosyaAdi);
+
+            System.IO.File.WriteAllText(tamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
+
+            MessageBox.Show($"Sevkiyat başarıyla BEKLEMEYE ALINDI!", "Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Ekranı Temizle
+            txtMusteriAdi.Clear();
+            txtSevkMusteri.Clear();
+            txtBarkod.Clear();
+            clbBelgeNo.Items.Clear();
+            cmbSevkPaletSayisi.SelectedIndex = -1;
+
+            if (dgvMalzemeler.DataSource == null) dgvMalzemeler.Rows.Clear();
+            else dgvMalzemeler.DataSource = null;
+
+            dgvPaletMatrisi.Columns.Clear();
+            dgvPaletMatrisi.Rows.Clear();
+            cmbAktifPalet.Items.Clear();
+
+            aktifPaletBarkodlari.Clear();
+
+            // Tabloyu anında güncelle ki eklenen yeni [BEKLET] kaydı fıstık yeşili olarak ekrana düşsün!
+            btnYarimGetir_Click(null, null);
+        }
+
         private void btnSevkAra_Click(object sender, EventArgs e)
         {
             if (clbBelgeNo.CheckedItems.Count == 0)
@@ -5376,7 +5487,7 @@ namespace TamgaApp
             public int[] PaletAdetleri { get; set; }
         }
 
-        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (AYNI ÜRÜNLERİ BİRLEŞTİRİR)
+        // 🌟 MATRİS RAPORUNU SAF EXCEL (.XLSX) YAPAN MOTOR (AYNI ÜRÜNLERİ BİRLEŞTİRİR VE ALT SATIRLARI DÜZELTİR)
         private void btnSevkRaporla_Click(object sender, EventArgs e)
         {
             if (dgvPaletMatrisi.Columns.Count == 0) return;
@@ -5436,7 +5547,6 @@ namespace TamgaApp
                                 int tireIndex = urunVeBelge.IndexOf(" - ");
                                 if (tireIndex > 0) mKodu = urunVeBelge.Substring(0, tireIndex).Trim();
 
-                                // 🌟 SİHİRLİ ZIRH: Anahtardan Belge No'yu SİLDİK! Sadece Malzeme Kodu'na bakarak birleştirir.
                                 string anahtar = mKodu;
 
                                 if (!raporHavuzu.ContainsKey(anahtar))
@@ -5452,11 +5562,14 @@ namespace TamgaApp
                                     foreach (DataGridViewRow solSatir in dgvMalzemeler.Rows)
                                     {
                                         if (solSatir.IsNewRow) continue;
-                                        // 🌟 Sadece Malzeme Koduna bak!
                                         if (solSatir.Cells["Malzeme Kodu"].Value?.ToString().Trim() == mKodu)
                                         {
-                                            raporHavuzu[anahtar].MalzemeAdi = solSatir.Cells["Malzeme Adı"].Value?.ToString() ?? "";
-                                            raporHavuzu[anahtar].Aciklama = solSatir.Cells["Açıklama"].Value?.ToString() ?? "";
+                                            // 🌟 YENİ ZIRH: SQL'den gelen gizli alt satır (Enter) karakterlerini temizle ve boşluğa çevir!
+                                            string mAdi = solSatir.Cells["Malzeme Adı"].Value?.ToString() ?? "";
+                                            string mAciklama = solSatir.Cells["Açıklama"].Value?.ToString() ?? "";
+
+                                            raporHavuzu[anahtar].MalzemeAdi = mAdi.Replace("\r", " ").Replace("\n", " ").Trim();
+                                            raporHavuzu[anahtar].Aciklama = mAciklama.Replace("\r", " ").Replace("\n", " ").Trim();
                                             break;
                                         }
                                     }
@@ -5464,20 +5577,21 @@ namespace TamgaApp
                                     // Sol tabloda bulamazsa kendi parçaladığı metni yazsın
                                     if (string.IsNullOrEmpty(raporHavuzu[anahtar].MalzemeAdi))
                                     {
-                                        raporHavuzu[anahtar].MalzemeAdi = tireIndex > 0 ? urunVeBelge.Substring(tireIndex + 3).Trim() : "Ürün Adı Yok";
+                                        string hamAd = tireIndex > 0 ? urunVeBelge.Substring(tireIndex + 3) : "Ürün Adı Yok";
+                                        raporHavuzu[anahtar].MalzemeAdi = hamAd.Replace("\r", " ").Replace("\n", " ").Trim();
                                         raporHavuzu[anahtar].Aciklama = "";
                                     }
                                 }
                                 else
                                 {
-                                    // 🌟 BİRLEŞTİRME ZIRHI: Aynı ürün farklı faturadan geldiyse Belge No'sunu yanına virgülle ekle
+                                    // BİRLEŞTİRME ZIRHI: Aynı ürün farklı faturadan geldiyse Belge No'sunu yanına virgülle ekle
                                     if (!raporHavuzu[anahtar].BelgeNo.Contains(bNo))
                                     {
                                         raporHavuzu[anahtar].BelgeNo += ", " + bNo;
                                     }
                                 }
 
-                                // 🌟 MATRİSTEKİ GERÇEK ADETİ HAVUZA YAZ VE TOPLA
+                                // MATRİSTEKİ GERÇEK ADETİ HAVUZA YAZ VE TOPLA
                                 raporHavuzu[anahtar].PaletAdetleri[j] += adet;
                             }
                         }
@@ -5486,9 +5600,19 @@ namespace TamgaApp
 
                 if (raporHavuzu.Count == 0) return;
 
-                // 🌟 2. ADIM: EXCEL'İ OLUŞTUR (SADECE MATRİS HAVUZUNDAN)
-                string anaBelgeNo = raporHavuzu.Values.FirstOrDefault()?.BelgeNo.Split(',')[0] ?? "SE";
-                string turKlasoru = anaBelgeNo.StartsWith("O1") ? "İhracat" : "Yurtiçi";
+                // 🌟 2. ADIM: EXCEL'İ OLUŞTUR
+                string anaBelgeNo = raporHavuzu.Values.FirstOrDefault()?.BelgeNo.Split(',')[0].Trim() ?? "SE";
+                string turKlasoru = "Yurtiçi"; // Varsayılan
+
+                if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
+                {
+                    DataRow[] dbSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{anaBelgeNo}%'");
+                    if (dbSatirlari.Length > 0 && dbSatirlari[0]["BelgeTipi"] != DBNull.Value && dbSatirlari[0]["BelgeTipi"].ToString().Trim() == "O1")
+                    {
+                        turKlasoru = "İhracat";
+                    }
+                }
+
                 string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Sevkiyat Raporları", turKlasoru, DateTime.Now.ToString("yyyy"), DateTime.Now.ToString("MM"), DateTime.Now.ToString("dd"));
                 if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
 
@@ -5502,13 +5626,16 @@ namespace TamgaApp
                     ws.Style.Font.FontName = "Times New Roman";
                     ws.Style.Font.FontSize = 11;
 
+                    // 🌟 TÜM ÇALIŞMA SAYFASI İÇİN "METNİ KAYDIR" ÖZELLİĞİNİ KOMPLE KAPATTIK!
+                    ws.Style.Alignment.WrapText = false;
+
                     // Başlıklar
                     ws.Cell(1, 1).Value = "Müşteri Adı";
                     ws.Cell(1, 2).Value = "Belge No";
                     ws.Cell(1, 3).Value = "Malzeme Kodu";
                     ws.Cell(1, 4).Value = "Malzeme Adı";
                     ws.Cell(1, 5).Value = "Açıklaması";
-                    ws.Cell(1, 6).Value = "Toplam Adet"; // Eski "Adet" yerine "Toplam Adet"
+                    ws.Cell(1, 6).Value = "Toplam Adet";
 
                     // Palet Başlıkları
                     int colIndex = 7;
@@ -5522,7 +5649,7 @@ namespace TamgaApp
                     int satir = 2;
                     foreach (var rv in raporHavuzu.Values)
                     {
-                        int genelToplam = rv.PaletAdetleri.Sum(); // O ürünün tüm paletlerdeki toplam gerçek adedi
+                        int genelToplam = rv.PaletAdetleri.Sum();
                         if (genelToplam == 0) continue;
 
                         ws.Cell(satir, 1).Value = txtMusteriAdi.Text.Trim();
@@ -5544,8 +5671,12 @@ namespace TamgaApp
                         satir++;
                     }
 
+                    // Sütun genişliklerini içeriğe göre otomatik ayarla
                     ws.Columns().AdjustToContents();
-                    ws.Column(5).Style.Alignment.WrapText = false; // Kaydırmayı kapat
+
+                    // Satır yüksekliklerini normale (15) zorla ki bozulma olmasın
+                    ws.Rows().Height = 15;
+
                     wb.SaveAs(tamYol);
                 }
 
@@ -6170,7 +6301,7 @@ namespace TamgaApp
 
         #region 📝 13.6 TAM VE KISMİ SEVKİYAT İŞLEMLERİ
 
-        // Tüm ürünlerin eksiksiz okutulduğunu onaylar, arşive kaydeder ve belgeyi kalıcı olarak kara listeye ekler.
+        // 🌟 TAM SEVKİYAT MOTORU (Önce Excel Raporu Alır, Sonra Kapatır)
         private void btnTamSevk_Click(object sender, EventArgs e)
         {
             if (dgvMalzemeler.Rows.Count == 0) return;
@@ -6190,10 +6321,12 @@ namespace TamgaApp
             if (eksikVarMi) MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
             else
             {
+                // 🌟 SİHİRLİ DOKUNUŞ: EKRAN TEMİZLENMEDEN ÖNCE OTOMATİK EXCEL RAPORUNU ÇIKART!
+                btnSevkRaporla_Click(null, null);
+
                 MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 // 🌟 ÇOKLU BELGE (KONSOLİDE) KAPATMA MANTIĞI
-                // Tabloda kaç farklı Belge No varsa hepsini bul ve listeye al
                 HashSet<string> bitenBelgeler = new HashSet<string>();
                 foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                 {
@@ -6240,16 +6373,16 @@ namespace TamgaApp
                 // Müşteri kutusunu kalan güncel siparişlere göre yeniden doldur
                 cmbMusteri.Items.Clear();
                 var kalanMusteriler = dtTumSiparisler.AsEnumerable()
-                                                            .Select(r => r.Field<string>("MusteriAdi")?.Trim())
-                                                            .Where(m => !string.IsNullOrEmpty(m))
-                                                            .Distinct()
-                                                            .OrderBy(m => m)
-                                                            .ToArray();
+                                                    .Select(r => r.Field<string>("MusteriAdi")?.Trim())
+                                                    .Where(m => !string.IsNullOrEmpty(m))
+                                                    .Distinct()
+                                                    .OrderBy(m => m)
+                                                    .ToArray();
                 cmbMusteri.Items.AddRange(kalanMusteriler);
             }
         }
 
-        // Eksik ürünleri geride bırakarak, sadece okutulmuş olan miktarı kısmi olarak gönderir
+        // 🌟 KISMİ SEVKİYAT MOTORU (Önce Excel Raporu Alır, Sonra Kapatır)
         private void btnKismiSevk_Click(object sender, EventArgs e)
         {
             if (dgvMalzemeler.Rows.Count == 0) return;
@@ -6273,6 +6406,9 @@ namespace TamgaApp
             {
                 if (MessageBox.Show("Eksik ürünler var. Yine de Kısmi Sevk yapılsın mı?\n\nEksikler:\n" + string.Join("\n", eksikListesi), "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
+                    // 🌟 SİHİRLİ DOKUNUŞ: EKRAN TEMİZLENMEDEN ÖNCE OTOMATİK EXCEL RAPORUNU ÇIKART!
+                    btnSevkRaporla_Click(null, null);
+
                     MessageBox.Show("Kısmi Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                     // 🌟 ÇOKLU BELGE (KONSOLİDE) KAPATMA MANTIĞI
@@ -6319,11 +6455,11 @@ namespace TamgaApp
                     // Müşteri kutusunu güncel siparişlere göre yeniden doldur
                     cmbMusteri.Items.Clear();
                     var kalanMusteriler = dtTumSiparisler.AsEnumerable()
-                                                                .Select(r => r.Field<string>("MusteriAdi")?.Trim())
-                                                                .Where(m => !string.IsNullOrEmpty(m))
-                                                                .Distinct()
-                                                                .OrderBy(m => m)
-                                                                .ToArray();
+                                                        .Select(r => r.Field<string>("MusteriAdi")?.Trim())
+                                                        .Where(m => !string.IsNullOrEmpty(m))
+                                                        .Distinct()
+                                                        .OrderBy(m => m)
+                                                        .ToArray();
                     cmbMusteri.Items.AddRange(kalanMusteriler);
                 }
             }
@@ -7726,8 +7862,18 @@ namespace TamgaApp
         {
             try
             {
-                string belgeKontrol = belgeNo.Split('_')[0];
-                string turKlasoru = belgeKontrol.StartsWith("O1") ? "İhracat" : "Yurtiçi";
+                string belgeKontrol = belgeNo.Split(new[] { '_', ',' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                string turKlasoru = "Yurtiçi"; // Varsayılan
+
+                // 🌟 GERÇEK ÇÖZÜM: İsme değil, arka plandaki SQL Belge Tipi (O1) sütununa bak!
+                if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
+                {
+                    DataRow[] dbSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{belgeKontrol}%'");
+                    if (dbSatirlari.Length > 0 && dbSatirlari[0]["BelgeTipi"] != DBNull.Value && dbSatirlari[0]["BelgeTipi"].ToString().Trim() == "O1")
+                    {
+                        turKlasoru = "İhracat";
+                    }
+                }
 
                 string yil = DateTime.Now.ToString("yyyy");
                 string ay = DateTime.Now.ToString("MM");
@@ -10376,7 +10522,17 @@ namespace TamgaApp
                             string sevkTuru = "AMBAR_SEVK";
 
                             string belgeKontrol = string.IsNullOrEmpty(belgeNo) ? "SE" : belgeNo.Split(new[] { ',', '_' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
-                            string turKlasoru = belgeKontrol.StartsWith("O1") ? "İhracat" : "Yurtiçi";
+                            string turKlasoru = "Yurtiçi"; // Varsayılan
+
+                            // 🌟 GERÇEK ÇÖZÜM: İsme değil, arka plandaki SQL Belge Tipi (O1) sütununa bak!
+                            if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
+                            {
+                                DataRow[] dbSatirlari = dtTumSiparisler.Select($"BelgeNo LIKE '%{belgeKontrol}%'");
+                                if (dbSatirlari.Length > 0 && dbSatirlari[0]["BelgeTipi"] != DBNull.Value && dbSatirlari[0]["BelgeTipi"].ToString().Trim() == "O1")
+                                {
+                                    turKlasoru = "İhracat";
+                                }
+                            }
 
                             string yil = DateTime.Now.ToString("yyyy");
                             string ay = DateTime.Now.ToString("MM");
@@ -11533,5 +11689,6 @@ namespace TamgaApp
         // =========================================================================================
 
         #endregion
+
     }
 }
