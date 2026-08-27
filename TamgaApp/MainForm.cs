@@ -19,15 +19,25 @@ namespace TamgaApp
     {
         #region 🌐 00.TamgaApp
 
-        #region 🌐 01. GLOBAL HAFIZA VE ÇEKİRDEK DEĞİŞKENLER
+        #region 🌐 01. ÇEKİRDEK SİSTEM VE GLOBAL DEĞİŞKENLER (CORE SYSTEM VARIABLES)
 
-        #region 🏠 01.1 EV MODU (GELİŞTİRİCİ ALANI)
+        #region 🧪 01.1 GELİŞTİRİCİ MODU VE MEDYA MOTORU (TEST & MEDIA ENGINE)
         // ------------------------------------------------------------------------
-        // DİKKAT: İş yerinde SQL'e bağlanamadığınız zamanlarda sistemi sahte
-        // verilerle test etmek için bu şalteri 'true' yapın. 
-        // Gerçek SQL veritabanına bağlanmak için mutlaka 'false' yapmalısınız!
+        // [EV MODU ŞALTERİ]
+        // NEDEN VAR? Canlı SQL sunucusuna erişimin olmadığı fiziksel ortamlarda (ev, kafe)
+        // programın çökmesini engellemek ve arayüz (UI) testleri yapabilmek için sistemi
+        // sahte (mock) veri tablolarıyla besleyen ana şalterdir. 
+        // DİKKAT: Canlı (Production) ortama derlerken KESİNLİKLE 'false' olmalıdır!
         // ------------------------------------------------------------------------
-        // 🌟 PERFORMANS: Ses Motorları (RAM'de hazır bekler)
+        public static bool EvModuAktif = false;
+
+        // ------------------------------------------------------------------------
+        // [MEDYA MOTORU DEĞİŞKENLERİ]
+        // NEDEN RAM'DE BEKLİYOR? Barkod okuyucu saniyede birden fazla tetikleme yapabilir.
+        // Her okumada diske (Harddisk/SSD) gidip .wav dosyasını bulmak I/O darboğazı yaratır ve 
+        // arayüzü dondurur. Bu yüzden sesleri uygulama açılışında Asenkron (LoadAsync) olarak 
+        // RAM'e yüklüyoruz. Böylece sıfır gecikmeyle (lag-free) anında tepki veriyor.
+        // ------------------------------------------------------------------------
         private System.Media.SoundPlayer basariliSesMotoru;
         private System.Media.SoundPlayer hataSesMotoru;
 
@@ -36,72 +46,117 @@ namespace TamgaApp
             try
             {
                 string bYol = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "basarili.wav");
-                if (System.IO.File.Exists(bYol)) { basariliSesMotoru = new System.Media.SoundPlayer(bYol); basariliSesMotoru.LoadAsync(); }
+                if (System.IO.File.Exists(bYol))
+                {
+                    basariliSesMotoru = new System.Media.SoundPlayer(bYol);
+                    basariliSesMotoru.LoadAsync();
+                }
 
                 string hYol = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "hata.wav");
-                if (System.IO.File.Exists(hYol)) { hataSesMotoru = new System.Media.SoundPlayer(hYol); hataSesMotoru.LoadAsync(); }
+                if (System.IO.File.Exists(hYol))
+                {
+                    hataSesMotoru = new System.Media.SoundPlayer(hYol);
+                    hataSesMotoru.LoadAsync();
+                }
             }
-            catch { }
+            catch { } // Ses dosyası silinmişse programın çökmemesi için sessizce yutulur
         }
 
-        private void BasariliSesCal() { if (basariliSesMotoru != null) basariliSesMotoru.Play(); else System.Media.SystemSounds.Asterisk.Play(); }
-        private void HataSesCal() { if (hataSesMotoru != null) hataSesMotoru.Play(); else System.Media.SystemSounds.Hand.Play(); }
-        public static bool EvModuAktif = false; // TODO: Canlı ortamda FALSE kalmalı!
+        private void BasariliSesCal()
+        {
+            if (basariliSesMotoru != null) basariliSesMotoru.Play();
+            else System.Media.SystemSounds.Asterisk.Play(); // Dosya yoksa Windows varsayılan sesine düş (Fallback)
+        }
+
+        private void HataSesCal()
+        {
+            if (hataSesMotoru != null) hataSesMotoru.Play();
+            else System.Media.SystemSounds.Hand.Play(); // Fallback
+        }
         #endregion
 
-        #region 🔐 01.2 KULLANICI VE YETKİLENDİRME
-        // Sisteme başarılı şekilde giriş yapan aktif kullanıcının bilgilerini ve
-        // erişebileceği sekme/modül yetkilerini tutan global güvenlik değişkenleri.
+        #region 🔐 01.2 OTURUM VE YETKİLENDİRME (SESSION & SECURITY)
+        // ------------------------------------------------------------------------
+        // [OTURUM (SESSION) BELLEĞİ]
+        // NEDEN STATİC? Kullanıcı giriş yaptıktan sonra bu veriler programın her köşesinden 
+        // (farklı formlardan veya class'lardan) tek bir referansla kontrol edilebilsin diye 
+        // static olarak RAM'e kazınır. Role-Based Access Control (RBAC) bu iki değişkene bakar.
+        // ------------------------------------------------------------------------
         public static string AktifKullaniciAdi = "";
         public static string AktifYetkiler = "";
         #endregion
 
-        #region 🎨 01.3 TASARIM MOTORU (SÜRÜKLE-BIRAK) DEĞİŞKENLERİ
-        // Kağıt/Zarf üzerindeki görsel nesneleri (etiket, dinamik alan, resim) yöneten motor
-        private List<DesignItem> designItems = new List<DesignItem>(); // Tasarım ekranındaki tüm görsel nesnelerin RAM'deki listesi
-        private List<Control> selectedControls = new List<Control>();  // Klavyeden CTRL tuşu ile seçilen çoklu nesneleri hafızada tutar
+        #region 📐 01.3 GÖRSEL TASARIM MOTORU (DRAG & DROP ENGINE)
+        // ------------------------------------------------------------------------
+        // TASARIM LİSTELERİ: Kağıt (Zarf/Etiket) üzerindeki nesnelerin ve arka plan 
+        // firma havuzunun geçici (RAM) olarak tutulduğu List yapıları.
+        // ------------------------------------------------------------------------
+        private List<DesignItem> designItems = new List<DesignItem>();     // O an aktif tasarım kağıdındaki tüm nesneler
+        private List<Control> selectedControls = new List<Control>();      // Çoklu seçimde (CTRL+Tık) toplu işlem (hizalama/renk) görecek nesneler
+        private List<Firma> tumFirmalarCache = new List<Firma>();          // SQL'i yormamak için firma listesinin önbelleğe alınmış hali
 
-        // Dinamik Fare Hareketleri ve Boyutlandırma Takibi
-        private bool isDragging = false;                               // Seçili nesne sürükleniyor mu?
-        private bool isResizing = false;                               // Seçili nesne kenarından çekilip büyütülüyor/küçültülüyor mu?
-        private string resizeDir = "";                                 // Boyutlandırmanın yönü (Örn: "WE" yatay sündürme, "NS" dikey)
-        private Point dragStart;                                       // Sürükleme veya sündürme işleminin başladığı X,Y koordinatı
-        private Control draggingControl;                               // O an farenin ucunda tutulan aktif kutucuk
-        private DesignItem selectedDesignItem;                         // Sağ taraftaki "Özellikler" panelinde ayarları gösterilen aktif nesne
-        private List<Firma> tumFirmalarCache = new List<Firma>();
+        // ------------------------------------------------------------------------
+        // DEVİNİMSEL EKSEN (STATE MACHINE) DEĞİŞKENLERİ
+        // NEDEN VAR? Fare hareketlerinin anlık olarak "Taşıma (Drag)" mı yoksa "Sündürme/
+        // Büyütme (Resize)" mi olduğunu algılayıp, ona göre Windows API'sini tetikleyen bayraklar.
+        // ------------------------------------------------------------------------
+        private bool isDragging = false;                                   // Taşıma durumu aktif mi?
+        private bool isResizing = false;                                   // Boyutlandırma aktif mi?
+        private string resizeDir = "";                                     // Hangi yöne sündürülüyor? (Örn: WE yatay, NS dikey, NWSE çapraz)
+        private Point dragStart;                                           // Farenin ilk tıklandığı milimetrik X,Y koordinatı (Fark hesaplamak için)
+        private Control draggingControl;                                   // O an farenin ucuna kilitlenmiş aktif kutucuk
+        private DesignItem selectedDesignItem;                             // Özellikler (Properties) paneline bağlanmış aktif nesne modeli
 
-        // Tasarım Arayüzü (Masa ve Kağıt)
-        private Panel pnlWorkspace;                                    // Arka plandaki devasa gri çalışma masası (Nesnelerin dışarı taşmasını önler)
-        private ComboBox cmbPaperSize;                                 // Üst menüdeki kağıt/zarf boyutu seçici (DL Zarf, A4, Özel Boyut vb.)
+        // ------------------------------------------------------------------------
+        // TASARIM MASASI (UI KONTROLLERİ)
+        // ------------------------------------------------------------------------
+        private Panel pnlWorkspace;                                        // Dış çerçeve: Dev çalışma masası (Taşmaları ve kaybolmaları önler)
+        private ComboBox cmbPaperSize;                                     // Global kağıt/zarf ölçüsü yönetici kutusu
         #endregion
 
-        #region 🖨️ 01.4 YAZDIRMA, PDF VE YAZICI SPOOLER YÖNETİMİ
-        // Tekli ve çoklu yazdırma işlemlerini sıraya koyan, yazıcı eşleştirmelerini tutan değişkenler
-        private List<Firma> batchFirms;                                // Çoklu zarf yazdırma işlemine sokulan firmaların toplu sırası
-        private int batchIndex;                                        // Çoklu yazdırmada anlık olarak kaçıncı kağıdın/firmanın yazdırıldığını tutar
-                                                                       // Sadece Ambar yazdırma sekmesine hizmet eden, kendi hafızası olan özel motor
+        #region 🖨️ 01.4 YAZDIRMA VE SPOOLER YÖNETİMİ (PRINT SPOOLER)
+        // ------------------------------------------------------------------------
+        // ÇOKLU (BATCH) YAZDIRMA MOTORU
+        // NEDEN LİSTE? Kullanıcı 50 firmayı seçip "Yazdır" dediğinde, Windows Spooler'a
+        // tek tek 50 komut göndermek yazıcıyı dondurur. Bunun yerine liste olarak alıp
+        // tek bir döküman (Document) içinde sayfalandırma yaparak RAM'den kazanç sağlıyoruz.
+        // ------------------------------------------------------------------------
+        private List<Firma> batchFirms;
+        private int batchIndex;                                            // İşlenen sayfanın o anki sırasını tutar (HasMorePages mantığı için)
 
-        // Yazıcı Hafızası
-        private Dictionary<string, string> printerMappings = new Dictionary<string, string>(); // Hangi ekranın hangi yazıcıyı varsayılan kullanacağını tutar
-        private const string PrinterSettingsFile = "printer_settings.json";                    // Yazıcı eşleştirmelerinin diske kaydedildiği JSON dosyasının adı
-        private PrintDocument pdUretim;                                // Üretim listesini (A4 kağıda) döken yazdırma motoru
-
+        // ------------------------------------------------------------------------
+        // YAZICI EŞLEŞTİRME (PRINTER MAPPING) DEPOSU
+        // NEDEN SÖZLÜK (DICTIONARY)? "Etiket" için Zebra'yı, "A4 Rapor" için HP'yi hatırlaması
+        // ve uygulamanın her açılışında json dosyasından okuyup donanıma ataması için anahtar-değer yapısı.
+        // ------------------------------------------------------------------------
+        private Dictionary<string, string> printerMappings = new Dictionary<string, string>();
+        private const string PrinterSettingsFile = "printer_settings.json";
+        private PrintDocument pdUretim;                                    // Depo Kabul A4 baskı motoru
         #endregion
 
-        #region 📦 01.5 SEVKİYAT SİSTEMİ VE KALICI HAFIZA (GHOST MODU)
-        // WMS ve Sipariş takip ekranının veritabanı değişkenleri
-        private DataTable dtTumSiparisler = new DataTable();           // SQL'den çekilen tüm siparişlerin geçici olarak tutulduğu RAM deposu
+        #region 📦 01.5 SEVKİYAT VE KALICI HAFIZA (GHOST MODE CACHE)
+        // ------------------------------------------------------------------------
+        // SİPARİŞ HAVUZU
+        // ------------------------------------------------------------------------
+        private DataTable dtTumSiparisler = new DataTable();               // ERP/SQL'den gelen verilerin UI bloklanmasın diye alındığı RAM havuzu
 
-        // 👻 GHOST MODU KARA LİSTESİ (Kalıcı Hafıza)
-        // Tamamı veya bir kısmı sevk edilip işlemleri biten benzersiz belge (sipariş) numaralarını tutar.
-        // Program açıldığında arka plandaki '.txt' dosyasından okunarak doldurulur.
-        // Böylece program kapansa bile, kapanmış bir sipariş SQL'den gelse dahi ekranda gösterilmez.
+        // ------------------------------------------------------------------------
+        // 👻 GHOST MODU KARA LİSTESİ (TAMAMLANMIŞ İŞLER)
+        // NEDEN GHOST MOD? ERP sisteminde belge kapanana kadar geçen sürede (asenkron gecikme),
+        // personelin aynı belgeyi tekrar sevketmesini engellemek için, lokal .txt tabanlı
+        // bir kara liste (Blacklist) tutulur. Bu listeye giren belge SQL'de açık görünse bile
+        // ekrandan gizlenir (Hayalet olur).
+        // ------------------------------------------------------------------------
         public static List<string> TamamlananBelgeNolar = new List<string>();
         #endregion
 
-        #region 🧩 01.6 VERİ MODELLERİ (JSON SERİLEŞTİRME SINIFLARI)
-        // Tasarım şablonlarının ve içindeki görsel nesnelerin diske kaydedilebilmesi 
-        // (.json dosyası olabilmesi) için gereken kalıp sınıflar.
+        #region 🧩 01.6 VERİ MODELLERİ VE SERİLEŞTİRME (DATA MODELS & SERIALIZATION)
+        // ------------------------------------------------------------------------
+        // NEDEN [Serializable]? 
+        // Bu sınıflar sadece bellekte yaşamak için değil, diske kalıcı olarak kaydedilip 
+        // (.json veya binary olarak) daha sonra uygulama kapatılıp açılsa bile eksiksiz 
+        // geri dönüştürülmek (Deserialize) için tasarlandığından bu etiketle işaretlenmelidir.
+        // ------------------------------------------------------------------------
 
         public class YarimSevkiyatHafizasi
         {
@@ -112,43 +167,43 @@ namespace TamgaApp
             public DateTime KayitTarihi { get; set; }
             public Dictionary<string, int> AnaOkutulanlar { get; set; } = new Dictionary<string, int>();
             public Dictionary<int, Dictionary<int, string>> PaletMatrisiDurumu { get; set; } = new Dictionary<int, Dictionary<int, string>>();
-
             public Dictionary<string, string> PaletBarkodlari { get; set; } = new Dictionary<string, string>();
         }
 
         [Serializable]
         public class DesignItem
         {
-            public string Id { get; set; } = Guid.NewGuid().ToString(); // Nesnenin benzersiz kimliği
-            public string Type { get; set; } // Kutunun türü: "Label" (Sabit), "Field" (Dinamik Veri), "Frame" (Çerçeve), "Image" (Resim)
-            public string Text { get; set; } // İçindeki sabit metin (Resim ise dosya yolu tutulur)
-            public string PlaceholderKey { get; set; } // Dinamik bir alansa veritabanı anahtarı (Örn: FirmaAdi, Adres, Telefon1)
+            public string Id { get; set; } = Guid.NewGuid().ToString();    // GUID: Silme ve seçme işlemlerinde benzersiz kilit (ID) görevi görür
+            public string Type { get; set; }                               // Label, Field, Frame, Image tespiti
+            public string Text { get; set; }                               // Sabit metin (Resim ise Harddisk Path'i)
+            public string PlaceholderKey { get; set; }                     // Dinamik Alan Değişkeni (Örn: {FirmaAdi})
 
-            // Milimetrik Koordinatlar ve Boyutlar (Yazıcıda milimetrik, hatasız çıkması için Px yerine Mm kullanıyoruz)
+            // NEDEN PİKSEL (PX) DEĞİL DE MİLİMETRE (MM)? 
+            // Farklı ekran çözünürlükleri (DPI) ve yazıcı pikselleri (PPI) arasında kayma (shift) 
+            // olmaması için matematiksel çekirdek veriyi sadece milimetre üzerinden saklıyoruz.
             public float Xmm { get; set; }
             public float Ymm { get; set; }
             public float Wmm { get; set; }
             public float Hmm { get; set; }
 
-            // Tipografi ve Görsel Stil Ayarları
             public string FontName { get; set; } = "Times New Roman";
             public float FontSizePt { get; set; } = 12f;
             public FontStyle FontStyle { get; set; } = FontStyle.Regular;
-            public string ColorName { get; set; } = "#000000";    // HEX renk kodu (Siyah)
-            public string Alignment { get; set; } = "Center";     // Metin Hizalama: Left, Center, Right
-            public int Rotation { get; set; } = 0;                // Metnin kağıt üzerindeki dönüş açısı (Dikey metinler için 90, 270 vb.)
+            public string ColorName { get; set; } = "#000000";             // Çapraz platform uyumluluğu için Color nesnesi yerine HTML Hex Kodu
+            public string Alignment { get; set; } = "Center";
+            public int Rotation { get; set; } = 0;
         }
 
         [Serializable]
         private class TemplateFile
         {
-            public string TemplateName { get; set; }          // JSON Şablonunun adı
-            public float PageWidthMm { get; set; }            // Kağıdın milimetrik genişliği
-            public float PageHeightMm { get; set; }           // Kağıdın milimetrik yüksekliği
-            public string Orientation { get; set; }           // Kağıt yönü (Portrait: Dikey, Landscape: Yatay)
-            public int Version { get; set; }                  // Şablon versiyonu (Gelecekte eski şablonları uyarlamak için)
-            public DateTime CreatedAt { get; set; }           // Şablonun tasarlanma tarihi
-            public List<DesignItem> DesignItems { get; set; } // Şablonun üzerindeki nesnelerin (DesignItem) barındırdığı liste
+            public string TemplateName { get; set; }
+            public float PageWidthMm { get; set; }
+            public float PageHeightMm { get; set; }
+            public string Orientation { get; set; }
+            public int Version { get; set; }                  // Gelecekte eklenecek yeni özelliklerde eski json'ların çökmesini önleyen versiyon kontrol bariyeri
+            public DateTime CreatedAt { get; set; }
+            public List<DesignItem> DesignItems { get; set; }
         }
         #endregion
 
@@ -976,27 +1031,25 @@ namespace TamgaApp
                     splitContainer2.Panel2.AutoScroll = true;
                 }
 
-                // --- SEVKİYAT PLAN (Kusursuz Lego Zırhı) ---
-                if (splitContainer5 != null && splitContainer6 != null)
+                // --- SEVKİYAT PLAN (Komple Sayfa Kaydırma Zırhı) ---
+                if (splitContainer5 != null)
                 {
-                    splitContainer5.Height = 525;
-                    splitContainer6.Height = 340;
+                    splitContainer5.Dock = DockStyle.Fill;
 
-                    splitContainer5.Dock = DockStyle.Top;
-                    splitContainer6.Dock = DockStyle.Top;
+                    // 🌟 1. ZIRH: Sayfadaki nesnelerin ezilmemesi için Minimum Boyut (Genişlik: 1200, Yükseklik: 850)
+                    // Eğer ekran bu piksellerden küçük olursa nesneler asla ezilmez, direkt kaydırma çubuğu çıkar.
+                    splitContainer5.MinimumSize = new Size(1200, 850);
 
-                    splitContainer6.SendToBack();
-                    splitContainer5.SendToBack();
+                    // (İç içe çift kaydırma çubuğu çıkmasın diye eski lokal ayarları kapatıyoruz)
+                    splitContainer5.Panel1.AutoScroll = false;
+                    if (panel7 != null) panel7.AutoScroll = false;
+                }
 
-                    splitContainer5.FixedPanel = FixedPanel.Panel1;
-                    splitContainer5.SplitterDistance = 420;
-                    splitContainer5.Panel1.AutoScroll = true;
-                    if (panel7 != null) panel7.AutoScroll = true;
-
-                    splitContainer6.FixedPanel = FixedPanel.Panel1;
-                    splitContainer6.SplitterDistance = 530;
-                    splitContainer6.Panel1.AutoScroll = true;
-                    if (panel8 != null) panel8.AutoScroll = true;
+                // 🌟 2. ZIRH: Sevkiyat sekmesine genel (komple) kaydırma çubuğu çıkarma yetkisi ver.
+                // Tasarımındaki o sekmenin adı 'tabPage13' olduğu için ona yetki veriyoruz.
+                if (tabPage13 != null)
+                {
+                    tabPage13.AutoScroll = true;
                 }
 
                 // --- DİĞER SERBEST PANELLER ---
@@ -5041,7 +5094,7 @@ namespace TamgaApp
             }
         }
 
-        // 🌟 YENİ BUTON: SEVK BEKLET (Askıya almanın Yeşil renkli versiyonu)
+        // 🌟 SEVK BEKLET MOTORU (Üstüne Yazmayı Engelleyen Zırhlı Versiyon)
         private void btnSevkBeklet_Click(object sender, EventArgs e)
         {
             if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
@@ -5095,15 +5148,23 @@ namespace TamgaApp
             string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
             if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
 
-            // 🌟 SİHİRLİ ZIRH: Dosya isminin başına [BEKLET] tagı ekliyoruz ki sistem onu yeşile boyayacağını anlasın!
-            string dosyaAdi = $"[BEKLET] {musteriTemiz} - {DateTime.Now:dd.MM.yyyy HH-mm}.json";
+            // 🌟 SİHİRLİ ZIRH (Saniye + Sayaç ile üstüne yazmayı %100 engeller)
+            string zamanDamgasi = DateTime.Now.ToString("dd.MM.yyyy HH-mm-ss");
+            string dosyaAdi = $"[BEKLET] {musteriTemiz} - {zamanDamgasi}.json";
             string tamYol = Path.Combine(anaYol, dosyaAdi);
+
+            int sayac = 1;
+            while (System.IO.File.Exists(tamYol))
+            {
+                dosyaAdi = $"[BEKLET] {musteriTemiz} - {zamanDamgasi} ({sayac}).json";
+                tamYol = Path.Combine(anaYol, dosyaAdi);
+                sayac++;
+            }
 
             System.IO.File.WriteAllText(tamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
 
             MessageBox.Show($"Sevkiyat başarıyla BEKLEMEYE ALINDI!", "Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-            // Ekranı Temizle
             txtMusteriAdi.Clear();
             txtSevkMusteri.Clear();
             txtBarkod.Clear();
@@ -5118,9 +5179,7 @@ namespace TamgaApp
             cmbAktifPalet.Items.Clear();
 
             aktifPaletBarkodlari.Clear();
-
-            // Tabloyu anında güncelle ki eklenen yeni [BEKLET] kaydı fıstık yeşili olarak ekrana düşsün!
-            btnYarimGetir_Click(null, null);
+            btnYarimGetir_Click(null, null); // Listeyi anında yenile
         }
 
         private void btnSevkAra_Click(object sender, EventArgs e)
@@ -7632,7 +7691,7 @@ namespace TamgaApp
             }
         }
 
-        // 1. Sevkiyatı askıya alırken dosyayı Müşteri ve Tarih adıyla kaydeder
+        // 🌟 SEVKİYATI ASKIYA AL MOTORU (Üstüne Yazmayı Engelleyen Zırhlı Versiyon)
         private void btnSevkAskayaAl_Click(object sender, EventArgs e)
         {
             if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
@@ -7655,15 +7714,13 @@ namespace TamgaApp
 
                 string belgeNo = row.Cells["Belge No"].Value?.ToString() ?? "";
                 string malzemeKodu = row.Cells["Malzeme Kodu"].Value.ToString();
-                string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? ""; // 🌟 ZIRH EKLENDİ
+                string aciklama = row.Cells["Açıklama"].Value?.ToString() ?? "";
 
-                // 🌟 KUSURSUZ ANAHTAR ZIRHI: Artık sadece koda değil, renge/açıklamaya da bakıyor!
                 string benzersizAnahtar = $"{belgeNo}_{malzemeKodu}_{aciklama}";
 
                 int okutulan = 0;
                 if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulan);
 
-                // 🌟 TOPLAMA ZIRHI: Aynı üründen 2 satır varsa sayıları birbirinin üstüne ezmez, toplayarak havuz yapar!
                 if (!hafiza.AnaOkutulanlar.ContainsKey(benzersizAnahtar))
                     hafiza.AnaOkutulanlar.Add(benzersizAnahtar, okutulan);
                 else
@@ -7685,12 +7742,21 @@ namespace TamgaApp
             string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
             if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
 
-            // 🌟 YENİ: DOSYA İSMİ MÜŞTERİ ADI VE TARİH İLE OLUŞTURULUYOR
             string musteriTemiz = string.Join("_", txtMusteriAdi.Text.Split(Path.GetInvalidFileNameChars()));
             if (string.IsNullOrWhiteSpace(musteriTemiz)) musteriTemiz = "BelirtilmeyenFirma";
 
-            string dosyaAdi = $"{musteriTemiz} - {DateTime.Now:dd.MM.yyyy HH-mm}.json";
+            // 🌟 SİHİRLİ ZIRH (Saniye + Sayaç ile üstüne yazmayı %100 engeller)
+            string zamanDamgasi = DateTime.Now.ToString("dd.MM.yyyy HH-mm-ss");
+            string dosyaAdi = $"{musteriTemiz} - {zamanDamgasi}.json";
             string tamYol = Path.Combine(anaYol, dosyaAdi);
+
+            int sayac = 1;
+            while (System.IO.File.Exists(tamYol))
+            {
+                dosyaAdi = $"{musteriTemiz} - {zamanDamgasi} ({sayac}).json";
+                tamYol = Path.Combine(anaYol, dosyaAdi);
+                sayac++;
+            }
 
             System.IO.File.WriteAllText(tamYol, Newtonsoft.Json.JsonConvert.SerializeObject(hafiza, Newtonsoft.Json.Formatting.Indented));
 
@@ -7710,6 +7776,7 @@ namespace TamgaApp
             cmbAktifPalet.Items.Clear();
 
             aktifPaletBarkodlari.Clear();
+            btnYarimGetir_Click(null, null); // Listeyi anında yenile
         }
 
         // 🌟 ASKI VE BEKLETME LİSTESİNİ DOLDURUR (Punto Küçültüldü ve Şıklaştırıldı)

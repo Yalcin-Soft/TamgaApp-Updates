@@ -38,52 +38,26 @@ namespace TamgaApp
             this.backgroundWorker1 = new System.ComponentModel.BackgroundWorker();
             this.printDialog1 = new System.Windows.Forms.PrintDialog();
             this.tabPage13 = new System.Windows.Forms.TabPage();
-            this.splitContainer6 = new System.Windows.Forms.SplitContainer();
-            this.panel8 = new System.Windows.Forms.Panel();
-            this.dgvYarimSevkler = new System.Windows.Forms.DataGridView();
-            this.btnSevkBeklet = new System.Windows.Forms.Button();
-            this.btnAmbarGetir = new System.Windows.Forms.Button();
-            this.btnAmbarGoruntule = new System.Windows.Forms.Button();
-            this.btnAmbarKaydet = new System.Windows.Forms.Button();
-            this.btnKamyonYukle = new System.Windows.Forms.Button();
-            this.btnAskidanSil = new System.Windows.Forms.Button();
-            this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
-            this.btnSevkAskayaAl = new System.Windows.Forms.Button();
-            this.btnTamSevk = new System.Windows.Forms.Button();
-            this.btnYarimGetir = new System.Windows.Forms.Button();
-            this.btnKismiSevk = new System.Windows.Forms.Button();
-            this.btnYarimAc = new System.Windows.Forms.Button();
-            this.btnGecmisSevkleriListele = new System.Windows.Forms.Button();
-            this.panel6 = new System.Windows.Forms.Panel();
-            this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.splitContainer5 = new System.Windows.Forms.SplitContainer();
-            this.panel7 = new System.Windows.Forms.Panel();
-            this.btnSonrakiPalet = new System.Windows.Forms.Button();
-            this.btnOncekiPalet = new System.Windows.Forms.Button();
-            this.btnBarkodKilidi = new System.Windows.Forms.Button();
-            this.btnManuelEksilt = new System.Windows.Forms.Button();
-            this.btnSevkRaporla = new System.Windows.Forms.Button();
-            this.numManuelAdet = new System.Windows.Forms.NumericUpDown();
-            this.btnTumBelgeleriSec = new System.Windows.Forms.Button();
-            this.clbBelgeNo = new System.Windows.Forms.CheckedListBox();
-            this.btnSevkTemizle = new System.Windows.Forms.Button();
-            this.btnPalettenSil = new System.Windows.Forms.Button();
-            this.btnManuelEkle = new System.Windows.Forms.Button();
-            this.label49 = new System.Windows.Forms.Label();
-            this.txtBarkod = new System.Windows.Forms.TextBox();
-            this.label56 = new System.Windows.Forms.Label();
-            this.cmbMusteri = new System.Windows.Forms.ComboBox();
-            this.label58 = new System.Windows.Forms.Label();
-            this.btnSevkAra = new System.Windows.Forms.Button();
-            this.cmbSevkPaletSayisi = new System.Windows.Forms.ComboBox();
-            this.label50 = new System.Windows.Forms.Label();
-            this.label59 = new System.Windows.Forms.Label();
-            this.label60 = new System.Windows.Forms.Label();
-            this.label51 = new System.Windows.Forms.Label();
-            this.btnSiparisYenile = new System.Windows.Forms.Button();
-            this.txtSevkMusteri = new System.Windows.Forms.TextBox();
-            this.txtMusteriAdi = new System.Windows.Forms.TextBox();
-            this.cmbAktifPalet = new System.Windows.Forms.ComboBox();
+            this.tabControl2 = new System.Windows.Forms.TabControl();
+            this.tabPage17 = new System.Windows.Forms.TabPage();
+            this.btnSevkBeklet = new System.Windows.Forms.Button();
+            this.dgvYarimSevkler = new System.Windows.Forms.DataGridView();
+            this.btnKismiSevk = new System.Windows.Forms.Button();
+            this.btnTamSevk = new System.Windows.Forms.Button();
+            this.btnAnlikPaletEtiketi = new System.Windows.Forms.Button();
+            this.btnAskidanSil = new System.Windows.Forms.Button();
+            this.btnYarimGetir = new System.Windows.Forms.Button();
+            this.btnSevkAskayaAl = new System.Windows.Forms.Button();
+            this.btnYarimAc = new System.Windows.Forms.Button();
+            this.tabPage18 = new System.Windows.Forms.TabPage();
+            this.btnGecmisSevkleriListele = new System.Windows.Forms.Button();
+            this.btnKamyonYukle = new System.Windows.Forms.Button();
+            this.tabPage19 = new System.Windows.Forms.TabPage();
+            this.btnAmbarGoruntule = new System.Windows.Forms.Button();
+            this.btnAmbarGetir = new System.Windows.Forms.Button();
+            this.btnAmbarKaydet = new System.Windows.Forms.Button();
+            this.dgvMalzemeler = new System.Windows.Forms.DataGridView();
             this.dgvPaletMatrisi = new System.Windows.Forms.DataGridView();
             this.tabPage7 = new System.Windows.Forms.TabPage();
             this.splitContainer3 = new System.Windows.Forms.SplitContainer();
@@ -357,21 +331,43 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
+            this.cmbAktifPalet = new System.Windows.Forms.ComboBox();
+            this.txtMusteriAdi = new System.Windows.Forms.TextBox();
+            this.txtSevkMusteri = new System.Windows.Forms.TextBox();
+            this.btnSiparisYenile = new System.Windows.Forms.Button();
+            this.label51 = new System.Windows.Forms.Label();
+            this.label60 = new System.Windows.Forms.Label();
+            this.label59 = new System.Windows.Forms.Label();
+            this.cmbSevkPaletSayisi = new System.Windows.Forms.ComboBox();
+            this.btnSevkAra = new System.Windows.Forms.Button();
+            this.label58 = new System.Windows.Forms.Label();
+            this.cmbMusteri = new System.Windows.Forms.ComboBox();
+            this.label56 = new System.Windows.Forms.Label();
+            this.txtBarkod = new System.Windows.Forms.TextBox();
+            this.label49 = new System.Windows.Forms.Label();
+            this.btnManuelEkle = new System.Windows.Forms.Button();
+            this.btnPalettenSil = new System.Windows.Forms.Button();
+            this.btnSevkTemizle = new System.Windows.Forms.Button();
+            this.clbBelgeNo = new System.Windows.Forms.CheckedListBox();
+            this.btnTumBelgeleriSec = new System.Windows.Forms.Button();
+            this.numManuelAdet = new System.Windows.Forms.NumericUpDown();
+            this.btnSevkRaporla = new System.Windows.Forms.Button();
+            this.btnManuelEksilt = new System.Windows.Forms.Button();
+            this.btnBarkodKilidi = new System.Windows.Forms.Button();
+            this.btnOncekiPalet = new System.Windows.Forms.Button();
+            this.btnSonrakiPalet = new System.Windows.Forms.Button();
+            this.panel7 = new System.Windows.Forms.Panel();
             this.tabPage13.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).BeginInit();
-            this.splitContainer6.Panel1.SuspendLayout();
-            this.splitContainer6.Panel2.SuspendLayout();
-            this.splitContainer6.SuspendLayout();
-            this.panel8.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).BeginInit();
-            this.panel6.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.dgvMalzemeler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
             this.splitContainer5.Panel1.SuspendLayout();
             this.splitContainer5.Panel2.SuspendLayout();
             this.splitContainer5.SuspendLayout();
-            this.panel7.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).BeginInit();
+            this.tabControl2.SuspendLayout();
+            this.tabPage17.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).BeginInit();
+            this.tabPage18.SuspendLayout();
+            this.tabPage19.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvMalzemeler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletMatrisi)).BeginInit();
             this.tabPage7.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer3)).BeginInit();
@@ -437,6 +433,8 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletler)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).BeginInit();
             this.panel4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).BeginInit();
+            this.panel7.SuspendLayout();
             this.SuspendLayout();
             // 
             // printPreviewDialog1
@@ -456,599 +454,263 @@ namespace TamgaApp
             // 
             // tabPage13
             // 
-            this.tabPage13.Controls.Add(this.splitContainer6);
             this.tabPage13.Controls.Add(this.splitContainer5);
             this.tabPage13.Location = new System.Drawing.Point(4, 22);
             this.tabPage13.Name = "tabPage13";
             this.tabPage13.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage13.Size = new System.Drawing.Size(1769, 872);
+            this.tabPage13.Size = new System.Drawing.Size(1769, 916);
             this.tabPage13.TabIndex = 9;
             this.tabPage13.Text = "Sevkiyat Plan";
             this.tabPage13.UseVisualStyleBackColor = true;
             // 
-            // splitContainer6
+            // splitContainer5
             // 
-            this.splitContainer6.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.splitContainer6.Location = new System.Drawing.Point(3, 536);
-            this.splitContainer6.Name = "splitContainer6";
+            this.splitContainer5.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer5.Location = new System.Drawing.Point(3, 3);
+            this.splitContainer5.Name = "splitContainer5";
             // 
-            // splitContainer6.Panel1
+            // splitContainer5.Panel1
             // 
-            this.splitContainer6.Panel1.Controls.Add(this.panel8);
+            this.splitContainer5.Panel1.AutoScroll = true;
+            this.splitContainer5.Panel1.Controls.Add(this.tabControl2);
+            this.splitContainer5.Panel1.Controls.Add(this.panel7);
             // 
-            // splitContainer6.Panel2
+            // splitContainer5.Panel2
             // 
-            this.splitContainer6.Panel2.Controls.Add(this.panel6);
-            this.splitContainer6.Size = new System.Drawing.Size(1763, 333);
-            this.splitContainer6.SplitterDistance = 519;
-            this.splitContainer6.TabIndex = 54;
+            this.splitContainer5.Panel2.Controls.Add(this.dgvMalzemeler);
+            this.splitContainer5.Panel2.Controls.Add(this.dgvPaletMatrisi);
+            this.splitContainer5.Size = new System.Drawing.Size(1763, 910);
+            this.splitContainer5.SplitterDistance = 401;
+            this.splitContainer5.TabIndex = 42;
             // 
-            // panel8
+            // tabControl2
             // 
-            this.panel8.Controls.Add(this.dgvYarimSevkler);
-            this.panel8.Controls.Add(this.btnSevkBeklet);
-            this.panel8.Controls.Add(this.btnAmbarGetir);
-            this.panel8.Controls.Add(this.btnAmbarGoruntule);
-            this.panel8.Controls.Add(this.btnAmbarKaydet);
-            this.panel8.Controls.Add(this.btnKamyonYukle);
-            this.panel8.Controls.Add(this.btnAskidanSil);
-            this.panel8.Controls.Add(this.btnAnlikPaletEtiketi);
-            this.panel8.Controls.Add(this.btnSevkAskayaAl);
-            this.panel8.Controls.Add(this.btnTamSevk);
-            this.panel8.Controls.Add(this.btnYarimGetir);
-            this.panel8.Controls.Add(this.btnKismiSevk);
-            this.panel8.Controls.Add(this.btnYarimAc);
-            this.panel8.Controls.Add(this.btnGecmisSevkleriListele);
-            this.panel8.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel8.Location = new System.Drawing.Point(0, 0);
-            this.panel8.Name = "panel8";
-            this.panel8.Size = new System.Drawing.Size(519, 333);
-            this.panel8.TabIndex = 53;
+            this.tabControl2.Controls.Add(this.tabPage17);
+            this.tabControl2.Controls.Add(this.tabPage18);
+            this.tabControl2.Controls.Add(this.tabPage19);
+            this.tabControl2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tabControl2.Location = new System.Drawing.Point(0, 438);
+            this.tabControl2.Name = "tabControl2";
+            this.tabControl2.SelectedIndex = 0;
+            this.tabControl2.Size = new System.Drawing.Size(401, 472);
+            this.tabControl2.TabIndex = 56;
             // 
-            // dgvYarimSevkler
+            // tabPage17
             // 
-            this.dgvYarimSevkler.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvYarimSevkler.Location = new System.Drawing.Point(5, 52);
-            this.dgvYarimSevkler.Name = "dgvYarimSevkler";
-            this.dgvYarimSevkler.Size = new System.Drawing.Size(254, 208);
-            this.dgvYarimSevkler.TabIndex = 53;
+            this.tabPage17.Controls.Add(this.btnSevkBeklet);
+            this.tabPage17.Controls.Add(this.dgvYarimSevkler);
+            this.tabPage17.Controls.Add(this.btnKismiSevk);
+            this.tabPage17.Controls.Add(this.btnTamSevk);
+            this.tabPage17.Controls.Add(this.btnSevkRaporla);
+            this.tabPage17.Controls.Add(this.btnAnlikPaletEtiketi);
+            this.tabPage17.Controls.Add(this.btnAskidanSil);
+            this.tabPage17.Controls.Add(this.btnYarimGetir);
+            this.tabPage17.Controls.Add(this.btnSevkAskayaAl);
+            this.tabPage17.Controls.Add(this.btnYarimAc);
+            this.tabPage17.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tabPage17.Location = new System.Drawing.Point(4, 22);
+            this.tabPage17.Name = "tabPage17";
+            this.tabPage17.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage17.Size = new System.Drawing.Size(393, 446);
+            this.tabPage17.TabIndex = 0;
+            this.tabPage17.Text = "SEVKİYAT";
+            this.tabPage17.UseVisualStyleBackColor = true;
             // 
             // btnSevkBeklet
             // 
             this.btnSevkBeklet.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkBeklet.Location = new System.Drawing.Point(265, 160);
+            this.btnSevkBeklet.Location = new System.Drawing.Point(0, 312);
             this.btnSevkBeklet.Name = "btnSevkBeklet";
-            this.btnSevkBeklet.Size = new System.Drawing.Size(118, 47);
+            this.btnSevkBeklet.Size = new System.Drawing.Size(215, 41);
             this.btnSevkBeklet.TabIndex = 52;
             this.btnSevkBeklet.Text = "SEVK BEKLET";
             this.btnSevkBeklet.UseVisualStyleBackColor = true;
             // 
-            // btnAmbarGetir
+            // dgvYarimSevkler
             // 
-            this.btnAmbarGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarGetir.Location = new System.Drawing.Point(389, 266);
-            this.btnAmbarGetir.Name = "btnAmbarGetir";
-            this.btnAmbarGetir.Size = new System.Drawing.Size(127, 47);
-            this.btnAmbarGetir.TabIndex = 51;
-            this.btnAmbarGetir.Text = "AMBAR GETİR";
-            this.btnAmbarGetir.UseVisualStyleBackColor = true;
-            this.btnAmbarGetir.Click += new System.EventHandler(this.btnAmbarGetir_Click);
-            // 
-            // btnAmbarGoruntule
-            // 
-            this.btnAmbarGoruntule.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarGoruntule.Location = new System.Drawing.Point(389, 213);
-            this.btnAmbarGoruntule.Name = "btnAmbarGoruntule";
-            this.btnAmbarGoruntule.Size = new System.Drawing.Size(127, 47);
-            this.btnAmbarGoruntule.TabIndex = 50;
-            this.btnAmbarGoruntule.Text = "AMBAR GÖRÜNTÜLE";
-            this.btnAmbarGoruntule.UseVisualStyleBackColor = true;
-            this.btnAmbarGoruntule.Click += new System.EventHandler(this.btnAmbarGoruntule_Click);
-            // 
-            // btnAmbarKaydet
-            // 
-            this.btnAmbarKaydet.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAmbarKaydet.Location = new System.Drawing.Point(389, 160);
-            this.btnAmbarKaydet.Name = "btnAmbarKaydet";
-            this.btnAmbarKaydet.Size = new System.Drawing.Size(127, 47);
-            this.btnAmbarKaydet.TabIndex = 49;
-            this.btnAmbarKaydet.Text = "AMBAR ARACI KAYDET";
-            this.btnAmbarKaydet.UseVisualStyleBackColor = true;
-            this.btnAmbarKaydet.Click += new System.EventHandler(this.btnAmbarKaydet_Click);
-            // 
-            // btnKamyonYukle
-            // 
-            this.btnKamyonYukle.BackColor = System.Drawing.Color.LimeGreen;
-            this.btnKamyonYukle.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnKamyonYukle.Location = new System.Drawing.Point(389, 89);
-            this.btnKamyonYukle.Name = "btnKamyonYukle";
-            this.btnKamyonYukle.Size = new System.Drawing.Size(127, 65);
-            this.btnKamyonYukle.TabIndex = 48;
-            this.btnKamyonYukle.Text = "ARAÇ YÜKLEMEYİ BAŞLAT";
-            this.btnKamyonYukle.UseVisualStyleBackColor = false;
-            this.btnKamyonYukle.Click += new System.EventHandler(this.btnKamyonYukle_Click);
-            // 
-            // btnAskidanSil
-            // 
-            this.btnAskidanSil.BackColor = System.Drawing.Color.Red;
-            this.btnAskidanSil.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAskidanSil.Location = new System.Drawing.Point(265, 266);
-            this.btnAskidanSil.Name = "btnAskidanSil";
-            this.btnAskidanSil.Size = new System.Drawing.Size(118, 47);
-            this.btnAskidanSil.TabIndex = 47;
-            this.btnAskidanSil.Text = "SİL";
-            this.btnAskidanSil.UseVisualStyleBackColor = false;
-            this.btnAskidanSil.Click += new System.EventHandler(this.btnAskidanSil_Click);
-            // 
-            // btnAnlikPaletEtiketi
-            // 
-            this.btnAnlikPaletEtiketi.BackColor = System.Drawing.Color.Gold;
-            this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(389, 8);
-            this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
-            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(127, 75);
-            this.btnAnlikPaletEtiketi.TabIndex = 46;
-            this.btnAnlikPaletEtiketi.Text = "Seçili Paleti Kapat ve Etiketi Bas";
-            this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
-            this.btnAnlikPaletEtiketi.Click += new System.EventHandler(this.btnAnlikPaletEtiketi_Click);
-            // 
-            // btnSevkAskayaAl
-            // 
-            this.btnSevkAskayaAl.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkAskayaAl.Location = new System.Drawing.Point(266, 105);
-            this.btnSevkAskayaAl.Name = "btnSevkAskayaAl";
-            this.btnSevkAskayaAl.Size = new System.Drawing.Size(118, 49);
-            this.btnSevkAskayaAl.TabIndex = 10;
-            this.btnSevkAskayaAl.Text = "Sevkiyatı Askıya Al / Kaydet";
-            this.btnSevkAskayaAl.UseVisualStyleBackColor = true;
-            // 
-            // btnTamSevk
-            // 
-            this.btnTamSevk.BackColor = System.Drawing.Color.Lime;
-            this.btnTamSevk.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnTamSevk.Location = new System.Drawing.Point(200, 8);
-            this.btnTamSevk.Name = "btnTamSevk";
-            this.btnTamSevk.Size = new System.Drawing.Size(184, 41);
-            this.btnTamSevk.TabIndex = 9;
-            this.btnTamSevk.Text = "TAM SEVKET";
-            this.btnTamSevk.UseVisualStyleBackColor = false;
-            // 
-            // btnYarimGetir
-            // 
-            this.btnYarimGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnYarimGetir.Location = new System.Drawing.Point(265, 52);
-            this.btnYarimGetir.Name = "btnYarimGetir";
-            this.btnYarimGetir.Size = new System.Drawing.Size(118, 47);
-            this.btnYarimGetir.TabIndex = 11;
-            this.btnYarimGetir.Text = "Askıdakileri Getir";
-            this.btnYarimGetir.UseVisualStyleBackColor = true;
+            this.dgvYarimSevkler.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvYarimSevkler.Dock = System.Windows.Forms.DockStyle.Top;
+            this.dgvYarimSevkler.Location = new System.Drawing.Point(3, 3);
+            this.dgvYarimSevkler.Name = "dgvYarimSevkler";
+            this.dgvYarimSevkler.Size = new System.Drawing.Size(387, 220);
+            this.dgvYarimSevkler.TabIndex = 53;
             // 
             // btnKismiSevk
             // 
             this.btnKismiSevk.BackColor = System.Drawing.Color.DarkOrange;
             this.btnKismiSevk.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnKismiSevk.Location = new System.Drawing.Point(3, 7);
+            this.btnKismiSevk.Location = new System.Drawing.Point(224, 270);
             this.btnKismiSevk.Name = "btnKismiSevk";
-            this.btnKismiSevk.Size = new System.Drawing.Size(191, 41);
+            this.btnKismiSevk.Size = new System.Drawing.Size(163, 41);
             this.btnKismiSevk.TabIndex = 8;
             this.btnKismiSevk.Text = "KISMİ SEVKET";
             this.btnKismiSevk.UseVisualStyleBackColor = false;
             // 
+            // btnTamSevk
+            // 
+            this.btnTamSevk.BackColor = System.Drawing.Color.Lime;
+            this.btnTamSevk.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnTamSevk.Location = new System.Drawing.Point(224, 229);
+            this.btnTamSevk.Name = "btnTamSevk";
+            this.btnTamSevk.Size = new System.Drawing.Size(163, 41);
+            this.btnTamSevk.TabIndex = 9;
+            this.btnTamSevk.Text = "TAM SEVKET";
+            this.btnTamSevk.UseVisualStyleBackColor = false;
+            // 
+            // btnAnlikPaletEtiketi
+            // 
+            this.btnAnlikPaletEtiketi.BackColor = System.Drawing.Color.Gold;
+            this.btnAnlikPaletEtiketi.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAnlikPaletEtiketi.Location = new System.Drawing.Point(224, 354);
+            this.btnAnlikPaletEtiketi.Name = "btnAnlikPaletEtiketi";
+            this.btnAnlikPaletEtiketi.Size = new System.Drawing.Size(163, 41);
+            this.btnAnlikPaletEtiketi.TabIndex = 46;
+            this.btnAnlikPaletEtiketi.Text = "ETİKET YAZDIR";
+            this.btnAnlikPaletEtiketi.UseVisualStyleBackColor = false;
+            this.btnAnlikPaletEtiketi.Click += new System.EventHandler(this.btnAnlikPaletEtiketi_Click);
+            // 
+            // btnAskidanSil
+            // 
+            this.btnAskidanSil.BackColor = System.Drawing.Color.Red;
+            this.btnAskidanSil.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAskidanSil.Location = new System.Drawing.Point(224, 312);
+            this.btnAskidanSil.Name = "btnAskidanSil";
+            this.btnAskidanSil.Size = new System.Drawing.Size(163, 41);
+            this.btnAskidanSil.TabIndex = 47;
+            this.btnAskidanSil.Text = "SİL";
+            this.btnAskidanSil.UseVisualStyleBackColor = false;
+            this.btnAskidanSil.Click += new System.EventHandler(this.btnAskidanSil_Click);
+            // 
+            // btnYarimGetir
+            // 
+            this.btnYarimGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnYarimGetir.Location = new System.Drawing.Point(0, 229);
+            this.btnYarimGetir.Name = "btnYarimGetir";
+            this.btnYarimGetir.Size = new System.Drawing.Size(215, 41);
+            this.btnYarimGetir.TabIndex = 11;
+            this.btnYarimGetir.Text = "Askıdakileri Getir";
+            this.btnYarimGetir.UseVisualStyleBackColor = true;
+            // 
+            // btnSevkAskayaAl
+            // 
+            this.btnSevkAskayaAl.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkAskayaAl.Location = new System.Drawing.Point(0, 270);
+            this.btnSevkAskayaAl.Name = "btnSevkAskayaAl";
+            this.btnSevkAskayaAl.Size = new System.Drawing.Size(215, 41);
+            this.btnSevkAskayaAl.TabIndex = 10;
+            this.btnSevkAskayaAl.Text = "Sevkiyatı Askıya Al / Kaydet";
+            this.btnSevkAskayaAl.UseVisualStyleBackColor = true;
+            // 
             // btnYarimAc
             // 
             this.btnYarimAc.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnYarimAc.Location = new System.Drawing.Point(265, 213);
+            this.btnYarimAc.Location = new System.Drawing.Point(0, 354);
             this.btnYarimAc.Name = "btnYarimAc";
-            this.btnYarimAc.Size = new System.Drawing.Size(118, 47);
+            this.btnYarimAc.Size = new System.Drawing.Size(215, 41);
             this.btnYarimAc.TabIndex = 12;
             this.btnYarimAc.Text = "Kaldığım Yerden Devam Et";
             this.btnYarimAc.UseVisualStyleBackColor = true;
             // 
+            // tabPage18
+            // 
+            this.tabPage18.Controls.Add(this.btnGecmisSevkleriListele);
+            this.tabPage18.Controls.Add(this.btnKamyonYukle);
+            this.tabPage18.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tabPage18.Location = new System.Drawing.Point(4, 22);
+            this.tabPage18.Name = "tabPage18";
+            this.tabPage18.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage18.Size = new System.Drawing.Size(392, 446);
+            this.tabPage18.TabIndex = 1;
+            this.tabPage18.Text = "YÜKLEME";
+            this.tabPage18.UseVisualStyleBackColor = true;
+            // 
             // btnGecmisSevkleriListele
             // 
             this.btnGecmisSevkleriListele.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(3, 266);
+            this.btnGecmisSevkleriListele.Location = new System.Drawing.Point(6, 98);
             this.btnGecmisSevkleriListele.Name = "btnGecmisSevkleriListele";
-            this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(256, 47);
+            this.btnGecmisSevkleriListele.Size = new System.Drawing.Size(381, 53);
             this.btnGecmisSevkleriListele.TabIndex = 14;
             this.btnGecmisSevkleriListele.Text = "Geçmiş Sevkler Listele";
             this.btnGecmisSevkleriListele.UseVisualStyleBackColor = true;
             // 
-            // panel6
+            // btnKamyonYukle
             // 
-            this.panel6.Controls.Add(this.dgvMalzemeler);
-            this.panel6.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel6.Location = new System.Drawing.Point(0, 0);
-            this.panel6.Name = "panel6";
-            this.panel6.Size = new System.Drawing.Size(1240, 333);
-            this.panel6.TabIndex = 49;
+            this.btnKamyonYukle.BackColor = System.Drawing.Color.LimeGreen;
+            this.btnKamyonYukle.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnKamyonYukle.Location = new System.Drawing.Point(6, 6);
+            this.btnKamyonYukle.Name = "btnKamyonYukle";
+            this.btnKamyonYukle.Size = new System.Drawing.Size(381, 57);
+            this.btnKamyonYukle.TabIndex = 48;
+            this.btnKamyonYukle.Text = "ARAÇ YÜKLEMEYİ BAŞLAT";
+            this.btnKamyonYukle.UseVisualStyleBackColor = false;
+            this.btnKamyonYukle.Click += new System.EventHandler(this.btnKamyonYukle_Click);
+            // 
+            // tabPage19
+            // 
+            this.tabPage19.Controls.Add(this.btnAmbarGoruntule);
+            this.tabPage19.Controls.Add(this.btnAmbarGetir);
+            this.tabPage19.Controls.Add(this.btnAmbarKaydet);
+            this.tabPage19.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.tabPage19.Location = new System.Drawing.Point(4, 22);
+            this.tabPage19.Name = "tabPage19";
+            this.tabPage19.Padding = new System.Windows.Forms.Padding(3);
+            this.tabPage19.Size = new System.Drawing.Size(393, 446);
+            this.tabPage19.TabIndex = 2;
+            this.tabPage19.Text = "AMBAR";
+            this.tabPage19.UseVisualStyleBackColor = true;
+            // 
+            // btnAmbarGoruntule
+            // 
+            this.btnAmbarGoruntule.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarGoruntule.Location = new System.Drawing.Point(6, 112);
+            this.btnAmbarGoruntule.Name = "btnAmbarGoruntule";
+            this.btnAmbarGoruntule.Size = new System.Drawing.Size(381, 47);
+            this.btnAmbarGoruntule.TabIndex = 50;
+            this.btnAmbarGoruntule.Text = "AMBAR GÖRÜNTÜLE";
+            this.btnAmbarGoruntule.UseVisualStyleBackColor = true;
+            this.btnAmbarGoruntule.Click += new System.EventHandler(this.btnAmbarGoruntule_Click);
+            // 
+            // btnAmbarGetir
+            // 
+            this.btnAmbarGetir.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarGetir.Location = new System.Drawing.Point(6, 6);
+            this.btnAmbarGetir.Name = "btnAmbarGetir";
+            this.btnAmbarGetir.Size = new System.Drawing.Size(381, 47);
+            this.btnAmbarGetir.TabIndex = 51;
+            this.btnAmbarGetir.Text = "AMBAR GETİR";
+            this.btnAmbarGetir.UseVisualStyleBackColor = true;
+            this.btnAmbarGetir.Click += new System.EventHandler(this.btnAmbarGetir_Click);
+            // 
+            // btnAmbarKaydet
+            // 
+            this.btnAmbarKaydet.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnAmbarKaydet.Location = new System.Drawing.Point(6, 59);
+            this.btnAmbarKaydet.Name = "btnAmbarKaydet";
+            this.btnAmbarKaydet.Size = new System.Drawing.Size(381, 47);
+            this.btnAmbarKaydet.TabIndex = 49;
+            this.btnAmbarKaydet.Text = "AMBAR ARACI KAYDET";
+            this.btnAmbarKaydet.UseVisualStyleBackColor = true;
+            this.btnAmbarKaydet.Click += new System.EventHandler(this.btnAmbarKaydet_Click);
             // 
             // dgvMalzemeler
             // 
             this.dgvMalzemeler.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.DisplayedCells;
             this.dgvMalzemeler.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvMalzemeler.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.dgvMalzemeler.Location = new System.Drawing.Point(0, 0);
+            this.dgvMalzemeler.Location = new System.Drawing.Point(0, 438);
             this.dgvMalzemeler.Name = "dgvMalzemeler";
-            this.dgvMalzemeler.Size = new System.Drawing.Size(1240, 333);
+            this.dgvMalzemeler.Size = new System.Drawing.Size(1358, 472);
             this.dgvMalzemeler.TabIndex = 27;
-            // 
-            // splitContainer5
-            // 
-            this.splitContainer5.Dock = System.Windows.Forms.DockStyle.Top;
-            this.splitContainer5.Location = new System.Drawing.Point(3, 3);
-            this.splitContainer5.Name = "splitContainer5";
-            // 
-            // splitContainer5.Panel1
-            // 
-            this.splitContainer5.Panel1.Controls.Add(this.panel7);
-            // 
-            // splitContainer5.Panel2
-            // 
-            this.splitContainer5.Panel2.Controls.Add(this.dgvPaletMatrisi);
-            this.splitContainer5.Size = new System.Drawing.Size(1763, 522);
-            this.splitContainer5.SplitterDistance = 401;
-            this.splitContainer5.TabIndex = 42;
-            // 
-            // panel7
-            // 
-            this.panel7.Controls.Add(this.btnSonrakiPalet);
-            this.panel7.Controls.Add(this.btnOncekiPalet);
-            this.panel7.Controls.Add(this.btnBarkodKilidi);
-            this.panel7.Controls.Add(this.btnManuelEksilt);
-            this.panel7.Controls.Add(this.btnSevkRaporla);
-            this.panel7.Controls.Add(this.numManuelAdet);
-            this.panel7.Controls.Add(this.btnTumBelgeleriSec);
-            this.panel7.Controls.Add(this.clbBelgeNo);
-            this.panel7.Controls.Add(this.btnSevkTemizle);
-            this.panel7.Controls.Add(this.btnPalettenSil);
-            this.panel7.Controls.Add(this.btnManuelEkle);
-            this.panel7.Controls.Add(this.label49);
-            this.panel7.Controls.Add(this.txtBarkod);
-            this.panel7.Controls.Add(this.label56);
-            this.panel7.Controls.Add(this.cmbMusteri);
-            this.panel7.Controls.Add(this.label58);
-            this.panel7.Controls.Add(this.btnSevkAra);
-            this.panel7.Controls.Add(this.cmbSevkPaletSayisi);
-            this.panel7.Controls.Add(this.label50);
-            this.panel7.Controls.Add(this.label59);
-            this.panel7.Controls.Add(this.label60);
-            this.panel7.Controls.Add(this.label51);
-            this.panel7.Controls.Add(this.btnSiparisYenile);
-            this.panel7.Controls.Add(this.txtSevkMusteri);
-            this.panel7.Controls.Add(this.txtMusteriAdi);
-            this.panel7.Controls.Add(this.cmbAktifPalet);
-            this.panel7.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panel7.Location = new System.Drawing.Point(0, 0);
-            this.panel7.Name = "panel7";
-            this.panel7.Size = new System.Drawing.Size(401, 522);
-            this.panel7.TabIndex = 54;
-            // 
-            // btnSonrakiPalet
-            // 
-            this.btnSonrakiPalet.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSonrakiPalet.Location = new System.Drawing.Point(321, 486);
-            this.btnSonrakiPalet.Name = "btnSonrakiPalet";
-            this.btnSonrakiPalet.Size = new System.Drawing.Size(76, 31);
-            this.btnSonrakiPalet.TabIndex = 55;
-            this.btnSonrakiPalet.Text = "Sonraki";
-            this.btnSonrakiPalet.UseVisualStyleBackColor = true;
-            this.btnSonrakiPalet.Click += new System.EventHandler(this.btnSonrakiPalet_Click);
-            // 
-            // btnOncekiPalet
-            // 
-            this.btnOncekiPalet.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnOncekiPalet.Location = new System.Drawing.Point(321, 452);
-            this.btnOncekiPalet.Name = "btnOncekiPalet";
-            this.btnOncekiPalet.Size = new System.Drawing.Size(76, 31);
-            this.btnOncekiPalet.TabIndex = 54;
-            this.btnOncekiPalet.Text = "Önceki";
-            this.btnOncekiPalet.UseVisualStyleBackColor = true;
-            this.btnOncekiPalet.Click += new System.EventHandler(this.btnOncekiPalet_Click);
-            // 
-            // btnBarkodKilidi
-            // 
-            this.btnBarkodKilidi.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnBarkodKilidi.Location = new System.Drawing.Point(209, 482);
-            this.btnBarkodKilidi.Name = "btnBarkodKilidi";
-            this.btnBarkodKilidi.Size = new System.Drawing.Size(106, 35);
-            this.btnBarkodKilidi.TabIndex = 53;
-            this.btnBarkodKilidi.Text = "BARKOD";
-            this.btnBarkodKilidi.UseVisualStyleBackColor = true;
-            this.btnBarkodKilidi.Click += new System.EventHandler(this.btnBarkodKilidi_Click);
-            // 
-            // btnManuelEksilt
-            // 
-            this.btnManuelEksilt.BackColor = System.Drawing.Color.Coral;
-            this.btnManuelEksilt.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelEksilt.Location = new System.Drawing.Point(9, 288);
-            this.btnManuelEksilt.Name = "btnManuelEksilt";
-            this.btnManuelEksilt.Size = new System.Drawing.Size(88, 70);
-            this.btnManuelEksilt.TabIndex = 52;
-            this.btnManuelEksilt.Text = "EKSİLT";
-            this.btnManuelEksilt.UseVisualStyleBackColor = false;
-            this.btnManuelEksilt.Click += new System.EventHandler(this.btnManuelEksilt_Click);
-            // 
-            // btnSevkRaporla
-            // 
-            this.btnSevkRaporla.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkRaporla.Location = new System.Drawing.Point(10, 422);
-            this.btnSevkRaporla.Name = "btnSevkRaporla";
-            this.btnSevkRaporla.Size = new System.Drawing.Size(387, 27);
-            this.btnSevkRaporla.TabIndex = 51;
-            this.btnSevkRaporla.Text = "Raporla";
-            this.btnSevkRaporla.UseVisualStyleBackColor = true;
-            this.btnSevkRaporla.Click += new System.EventHandler(this.btnSevkRaporla_Click);
-            // 
-            // numManuelAdet
-            // 
-            this.numManuelAdet.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.numManuelAdet.Location = new System.Drawing.Point(197, 301);
-            this.numManuelAdet.Maximum = new decimal(new int[] {
-            500,
-            0,
-            0,
-            0});
-            this.numManuelAdet.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.numManuelAdet.Name = "numManuelAdet";
-            this.numManuelAdet.Size = new System.Drawing.Size(62, 38);
-            this.numManuelAdet.TabIndex = 50;
-            this.numManuelAdet.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.numManuelAdet.Value = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            // 
-            // btnTumBelgeleriSec
-            // 
-            this.btnTumBelgeleriSec.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnTumBelgeleriSec.Location = new System.Drawing.Point(5, 151);
-            this.btnTumBelgeleriSec.Name = "btnTumBelgeleriSec";
-            this.btnTumBelgeleriSec.Size = new System.Drawing.Size(79, 134);
-            this.btnTumBelgeleriSec.TabIndex = 49;
-            this.btnTumBelgeleriSec.Text = "Tüm Belge No Seç";
-            this.btnTumBelgeleriSec.UseVisualStyleBackColor = true;
-            this.btnTumBelgeleriSec.Click += new System.EventHandler(this.btnTumBelgeleriSec_Click);
-            // 
-            // clbBelgeNo
-            // 
-            this.clbBelgeNo.FormattingEnabled = true;
-            this.clbBelgeNo.Location = new System.Drawing.Point(90, 131);
-            this.clbBelgeNo.Name = "clbBelgeNo";
-            this.clbBelgeNo.Size = new System.Drawing.Size(299, 154);
-            this.clbBelgeNo.TabIndex = 48;
-            // 
-            // btnSevkTemizle
-            // 
-            this.btnSevkTemizle.BackColor = System.Drawing.Color.Red;
-            this.btnSevkTemizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkTemizle.Location = new System.Drawing.Point(10, 389);
-            this.btnSevkTemizle.Name = "btnSevkTemizle";
-            this.btnSevkTemizle.Size = new System.Drawing.Size(387, 32);
-            this.btnSevkTemizle.TabIndex = 47;
-            this.btnSevkTemizle.Text = "TEMİZLE";
-            this.btnSevkTemizle.UseVisualStyleBackColor = false;
-            // 
-            // btnPalettenSil
-            // 
-            this.btnPalettenSil.BackColor = System.Drawing.Color.OrangeRed;
-            this.btnPalettenSil.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnPalettenSil.Location = new System.Drawing.Point(10, 359);
-            this.btnPalettenSil.Name = "btnPalettenSil";
-            this.btnPalettenSil.Size = new System.Drawing.Size(387, 30);
-            this.btnPalettenSil.TabIndex = 46;
-            this.btnPalettenSil.Text = "Kalem Sil";
-            this.btnPalettenSil.UseVisualStyleBackColor = false;
-            // 
-            // btnManuelEkle
-            // 
-            this.btnManuelEkle.BackColor = System.Drawing.Color.Coral;
-            this.btnManuelEkle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelEkle.Location = new System.Drawing.Point(100, 288);
-            this.btnManuelEkle.Name = "btnManuelEkle";
-            this.btnManuelEkle.Size = new System.Drawing.Size(91, 70);
-            this.btnManuelEkle.TabIndex = 42;
-            this.btnManuelEkle.Text = "Manuel Ekle";
-            this.btnManuelEkle.UseVisualStyleBackColor = false;
-            // 
-            // label49
-            // 
-            this.label49.AutoSize = true;
-            this.label49.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label49.Location = new System.Drawing.Point(162, 7);
-            this.label49.Name = "label49";
-            this.label49.Size = new System.Drawing.Size(76, 15);
-            this.label49.TabIndex = 24;
-            this.label49.Text = "Müşteri Adı:";
-            // 
-            // txtBarkod
-            // 
-            this.txtBarkod.Location = new System.Drawing.Point(98, 491);
-            this.txtBarkod.Name = "txtBarkod";
-            this.txtBarkod.Size = new System.Drawing.Size(105, 20);
-            this.txtBarkod.TabIndex = 7;
-            // 
-            // label56
-            // 
-            this.label56.AutoSize = true;
-            this.label56.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label56.Location = new System.Drawing.Point(7, 493);
-            this.label56.Name = "label56";
-            this.label56.Size = new System.Drawing.Size(90, 15);
-            this.label56.TabIndex = 35;
-            this.label56.Text = "Ürün Barkodu:";
-            // 
-            // cmbMusteri
-            // 
-            this.cmbMusteri.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbMusteri.FormattingEnabled = true;
-            this.cmbMusteri.Location = new System.Drawing.Point(90, 104);
-            this.cmbMusteri.Name = "cmbMusteri";
-            this.cmbMusteri.Size = new System.Drawing.Size(299, 21);
-            this.cmbMusteri.TabIndex = 2;
-            // 
-            // label58
-            // 
-            this.label58.AutoSize = true;
-            this.label58.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label58.Location = new System.Drawing.Point(7, 106);
-            this.label58.Name = "label58";
-            this.label58.Size = new System.Drawing.Size(78, 15);
-            this.label58.TabIndex = 37;
-            this.label58.Text = "Müşteri Seç:";
-            // 
-            // btnSevkAra
-            // 
-            this.btnSevkAra.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSevkAra.Location = new System.Drawing.Point(265, 325);
-            this.btnSevkAra.Name = "btnSevkAra";
-            this.btnSevkAra.Size = new System.Drawing.Size(133, 32);
-            this.btnSevkAra.TabIndex = 4;
-            this.btnSevkAra.Text = "Ara";
-            this.btnSevkAra.UseVisualStyleBackColor = true;
-            this.btnSevkAra.Click += new System.EventHandler(this.btnSevkAra_Click);
-            // 
-            // cmbSevkPaletSayisi
-            // 
-            this.cmbSevkPaletSayisi.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbSevkPaletSayisi.FormattingEnabled = true;
-            this.cmbSevkPaletSayisi.Items.AddRange(new object[] {
-            "1",
-            "2",
-            "3",
-            "4",
-            "5",
-            "6",
-            "7",
-            "8",
-            "9",
-            "10",
-            "11",
-            "12",
-            "13",
-            "14",
-            "15",
-            "16",
-            "17",
-            "18",
-            "19",
-            "20",
-            "21",
-            "22",
-            "23",
-            "24",
-            "25",
-            "26",
-            "27",
-            "28",
-            "29",
-            "30",
-            "31",
-            "32",
-            "33",
-            "34",
-            "35",
-            "36",
-            "37",
-            "38",
-            "39",
-            "40",
-            "41",
-            "42"});
-            this.cmbSevkPaletSayisi.Location = new System.Drawing.Point(83, 457);
-            this.cmbSevkPaletSayisi.Name = "cmbSevkPaletSayisi";
-            this.cmbSevkPaletSayisi.Size = new System.Drawing.Size(76, 21);
-            this.cmbSevkPaletSayisi.TabIndex = 5;
-            // 
-            // label50
-            // 
-            this.label50.AutoSize = true;
-            this.label50.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label50.Location = new System.Drawing.Point(23, 133);
-            this.label50.Name = "label50";
-            this.label50.Size = new System.Drawing.Size(61, 15);
-            this.label50.TabIndex = 28;
-            this.label50.Text = "Belge No:";
-            // 
-            // label59
-            // 
-            this.label59.AutoSize = true;
-            this.label59.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label59.Location = new System.Drawing.Point(7, 459);
-            this.label59.Name = "label59";
-            this.label59.Size = new System.Drawing.Size(76, 15);
-            this.label59.TabIndex = 39;
-            this.label59.Text = "Palet Sayısı:";
-            // 
-            // label60
-            // 
-            this.label60.AutoSize = true;
-            this.label60.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label60.Location = new System.Drawing.Point(167, 459);
-            this.label60.Name = "label60";
-            this.label60.Size = new System.Drawing.Size(71, 15);
-            this.label60.TabIndex = 40;
-            this.label60.Text = "Aktif Palet:";
-            // 
-            // label51
-            // 
-            this.label51.AutoSize = true;
-            this.label51.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.label51.Location = new System.Drawing.Point(156, 51);
-            this.label51.Name = "label51";
-            this.label51.Size = new System.Drawing.Size(95, 15);
-            this.label51.TabIndex = 30;
-            this.label51.Text = "Sevk Müşterisi:";
-            // 
-            // btnSiparisYenile
-            // 
-            this.btnSiparisYenile.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSiparisYenile.Location = new System.Drawing.Point(265, 288);
-            this.btnSiparisYenile.Name = "btnSiparisYenile";
-            this.btnSiparisYenile.Size = new System.Drawing.Size(132, 32);
-            this.btnSiparisYenile.TabIndex = 1;
-            this.btnSiparisYenile.Text = "Yenile";
-            this.btnSiparisYenile.UseVisualStyleBackColor = true;
-            this.btnSiparisYenile.Click += new System.EventHandler(this.btnSiparisYenile_Click);
-            // 
-            // txtSevkMusteri
-            // 
-            this.txtSevkMusteri.Location = new System.Drawing.Point(3, 76);
-            this.txtSevkMusteri.Name = "txtSevkMusteri";
-            this.txtSevkMusteri.ReadOnly = true;
-            this.txtSevkMusteri.Size = new System.Drawing.Size(386, 20);
-            this.txtSevkMusteri.TabIndex = 29;
-            // 
-            // txtMusteriAdi
-            // 
-            this.txtMusteriAdi.Location = new System.Drawing.Point(3, 25);
-            this.txtMusteriAdi.Name = "txtMusteriAdi";
-            this.txtMusteriAdi.ReadOnly = true;
-            this.txtMusteriAdi.Size = new System.Drawing.Size(386, 20);
-            this.txtMusteriAdi.TabIndex = 23;
-            // 
-            // cmbAktifPalet
-            // 
-            this.cmbAktifPalet.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbAktifPalet.FormattingEnabled = true;
-            this.cmbAktifPalet.Location = new System.Drawing.Point(239, 457);
-            this.cmbAktifPalet.Name = "cmbAktifPalet";
-            this.cmbAktifPalet.Size = new System.Drawing.Size(76, 21);
-            this.cmbAktifPalet.TabIndex = 6;
             // 
             // dgvPaletMatrisi
             // 
             this.dgvPaletMatrisi.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.DisplayedCells;
             this.dgvPaletMatrisi.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            this.dgvPaletMatrisi.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.dgvPaletMatrisi.Dock = System.Windows.Forms.DockStyle.Top;
             this.dgvPaletMatrisi.Location = new System.Drawing.Point(0, 0);
             this.dgvPaletMatrisi.Name = "dgvPaletMatrisi";
-            this.dgvPaletMatrisi.Size = new System.Drawing.Size(1358, 522);
+            this.dgvPaletMatrisi.Size = new System.Drawing.Size(1358, 438);
             this.dgvPaletMatrisi.TabIndex = 1;
             // 
             // tabPage7
@@ -1057,7 +719,7 @@ namespace TamgaApp
             this.tabPage7.Location = new System.Drawing.Point(4, 22);
             this.tabPage7.Name = "tabPage7";
             this.tabPage7.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage7.Size = new System.Drawing.Size(1769, 872);
+            this.tabPage7.Size = new System.Drawing.Size(1769, 916);
             this.tabPage7.TabIndex = 8;
             this.tabPage7.Text = "Depo Kabul";
             this.tabPage7.UseVisualStyleBackColor = true;
@@ -1075,7 +737,7 @@ namespace TamgaApp
             // splitContainer3.Panel2
             // 
             this.splitContainer3.Panel2.Controls.Add(this.dgvUretim);
-            this.splitContainer3.Size = new System.Drawing.Size(1763, 866);
+            this.splitContainer3.Size = new System.Drawing.Size(1763, 910);
             this.splitContainer3.SplitterDistance = 297;
             this.splitContainer3.TabIndex = 19;
             // 
@@ -1096,7 +758,7 @@ namespace TamgaApp
             this.panel5.Dock = System.Windows.Forms.DockStyle.Left;
             this.panel5.Location = new System.Drawing.Point(0, 0);
             this.panel5.Name = "panel5";
-            this.panel5.Size = new System.Drawing.Size(294, 866);
+            this.panel5.Size = new System.Drawing.Size(294, 910);
             this.panel5.TabIndex = 18;
             // 
             // tvRaporlar
@@ -1225,7 +887,7 @@ namespace TamgaApp
             this.dgvUretim.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvUretim.Location = new System.Drawing.Point(0, 0);
             this.dgvUretim.Name = "dgvUretim";
-            this.dgvUretim.Size = new System.Drawing.Size(1462, 866);
+            this.dgvUretim.Size = new System.Drawing.Size(1462, 910);
             this.dgvUretim.TabIndex = 1;
             // 
             // ÜrünKodu
@@ -3534,7 +3196,7 @@ namespace TamgaApp
             this.tabPage1.Margin = new System.Windows.Forms.Padding(2);
             this.tabPage1.Name = "tabPage1";
             this.tabPage1.Padding = new System.Windows.Forms.Padding(2);
-            this.tabPage1.Size = new System.Drawing.Size(1769, 872);
+            this.tabPage1.Size = new System.Drawing.Size(1769, 935);
             this.tabPage1.TabIndex = 0;
             this.tabPage1.Text = "Ana Panel";
             this.tabPage1.UseVisualStyleBackColor = true;
@@ -3621,7 +3283,7 @@ namespace TamgaApp
             this.tabControl1.Margin = new System.Windows.Forms.Padding(2);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
-            this.tabControl1.Size = new System.Drawing.Size(1777, 898);
+            this.tabControl1.Size = new System.Drawing.Size(1777, 942);
             this.tabControl1.TabIndex = 0;
             // 
             // tabPage14
@@ -3755,7 +3417,7 @@ namespace TamgaApp
             this.tabPage2.Location = new System.Drawing.Point(4, 22);
             this.tabPage2.Name = "tabPage2";
             this.tabPage2.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage2.Size = new System.Drawing.Size(1769, 872);
+            this.tabPage2.Size = new System.Drawing.Size(1769, 916);
             this.tabPage2.TabIndex = 10;
             this.tabPage2.Text = "Çoklu Zarf Yazdırma";
             this.tabPage2.UseVisualStyleBackColor = true;
@@ -3767,7 +3429,7 @@ namespace TamgaApp
             this.pnlAmbar.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlAmbar.Location = new System.Drawing.Point(3, 3);
             this.pnlAmbar.Name = "pnlAmbar";
-            this.pnlAmbar.Size = new System.Drawing.Size(1763, 866);
+            this.pnlAmbar.Size = new System.Drawing.Size(1763, 910);
             this.pnlAmbar.TabIndex = 61;
             // 
             // splitContainer2
@@ -3785,7 +3447,7 @@ namespace TamgaApp
             this.splitContainer2.Panel2.Controls.Add(this.dgvAmbarSonListe);
             this.splitContainer2.Panel2.Controls.Add(this.dgvPaletler);
             this.splitContainer2.Panel2.Controls.Add(this.dgvAmbarSecilenFirmalar);
-            this.splitContainer2.Size = new System.Drawing.Size(1763, 807);
+            this.splitContainer2.Size = new System.Drawing.Size(1763, 851);
             this.splitContainer2.SplitterDistance = 950;
             this.splitContainer2.TabIndex = 33;
             // 
@@ -3795,7 +3457,7 @@ namespace TamgaApp
             this.dgvAmbarTumFirmalar.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvAmbarTumFirmalar.Location = new System.Drawing.Point(0, 0);
             this.dgvAmbarTumFirmalar.Name = "dgvAmbarTumFirmalar";
-            this.dgvAmbarTumFirmalar.Size = new System.Drawing.Size(950, 807);
+            this.dgvAmbarTumFirmalar.Size = new System.Drawing.Size(950, 851);
             this.dgvAmbarTumFirmalar.TabIndex = 0;
             // 
             // dgvAmbarSonListe
@@ -3982,13 +3644,352 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
+            // cmbAktifPalet
+            // 
+            this.cmbAktifPalet.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbAktifPalet.FormattingEnabled = true;
+            this.cmbAktifPalet.Location = new System.Drawing.Point(235, 212);
+            this.cmbAktifPalet.Name = "cmbAktifPalet";
+            this.cmbAktifPalet.Size = new System.Drawing.Size(76, 21);
+            this.cmbAktifPalet.TabIndex = 6;
+            // 
+            // txtMusteriAdi
+            // 
+            this.txtMusteriAdi.Location = new System.Drawing.Point(110, 6);
+            this.txtMusteriAdi.Name = "txtMusteriAdi";
+            this.txtMusteriAdi.ReadOnly = true;
+            this.txtMusteriAdi.Size = new System.Drawing.Size(287, 20);
+            this.txtMusteriAdi.TabIndex = 23;
+            // 
+            // txtSevkMusteri
+            // 
+            this.txtSevkMusteri.Location = new System.Drawing.Point(110, 29);
+            this.txtSevkMusteri.Name = "txtSevkMusteri";
+            this.txtSevkMusteri.ReadOnly = true;
+            this.txtSevkMusteri.Size = new System.Drawing.Size(287, 20);
+            this.txtSevkMusteri.TabIndex = 29;
+            // 
+            // btnSiparisYenile
+            // 
+            this.btnSiparisYenile.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSiparisYenile.Location = new System.Drawing.Point(153, 82);
+            this.btnSiparisYenile.Name = "btnSiparisYenile";
+            this.btnSiparisYenile.Size = new System.Drawing.Size(244, 32);
+            this.btnSiparisYenile.TabIndex = 1;
+            this.btnSiparisYenile.Text = "Yenile";
+            this.btnSiparisYenile.UseVisualStyleBackColor = true;
+            this.btnSiparisYenile.Click += new System.EventHandler(this.btnSiparisYenile_Click);
+            // 
+            // label51
+            // 
+            this.label51.AutoSize = true;
+            this.label51.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label51.Location = new System.Drawing.Point(9, 31);
+            this.label51.Name = "label51";
+            this.label51.Size = new System.Drawing.Size(95, 15);
+            this.label51.TabIndex = 30;
+            this.label51.Text = "Sevk Müşterisi:";
+            // 
+            // label60
+            // 
+            this.label60.AutoSize = true;
+            this.label60.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label60.Location = new System.Drawing.Point(239, 194);
+            this.label60.Name = "label60";
+            this.label60.Size = new System.Drawing.Size(67, 15);
+            this.label60.TabIndex = 40;
+            this.label60.Text = "Aktif Palet";
+            // 
+            // label59
+            // 
+            this.label59.AutoSize = true;
+            this.label59.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label59.Location = new System.Drawing.Point(153, 194);
+            this.label59.Name = "label59";
+            this.label59.Size = new System.Drawing.Size(72, 15);
+            this.label59.TabIndex = 39;
+            this.label59.Text = "Palet Sayısı";
+            // 
+            // cmbSevkPaletSayisi
+            // 
+            this.cmbSevkPaletSayisi.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbSevkPaletSayisi.FormattingEnabled = true;
+            this.cmbSevkPaletSayisi.Items.AddRange(new object[] {
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15",
+            "16",
+            "17",
+            "18",
+            "19",
+            "20",
+            "21",
+            "22",
+            "23",
+            "24",
+            "25",
+            "26",
+            "27",
+            "28",
+            "29",
+            "30",
+            "31",
+            "32",
+            "33",
+            "34",
+            "35",
+            "36",
+            "37",
+            "38",
+            "39",
+            "40",
+            "41",
+            "42"});
+            this.cmbSevkPaletSayisi.Location = new System.Drawing.Point(153, 212);
+            this.cmbSevkPaletSayisi.Name = "cmbSevkPaletSayisi";
+            this.cmbSevkPaletSayisi.Size = new System.Drawing.Size(76, 21);
+            this.cmbSevkPaletSayisi.TabIndex = 5;
+            // 
+            // btnSevkAra
+            // 
+            this.btnSevkAra.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkAra.Location = new System.Drawing.Point(153, 114);
+            this.btnSevkAra.Name = "btnSevkAra";
+            this.btnSevkAra.Size = new System.Drawing.Size(244, 32);
+            this.btnSevkAra.TabIndex = 4;
+            this.btnSevkAra.Text = "Ara";
+            this.btnSevkAra.UseVisualStyleBackColor = true;
+            this.btnSevkAra.Click += new System.EventHandler(this.btnSevkAra_Click);
+            // 
+            // label58
+            // 
+            this.label58.AutoSize = true;
+            this.label58.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label58.Location = new System.Drawing.Point(9, 57);
+            this.label58.Name = "label58";
+            this.label58.Size = new System.Drawing.Size(78, 15);
+            this.label58.TabIndex = 37;
+            this.label58.Text = "Müşteri Seç:";
+            // 
+            // cmbMusteri
+            // 
+            this.cmbMusteri.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbMusteri.FormattingEnabled = true;
+            this.cmbMusteri.Location = new System.Drawing.Point(110, 55);
+            this.cmbMusteri.Name = "cmbMusteri";
+            this.cmbMusteri.Size = new System.Drawing.Size(287, 21);
+            this.cmbMusteri.TabIndex = 2;
+            // 
+            // label56
+            // 
+            this.label56.AutoSize = true;
+            this.label56.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label56.Location = new System.Drawing.Point(194, 236);
+            this.label56.Name = "label56";
+            this.label56.Size = new System.Drawing.Size(90, 15);
+            this.label56.TabIndex = 35;
+            this.label56.Text = "Ürün Barkodu:";
+            // 
+            // txtBarkod
+            // 
+            this.txtBarkod.Location = new System.Drawing.Point(153, 252);
+            this.txtBarkod.Name = "txtBarkod";
+            this.txtBarkod.Size = new System.Drawing.Size(158, 20);
+            this.txtBarkod.TabIndex = 7;
+            // 
+            // label49
+            // 
+            this.label49.AutoSize = true;
+            this.label49.Font = new System.Drawing.Font("Times New Roman", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.label49.Location = new System.Drawing.Point(9, 8);
+            this.label49.Name = "label49";
+            this.label49.Size = new System.Drawing.Size(76, 15);
+            this.label49.TabIndex = 24;
+            this.label49.Text = "Müşteri Adı:";
+            // 
+            // btnManuelEkle
+            // 
+            this.btnManuelEkle.BackColor = System.Drawing.Color.Coral;
+            this.btnManuelEkle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnManuelEkle.Location = new System.Drawing.Point(179, 311);
+            this.btnManuelEkle.Name = "btnManuelEkle";
+            this.btnManuelEkle.Size = new System.Drawing.Size(142, 38);
+            this.btnManuelEkle.TabIndex = 42;
+            this.btnManuelEkle.Text = "Manuel Ekle";
+            this.btnManuelEkle.UseVisualStyleBackColor = false;
+            // 
+            // btnPalettenSil
+            // 
+            this.btnPalettenSil.BackColor = System.Drawing.Color.OrangeRed;
+            this.btnPalettenSil.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnPalettenSil.Location = new System.Drawing.Point(12, 349);
+            this.btnPalettenSil.Name = "btnPalettenSil";
+            this.btnPalettenSil.Size = new System.Drawing.Size(379, 38);
+            this.btnPalettenSil.TabIndex = 46;
+            this.btnPalettenSil.Text = "Kalem Sil";
+            this.btnPalettenSil.UseVisualStyleBackColor = false;
+            // 
+            // btnSevkTemizle
+            // 
+            this.btnSevkTemizle.BackColor = System.Drawing.Color.Red;
+            this.btnSevkTemizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkTemizle.Location = new System.Drawing.Point(12, 386);
+            this.btnSevkTemizle.Name = "btnSevkTemizle";
+            this.btnSevkTemizle.Size = new System.Drawing.Size(379, 38);
+            this.btnSevkTemizle.TabIndex = 47;
+            this.btnSevkTemizle.Text = "TEMİZLE";
+            this.btnSevkTemizle.UseVisualStyleBackColor = false;
+            // 
+            // clbBelgeNo
+            // 
+            this.clbBelgeNo.FormattingEnabled = true;
+            this.clbBelgeNo.Location = new System.Drawing.Point(12, 82);
+            this.clbBelgeNo.Name = "clbBelgeNo";
+            this.clbBelgeNo.Size = new System.Drawing.Size(135, 184);
+            this.clbBelgeNo.TabIndex = 48;
+            // 
+            // btnTumBelgeleriSec
+            // 
+            this.btnTumBelgeleriSec.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnTumBelgeleriSec.Location = new System.Drawing.Point(153, 153);
+            this.btnTumBelgeleriSec.Name = "btnTumBelgeleriSec";
+            this.btnTumBelgeleriSec.Size = new System.Drawing.Size(244, 35);
+            this.btnTumBelgeleriSec.TabIndex = 49;
+            this.btnTumBelgeleriSec.Text = "Tüm Belge Numaraları Seç";
+            this.btnTumBelgeleriSec.UseVisualStyleBackColor = true;
+            this.btnTumBelgeleriSec.Click += new System.EventHandler(this.btnTumBelgeleriSec_Click);
+            // 
+            // numManuelAdet
+            // 
+            this.numManuelAdet.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.numManuelAdet.Location = new System.Drawing.Point(327, 311);
+            this.numManuelAdet.Maximum = new decimal(new int[] {
+            500,
+            0,
+            0,
+            0});
+            this.numManuelAdet.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numManuelAdet.Name = "numManuelAdet";
+            this.numManuelAdet.Size = new System.Drawing.Size(64, 38);
+            this.numManuelAdet.TabIndex = 50;
+            this.numManuelAdet.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            this.numManuelAdet.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            // 
+            // btnSevkRaporla
+            // 
+            this.btnSevkRaporla.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSevkRaporla.Location = new System.Drawing.Point(6, 401);
+            this.btnSevkRaporla.Name = "btnSevkRaporla";
+            this.btnSevkRaporla.Size = new System.Drawing.Size(380, 33);
+            this.btnSevkRaporla.TabIndex = 51;
+            this.btnSevkRaporla.Text = "Raporla";
+            this.btnSevkRaporla.UseVisualStyleBackColor = true;
+            this.btnSevkRaporla.Click += new System.EventHandler(this.btnSevkRaporla_Click);
+            // 
+            // btnManuelEksilt
+            // 
+            this.btnManuelEksilt.BackColor = System.Drawing.Color.Coral;
+            this.btnManuelEksilt.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnManuelEksilt.Location = new System.Drawing.Point(12, 311);
+            this.btnManuelEksilt.Name = "btnManuelEksilt";
+            this.btnManuelEksilt.Size = new System.Drawing.Size(142, 38);
+            this.btnManuelEksilt.TabIndex = 52;
+            this.btnManuelEksilt.Text = "EKSİLT";
+            this.btnManuelEksilt.UseVisualStyleBackColor = false;
+            this.btnManuelEksilt.Click += new System.EventHandler(this.btnManuelEksilt_Click);
+            // 
+            // btnBarkodKilidi
+            // 
+            this.btnBarkodKilidi.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnBarkodKilidi.Location = new System.Drawing.Point(12, 274);
+            this.btnBarkodKilidi.Name = "btnBarkodKilidi";
+            this.btnBarkodKilidi.Size = new System.Drawing.Size(379, 35);
+            this.btnBarkodKilidi.TabIndex = 53;
+            this.btnBarkodKilidi.Text = "BARKOD";
+            this.btnBarkodKilidi.UseVisualStyleBackColor = true;
+            this.btnBarkodKilidi.Click += new System.EventHandler(this.btnBarkodKilidi_Click);
+            // 
+            // btnOncekiPalet
+            // 
+            this.btnOncekiPalet.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnOncekiPalet.Location = new System.Drawing.Point(315, 205);
+            this.btnOncekiPalet.Name = "btnOncekiPalet";
+            this.btnOncekiPalet.Size = new System.Drawing.Size(76, 31);
+            this.btnOncekiPalet.TabIndex = 54;
+            this.btnOncekiPalet.Text = "Önceki";
+            this.btnOncekiPalet.UseVisualStyleBackColor = true;
+            this.btnOncekiPalet.Click += new System.EventHandler(this.btnOncekiPalet_Click);
+            // 
+            // btnSonrakiPalet
+            // 
+            this.btnSonrakiPalet.Font = new System.Drawing.Font("Times New Roman", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSonrakiPalet.Location = new System.Drawing.Point(315, 241);
+            this.btnSonrakiPalet.Name = "btnSonrakiPalet";
+            this.btnSonrakiPalet.Size = new System.Drawing.Size(76, 31);
+            this.btnSonrakiPalet.TabIndex = 55;
+            this.btnSonrakiPalet.Text = "Sonraki";
+            this.btnSonrakiPalet.UseVisualStyleBackColor = true;
+            this.btnSonrakiPalet.Click += new System.EventHandler(this.btnSonrakiPalet_Click);
+            // 
+            // panel7
+            // 
+            this.panel7.Controls.Add(this.btnSonrakiPalet);
+            this.panel7.Controls.Add(this.btnOncekiPalet);
+            this.panel7.Controls.Add(this.btnBarkodKilidi);
+            this.panel7.Controls.Add(this.btnManuelEksilt);
+            this.panel7.Controls.Add(this.numManuelAdet);
+            this.panel7.Controls.Add(this.btnTumBelgeleriSec);
+            this.panel7.Controls.Add(this.clbBelgeNo);
+            this.panel7.Controls.Add(this.btnSevkTemizle);
+            this.panel7.Controls.Add(this.btnPalettenSil);
+            this.panel7.Controls.Add(this.btnManuelEkle);
+            this.panel7.Controls.Add(this.label49);
+            this.panel7.Controls.Add(this.txtBarkod);
+            this.panel7.Controls.Add(this.label56);
+            this.panel7.Controls.Add(this.cmbMusteri);
+            this.panel7.Controls.Add(this.label58);
+            this.panel7.Controls.Add(this.btnSevkAra);
+            this.panel7.Controls.Add(this.cmbSevkPaletSayisi);
+            this.panel7.Controls.Add(this.label59);
+            this.panel7.Controls.Add(this.label60);
+            this.panel7.Controls.Add(this.label51);
+            this.panel7.Controls.Add(this.btnSiparisYenile);
+            this.panel7.Controls.Add(this.txtSevkMusteri);
+            this.panel7.Controls.Add(this.txtMusteriAdi);
+            this.panel7.Controls.Add(this.cmbAktifPalet);
+            this.panel7.Dock = System.Windows.Forms.DockStyle.Top;
+            this.panel7.Location = new System.Drawing.Point(0, 0);
+            this.panel7.Name = "panel7";
+            this.panel7.Size = new System.Drawing.Size(401, 438);
+            this.panel7.TabIndex = 54;
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoScroll = true;
             this.AutoSize = true;
-            this.ClientSize = new System.Drawing.Size(1777, 898);
+            this.ClientSize = new System.Drawing.Size(1777, 942);
             this.Controls.Add(this.tabControl1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -3996,21 +3997,16 @@ namespace TamgaApp
             this.Name = "MainForm";
             this.Text = "TamgaApp";
             this.tabPage13.ResumeLayout(false);
-            this.splitContainer6.Panel1.ResumeLayout(false);
-            this.splitContainer6.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer6)).EndInit();
-            this.splitContainer6.ResumeLayout(false);
-            this.panel8.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).EndInit();
-            this.panel6.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.dgvMalzemeler)).EndInit();
             this.splitContainer5.Panel1.ResumeLayout(false);
             this.splitContainer5.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).EndInit();
             this.splitContainer5.ResumeLayout(false);
-            this.panel7.ResumeLayout(false);
-            this.panel7.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).EndInit();
+            this.tabControl2.ResumeLayout(false);
+            this.tabPage17.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvYarimSevkler)).EndInit();
+            this.tabPage18.ResumeLayout(false);
+            this.tabPage19.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvMalzemeler)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.dgvPaletMatrisi)).EndInit();
             this.tabPage7.ResumeLayout(false);
             this.splitContainer3.Panel1.ResumeLayout(false);
@@ -4095,6 +4091,9 @@ namespace TamgaApp
             ((System.ComponentModel.ISupportInitialize)(this.dgvAmbarSecilenFirmalar)).EndInit();
             this.panel4.ResumeLayout(false);
             this.panel4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.numManuelAdet)).EndInit();
+            this.panel7.ResumeLayout(false);
+            this.panel7.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -4338,39 +4337,17 @@ namespace TamgaApp
         private DataGridView dgvSayim;
         private Button btnSayimBitir;
         private SplitContainer splitContainer5;
-        private Panel panel6;
         private Panel panel10;
         private Panel panel12;
-        private Panel panel8;
         private Button btnSevkAskayaAl;
         private Button btnTamSevk;
         private Button btnYarimGetir;
         private Button btnKismiSevk;
         private Button btnYarimAc;
         private Button btnGecmisSevkleriListele;
-        private SplitContainer splitContainer6;
-        private Panel panel7;
-        private Label label49;
-        private TextBox txtBarkod;
-        private Label label56;
-        private ComboBox cmbMusteri;
-        private Label label58;
-        private Button btnSevkAra;
-        private ComboBox cmbSevkPaletSayisi;
-        private Label label50;
-        private Label label59;
-        private Label label60;
-        private Label label51;
-        private Button btnSiparisYenile;
-        private TextBox txtSevkMusteri;
-        private TextBox txtMusteriAdi;
-        private ComboBox cmbAktifPalet;
         private DataGridView dgvPaletMatrisi;
         private Button btnManuelAdresEkle;
         private Button btnZarfHafiza;
-        private Button btnManuelEkle;
-        private Button btnSevkTemizle;
-        private Button btnPalettenSil;
         private ComboBox cmbPrintStyle;
         private Label label65;
         private Label label64;
@@ -4392,10 +4369,6 @@ namespace TamgaApp
         private Button btnComBaglan;
         private Label label69;
         private ComboBox cmbComPort;
-        private CheckedListBox clbBelgeNo;
-        private Button btnTumBelgeleriSec;
-        private NumericUpDown numManuelAdet;
-        private Button btnSevkRaporla;
         private Button btnAnlikPaletEtiketi;
         private TreeView tvSayimRaporlari;
         private TreeView tvRaporlar;
@@ -4419,12 +4392,38 @@ namespace TamgaApp
         private Button btnAmbarGoruntule;
         private Button btnAmbarKaydet;
         private Button btnAmbar;
-        private Button btnManuelEksilt;
-        private Button btnBarkodKilidi;
-        private Button btnSonrakiPalet;
-        private Button btnOncekiPalet;
         private Button btnSevkBeklet;
         private DataGridView dgvYarimSevkler;
+        private TabControl tabControl2;
+        private TabPage tabPage17;
+        private TabPage tabPage18;
+        private TabPage tabPage19;
+        private Panel panel7;
+        private Button btnSonrakiPalet;
+        private Button btnOncekiPalet;
+        private Button btnBarkodKilidi;
+        private Button btnManuelEksilt;
+        private Button btnSevkRaporla;
+        private NumericUpDown numManuelAdet;
+        private Button btnTumBelgeleriSec;
+        private CheckedListBox clbBelgeNo;
+        private Button btnSevkTemizle;
+        private Button btnPalettenSil;
+        private Button btnManuelEkle;
+        private Label label49;
+        private TextBox txtBarkod;
+        private Label label56;
+        private ComboBox cmbMusteri;
+        private Label label58;
+        private Button btnSevkAra;
+        private ComboBox cmbSevkPaletSayisi;
+        private Label label59;
+        private Label label60;
+        private Label label51;
+        private Button btnSiparisYenile;
+        private TextBox txtSevkMusteri;
+        private TextBox txtMusteriAdi;
+        private ComboBox cmbAktifPalet;
     }
 }
 
