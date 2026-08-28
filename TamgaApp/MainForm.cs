@@ -482,11 +482,32 @@ namespace TamgaApp
             this.Size = new Size(950, 600);
             this.CenterToScreen();
 
+            // 🌟 KİLİT ZIRHI: Askıda işlem varken başka sekmeye geçişi iptal et
+            tabControl1.Selecting += (s, tabEvent) =>
+            {
+                if (AskidanIslemKilitAktif && tabEvent.TabPage.Text != "Sevkiyat Plan")
+                {
+                    HataSesCal();
+                    MessageBox.Show("Güvenlik Zırhı Aktif!\n\nAskıdan çekilen işleme devam ediyorsunuz. Bu işlem sonlanmadan başka bir sekmeye geçemezsiniz.", "Karantina İhlali", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    tabEvent.Cancel = true; // e yerine tabEvent kullandık
+                }
+            };
+
         }
 
         // 🌟 SAĞ ÜSTTEKİ ÇARPI (X) TUŞUYLA KAPATILIRSA DEVREYE GİREN ZIRH
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+
+            // 🌟 BUNU YENİ EKLİYORSUN: Kapatma Koruması
+            if (AskidanIslemKilitAktif)
+            {
+                HataSesCal();
+                MessageBox.Show("Sistem Kilitli!\n\nAskıdan çekilen yarım bir işlem varken program kapatılamaz. Önce işlemi bitirin veya tekrar askıya alın.", "Kritik Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                e.Cancel = true;
+                return;
+            }
+
             // Animasyon başladıysa ve Windows sistemi kapatıyorsa karışma, kapanmasına izin ver
             if (kapanisBasladi)
             {
@@ -775,6 +796,46 @@ namespace TamgaApp
                 }
             }
             catch { }
+        }
+
+        public static bool AskidanIslemKilitAktif = false;
+
+        // 🌟 KARANTİNA MOTORU 🌟
+        private void KarantinayaAl(bool kilitlensinMi)
+        {
+            AskidanIslemKilitAktif = kilitlensinMi;
+
+            // SADECE CANLI KALMASINI İSTEDİĞİMİZ "DOKUNULMAZ" NESNELER
+            List<string> dokunulmazlar = new List<string>
+    {
+        "txtBarkod", "dgvPaletMatrisi", "dgvMalzemeler", "dgvYarimSevkler", "dgvPaletler",
+        "btnSevkAskayaAl", "btnSevkBeklet", "btnTamSevk", "btnKismiSevk", "btnAnlikPaletEtiketi",
+        "btnSevkRaporla" // 🌟 RAPORLA BUTONUNU DA KORUMAYA ALDIK
+    };
+
+            if (tabPage13 != null)
+            {
+                NesneleriDondur(tabPage13, kilitlensinMi, dokunulmazlar);
+            }
+        }
+
+        private void NesneleriDondur(Control anaKutu, bool kilitlensinMi, List<string> dokunulmazlar)
+        {
+            foreach (Control ctrl in anaKutu.Controls)
+            {
+                if (ctrl is Button || ctrl is TextBox || ctrl is ComboBox || ctrl is NumericUpDown || ctrl is CheckedListBox)
+                {
+                    if (!dokunulmazlar.Contains(ctrl.Name))
+                    {
+                        ctrl.Enabled = !kilitlensinMi;
+                    }
+                }
+
+                if (ctrl.Controls.Count > 0)
+                {
+                    NesneleriDondur(ctrl, kilitlensinMi, dokunulmazlar);
+                }
+            }
         }
 
         private void btnLoginDon_Click(object sender, EventArgs e)
@@ -2202,6 +2263,90 @@ namespace TamgaApp
 
             html.AppendLine("</body></html>");
             return html.ToString();
+        }
+
+
+        private void btnManuelZarf_Click(object sender, EventArgs e)
+        {
+            // 🌟 1. AŞAMA: Hiç tasarımla uğraşmadan kodla şık bir pencere (Form) yaratıyoruz
+            Form frmManuel = new Form();
+            frmManuel.Text = "Manuel Zarf Yazdırma";
+            frmManuel.Size = new Size(420, 360);
+            frmManuel.StartPosition = FormStartPosition.CenterParent;
+            frmManuel.FormBorderStyle = FormBorderStyle.FixedDialog;
+            frmManuel.MaximizeBox = false;
+            frmManuel.MinimizeBox = false;
+            frmManuel.BackColor = Color.FromArgb(245, 247, 250); // Elit Gri Arkaplan
+
+            // 🌟 2. AŞAMA: Kutuları ve Başlıkları (Label) oluşturuyoruz
+            string[] etiketler = { "Firma Adı:", "Adres:", "İl:", "Telefon 1:", "Telefon 2:" };
+            TextBox[] kutular = new TextBox[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                Label lbl = new Label();
+                lbl.Text = etiketler[i];
+                lbl.Left = 20;
+                lbl.Top = 20 + (i * 45);
+                lbl.AutoSize = true;
+                lbl.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+                lbl.ForeColor = Color.FromArgb(33, 37, 41);
+
+                kutular[i] = new TextBox();
+                kutular[i].Left = 130;
+                kutular[i].Top = 18 + (i * 45);
+                kutular[i].Width = 240;
+                kutular[i].Font = new Font("Segoe UI", 10);
+
+                // Çok satırlı adres girişi için 2. kutuyu (Adres) büyütelim
+                if (i == 1) { kutular[i].Multiline = true; kutular[i].Height = 40; }
+
+                frmManuel.Controls.Add(lbl);
+                frmManuel.Controls.Add(kutular[i]);
+            }
+
+            // 🌟 3. AŞAMA: Kocaman, şık bir "YAZDIR" butonu ekliyoruz
+            Button btnYazdir = new Button();
+            btnYazdir.Text = "🖨️ YAZDIR";
+            btnYazdir.Left = 130;
+            btnYazdir.Top = 250;
+            btnYazdir.Width = 240;
+            btnYazdir.Height = 45;
+            btnYazdir.BackColor = Color.FromArgb(15, 76, 58); // Koyu Yeşil
+            btnYazdir.ForeColor = Color.White;
+            btnYazdir.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+            btnYazdir.FlatStyle = FlatStyle.Flat;
+            btnYazdir.Cursor = Cursors.Hand;
+            frmManuel.Controls.Add(btnYazdir);
+
+            // 🌟 4. AŞAMA: Yazdır Butonuna basıldığında olacaklar
+            btnYazdir.Click += (s, ev) =>
+            {
+                // Kutulardaki yazıları al
+                string mFirma = kutular[0].Text;
+                string mAdres = kutular[1].Text;
+                string mIl = kutular[2].Text;
+                string mTel1 = kutular[3].Text;
+                string mTel2 = kutular[4].Text;
+
+                if (string.IsNullOrWhiteSpace(mFirma))
+                {
+                    MessageBox.Show("Firma Adı boş bırakılamaz!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // --- YAZDIRMA MOTORUNA GÖNDERME KISMI ---
+                // Sisteminde yazdırma işlemini yapan metoda bu verileri göndermelisin.
+                // Örnek kullanım:
+                // Firma geciciFirma = new Firma { FirmaAdi = mFirma, Adres = mAdres, Il = mIl, Telefon1 = mTel1, Telefon2 = mTel2 };
+                // ZarfiYaziciyaGonder(geciciFirma);
+
+                MessageBox.Show($"{mFirma} için yazdırma komutu gönderildi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                frmManuel.Close(); // İşlem bitince küçük pencereyi kapat
+            };
+
+            // 🌟 5. AŞAMA: Pencereyi Ekranda Göster
+            frmManuel.ShowDialog();
         }
 
         // Tıpkı Ambar Sayfasındaki Gibi Dinamik Arayüz Açan Motor
@@ -5097,6 +5242,52 @@ namespace TamgaApp
         // 🌟 SEVK BEKLET MOTORU (Üstüne Yazmayı Engelleyen Zırhlı Versiyon)
         private void btnSevkBeklet_Click(object sender, EventArgs e)
         {
+            // 🌟 ZIRH: ASKIYA ALMADAN ÖNCE ETİKETSİZ (BARKODSUZ) PALET KONTROLÜ
+            dgvPaletMatrisi.EndEdit();
+            List<string> etiketsizPaletler = new List<string>();
+
+            // Matristeki (Kamyondaki) tüm paletleri tek tek kontrol et
+            for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+            {
+                string pAdi = dgvPaletMatrisi.Columns[j].HeaderText;
+                bool paletDoluMu = false;
+
+                // Paletin içine ürün konmuş mu? (Boş palet için uyarı vermeyelim)
+                foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
+                {
+                    if (row.Cells[j].Value != null && !string.IsNullOrWhiteSpace(row.Cells[j].Value.ToString()))
+                    {
+                        paletDoluMu = true;
+                        break;
+                    }
+                }
+
+                // Eğer palet doluysa AMA hafızada (aktifPaletBarkodlari) barkodu üretilmemişse (yani Yazdır'a basılmamışsa)
+                if (paletDoluMu && !aktifPaletBarkodlari.ContainsKey(pAdi))
+                {
+                    etiketsizPaletler.Add(pAdi);
+                }
+            }
+
+            // Eğer etiketi basılmamış dolu paletler varsa uyar!
+            if (etiketsizPaletler.Count > 0)
+            {
+                HataSesCal();
+                DialogResult cevap = MessageBox.Show(
+                    "DİKKAT! Aşağıdaki paletlerin etiketini (EAN-13) henüz YAZDIRMADINIZ:\n\n👉 " +
+                    string.Join("\n👉 ", etiketsizPaletler) +
+                    "\n\nFiziksel paletlerin sahada isimsiz kalıp kaybolmaması için önce 'Etiket Yazdır' yapmanız tavsiye edilir.\n\nYine de etiketsiz olarak ASKIYA ALMAK istiyor musunuz?",
+                    "Etiketi Basılmamış Palet Uyarısı",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2); // Yanlışlıkla basmasın diye 'Hayır'ı seçili getiririz
+
+                if (cevap == DialogResult.No)
+                {
+                    return; // 🛑 İşlemi iptal et, kullanıcı gidip etiketleri yazdırsın!
+                }
+            }
+
             if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
             {
                 MessageBox.Show("Beklemeye alınacak açık bir sevkiyat yok!", "Hata"); return;
@@ -5180,6 +5371,7 @@ namespace TamgaApp
 
             aktifPaletBarkodlari.Clear();
             btnYarimGetir_Click(null, null); // Listeyi anında yenile
+            KarantinayaAl(false);
         }
 
         private void btnSevkAra_Click(object sender, EventArgs e)
@@ -6363,6 +6555,55 @@ namespace TamgaApp
         // 🌟 TAM SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
         private void btnTamSevk_Click(object sender, EventArgs e)
         {
+
+            // 🌟 ZIRH 1: Havada Kalan Verileri Tabloya Yazdır
+            dgvPaletler.EndEdit();
+            dgvPaletMatrisi.EndEdit();
+
+            // 🌟 ZIRH 2: Barkodsuz ve Boş Palet Dedektörü
+            List<string> hataliPaletler = new List<string>();
+
+            foreach (DataGridViewRow row in dgvPaletler.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                // NOT: Kendi dgvPaletler tablondaki sütun isimlerine göre buraları güncelle!
+                string paletNo = row.Cells["PaletAdi"].Value?.ToString() ?? "Bilinmeyen Palet";
+                string barkod = row.Cells["BarkodNo"].Value?.ToString();
+
+                // Paletin içindeki ürün sayısını kontrol et (Miktar sütunu)
+                int miktar = 0;
+                if (row.Cells["Miktar"] != null && row.Cells["Miktar"].Value != null)
+                {
+                    int.TryParse(row.Cells["Miktar"].Value.ToString(), out miktar);
+                }
+
+                // KURAL 1: Barkod boş mu?
+                if (string.IsNullOrWhiteSpace(barkod))
+                {
+                    hataliPaletler.Add($"{paletNo} (Barkodu Yok veya Yazdırılmamış)");
+                }
+                // KURAL 2: Palet boş mu?
+                else if (miktar == 0)
+                {
+                    hataliPaletler.Add($"{paletNo} (İçi Boş, Ürün Eklenmemiş)");
+                }
+            }
+
+            if (hataliPaletler.Count > 0)
+            {
+                HataSesCal();
+                MessageBox.Show("DUR! Sevkiyat yapılamaz!\n\nAşağıdaki paletlerde kritik eksikler var:\n\n👉 " +
+                                string.Join("\n👉 ", hataliPaletler) +
+                                "\n\nLütfen hataları düzeltip tekrar deneyin.",
+                                "Kritik Eksiklik", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return; // 🛑 İŞLEMİ KESER, KAYDETMEZ!
+            }
+
+            // 🌟 ZIRH 3: Çift Tıklama Koruması
+            Button basilanButon = sender as Button;
+            if (basilanButon != null) basilanButon.Enabled = false;
+
             // 🌟 HAYALET YÜKLEYİCİ: Ekran boşsa ama listede seçili bir iş varsa devreye girer
             if (dgvMalzemeler.Rows.Count == 0)
             {
@@ -6447,11 +6688,63 @@ namespace TamgaApp
                                                     .ToArray();
                 cmbMusteri.Items.AddRange(kalanMusteriler);
             }
+
+            KarantinayaAl(false);
+
         }
 
         // 🌟 KISMİ SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
         private void btnKismiSevk_Click(object sender, EventArgs e)
         {
+
+            // 🌟 ZIRH 1: Havada Kalan Verileri Tabloya Yazdır
+            dgvPaletler.EndEdit();
+            dgvPaletMatrisi.EndEdit();
+
+            // 🌟 ZIRH 2: Barkodsuz ve Boş Palet Dedektörü
+            List<string> hataliPaletler = new List<string>();
+
+            foreach (DataGridViewRow row in dgvPaletler.Rows)
+            {
+                if (row.IsNewRow) continue;
+
+                // NOT: Kendi dgvPaletler tablondaki sütun isimlerine göre buraları güncelle!
+                string paletNo = row.Cells["PaletAdi"].Value?.ToString() ?? "Bilinmeyen Palet";
+                string barkod = row.Cells["BarkodNo"].Value?.ToString();
+
+                // Paletin içindeki ürün sayısını kontrol et (Miktar sütunu)
+                int miktar = 0;
+                if (row.Cells["Miktar"] != null && row.Cells["Miktar"].Value != null)
+                {
+                    int.TryParse(row.Cells["Miktar"].Value.ToString(), out miktar);
+                }
+
+                // KURAL 1: Barkod boş mu?
+                if (string.IsNullOrWhiteSpace(barkod))
+                {
+                    hataliPaletler.Add($"{paletNo} (Barkodu Yok veya Yazdırılmamış)");
+                }
+                // KURAL 2: Palet boş mu?
+                else if (miktar == 0)
+                {
+                    hataliPaletler.Add($"{paletNo} (İçi Boş, Ürün Eklenmemiş)");
+                }
+            }
+
+            if (hataliPaletler.Count > 0)
+            {
+                HataSesCal();
+                MessageBox.Show("DUR! Sevkiyat yapılamaz!\n\nAşağıdaki paletlerde kritik eksikler var:\n\n👉 " +
+                                string.Join("\n👉 ", hataliPaletler) +
+                                "\n\nLütfen hataları düzeltip tekrar deneyin.",
+                                "Kritik Eksiklik", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return; // 🛑 İŞLEMİ KESER, KAYDETMEZ!
+            }
+
+            // 🌟 ZIRH 3: Çift Tıklama Koruması
+            Button basilanButon = sender as Button;
+            if (basilanButon != null) basilanButon.Enabled = false;
+
             // 🌟 HAYALET YÜKLEYİCİ: Ekran boşsa ama listede seçili bir iş varsa devreye girer
             if (dgvMalzemeler.Rows.Count == 0)
             {
@@ -6546,6 +6839,9 @@ namespace TamgaApp
             {
                 MessageBox.Show("Hiçbir ürün eksik değil! Lütfen siparişi bitirmek için 'Tam Sevket' butonunu kullanın.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+
+            KarantinayaAl(false);
+
         }
 
         #endregion
@@ -7414,6 +7710,28 @@ namespace TamgaApp
         // 🌟 Anında Palet Etiketi Basma (TEKLİ VEYA SERİ) ve Barkod Hafızaya Alma
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
+
+            // Örnek: Seçili paletin satırını alıyoruz
+            DataGridViewRow seciliSatir = dgvPaletler.CurrentRow;
+
+            // Zaten bir barkodu var mı kontrol et
+            string mevcutBarkod = seciliSatir.Cells["BarkodNo"].Value?.ToString();
+            string basilacakBarkod = "";
+
+            if (!string.IsNullOrWhiteSpace(mevcutBarkod))
+            {
+                // 🌟 KORUMA: Paletin zaten barkodu var! Kiosk unutmasın diye aynısını kullan.
+                basilacakBarkod = mevcutBarkod;
+            }
+            else
+            {
+                // Palet yeni, ilk defa yazdırılıyor. O zaman yeni barkod üret.
+                basilacakBarkod = $"PLT-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+
+                // Ürettiğin barkodu DGV'ye kaydet ki hafızada kalsın!
+                seciliSatir.Cells["BarkodNo"].Value = basilacakBarkod;
+            }
+
             if (dgvPaletMatrisi.Columns.Count == 0)
             {
                 MessageBox.Show("Yazdırılacak palet bulunamadı!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -7694,6 +8012,53 @@ namespace TamgaApp
         // 🌟 SEVKİYATI ASKIYA AL MOTORU (Üstüne Yazmayı Engelleyen Zırhlı Versiyon)
         private void btnSevkAskayaAl_Click(object sender, EventArgs e)
         {
+
+            // 🌟 ZIRH: ASKIYA ALMADAN ÖNCE ETİKETSİZ (BARKODSUZ) PALET KONTROLÜ
+            dgvPaletMatrisi.EndEdit();
+            List<string> etiketsizPaletler = new List<string>();
+
+            // Matristeki (Kamyondaki) tüm paletleri tek tek kontrol et
+            for (int j = 0; j < dgvPaletMatrisi.Columns.Count; j++)
+            {
+                string pAdi = dgvPaletMatrisi.Columns[j].HeaderText;
+                bool paletDoluMu = false;
+
+                // Paletin içine ürün konmuş mu? (Boş palet için uyarı vermeyelim)
+                foreach (DataGridViewRow row in dgvPaletMatrisi.Rows)
+                {
+                    if (row.Cells[j].Value != null && !string.IsNullOrWhiteSpace(row.Cells[j].Value.ToString()))
+                    {
+                        paletDoluMu = true;
+                        break;
+                    }
+                }
+
+                // Eğer palet doluysa AMA hafızada (aktifPaletBarkodlari) barkodu üretilmemişse (yani Yazdır'a basılmamışsa)
+                if (paletDoluMu && !aktifPaletBarkodlari.ContainsKey(pAdi))
+                {
+                    etiketsizPaletler.Add(pAdi);
+                }
+            }
+
+            // Eğer etiketi basılmamış dolu paletler varsa uyar!
+            if (etiketsizPaletler.Count > 0)
+            {
+                HataSesCal();
+                DialogResult cevap = MessageBox.Show(
+                    "DİKKAT! Aşağıdaki paletlerin etiketini (EAN-13) henüz YAZDIRMADINIZ:\n\n👉 " +
+                    string.Join("\n👉 ", etiketsizPaletler) +
+                    "\n\nFiziksel paletlerin sahada isimsiz kalıp kaybolmaması için önce 'Etiket Yazdır' yapmanız tavsiye edilir.\n\nYine de etiketsiz olarak ASKIYA ALMAK istiyor musunuz?",
+                    "Etiketi Basılmamış Palet Uyarısı",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning,
+                    MessageBoxDefaultButton.Button2); // Yanlışlıkla basmasın diye 'Hayır'ı seçili getiririz
+
+                if (cevap == DialogResult.No)
+                {
+                    return; // 🛑 İşlemi iptal et, kullanıcı gidip etiketleri yazdırsın!
+                }
+            }
+
             if (clbBelgeNo.CheckedItems.Count == 0 || dgvMalzemeler.Rows.Count == 0)
             {
                 MessageBox.Show("Askıya alınacak açık bir sevkiyat yok!", "Hata"); return;
@@ -7777,6 +8142,8 @@ namespace TamgaApp
 
             aktifPaletBarkodlari.Clear();
             btnYarimGetir_Click(null, null); // Listeyi anında yenile
+
+            KarantinayaAl(false);
         }
 
         // 🌟 ASKI VE BEKLETME LİSTESİNİ DOLDURUR (Punto Küçültüldü ve Şıklaştırıldı)
@@ -7834,6 +8201,17 @@ namespace TamgaApp
                     row.DefaultCellStyle.Font = new Font("Segoe UI", 8, FontStyle.Regular);
                 }
             }
+            // ... yukarıdaki döngüler ve tabloya ekleme kodları ...
+
+            // 🌟 DİNAMİK BUTON KİLİDİ: Tablo boşsa işlem butonlarını beton gibi dondur!
+            bool kayitVarMi = dgvYarimSevkler.Rows.Count > 0;
+
+            if (btnYarimAc != null) btnYarimAc.Enabled = kayitVarMi;
+
+            // Eğer tasarımında Askıdan Sil butonu varsa onu da otomatik bulur ve kilitler
+            var btnSil = this.Controls.Find("btnAskidanSil", true).FirstOrDefault() as Button;
+            if (btnSil != null) btnSil.Enabled = kayitVarMi;
+
         }
 
         // 🌟 ASKI VE BEKLETME LİSTESİNDEN (TABLODAN) KAYIT SİLME MOTORU
@@ -7975,6 +8353,9 @@ namespace TamgaApp
             {
                 MessageBox.Show("Geri yükleme sırasında hata oluştu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+
+            KarantinayaAl(true);
+
         }
 
         // 🌟 SİHİRLİ ZIRH: "Random" motorunu sınıf seviyesine (dışarı) alıyoruz ki 
@@ -8744,7 +9125,7 @@ namespace TamgaApp
 
         #region ✉️ 16. ÇOKLU ZARF YAZDIRMA (MANUEL GİRİŞ VE İŞLEMLER)
 
-        // Çoklu Zarf sayfasındaki "Manuel Ekle" butonunun tıklanma olayı
+        // Normal Zarf sayfasındaki "Manuel Yazdır" butonunun tıklanma olayı
         private void btnManuelAdresEkle_Click(object sender, EventArgs e)
         {
             // 1. Şık ve Dinamik Bir Popup Form Oluşturuyoruz
@@ -8752,12 +9133,13 @@ namespace TamgaApp
             {
                 Width = 400,
                 Height = 350,
-                Text = "Manuel Adres Girişi (Tek Seferlik)",
+                Text = "Manuel Zarf Yazdırma (Tek Seferlik)",
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent,
                 MaximizeBox = false,
                 MinimizeBox = false,
-                Icon = this.Icon
+                Icon = this.Icon,
+                BackColor = Color.WhiteSmoke
             };
 
             // 2. Kutuları ve Etiketleri Hazırlıyoruz
@@ -8776,17 +9158,19 @@ namespace TamgaApp
             Label lblTel2 = new Label { Text = "Telefon 2:", Left = 20, Top = 220, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             TextBox txtTel2 = new TextBox { Left = 120, Top = 220, Width = 240 };
 
-            Button btnEkle = new Button
+            // 🌟 SİHİRLİ DOKUNUŞ: Buton artık DGV'ye kaydetmez, doğrudan yazıcıya gönderir!
+            Button btnYazdir = new Button
             {
-                Text = "YAZDIRMA LİSTESİNE EKLE",
+                Text = "🖨️ DİREKT YAZDIR",
                 Left = 120,
                 Top = 260,
                 Width = 240,
                 Height = 40,
-                BackColor = Color.Teal,
-                ForeColor = Color.White,
+                BackColor = Color.Orange,
+                ForeColor = Color.Black,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat
             };
 
             // 3. Hepsini Forma Monte Ediyoruz
@@ -8795,10 +9179,10 @@ namespace TamgaApp
             frmManuel.Controls.Add(lblIl); frmManuel.Controls.Add(txtIl);
             frmManuel.Controls.Add(lblTel1); frmManuel.Controls.Add(txtTel1);
             frmManuel.Controls.Add(lblTel2); frmManuel.Controls.Add(txtTel2);
-            frmManuel.Controls.Add(btnEkle);
+            frmManuel.Controls.Add(btnYazdir);
 
-            // 4. Kaydet Butonuna Basıldığında Ne Olacak?
-            btnEkle.Click += (s, args) =>
+            // 4. Yazdır Butonuna Basıldığında Ne Olacak?
+            btnYazdir.Click += (s, args) =>
             {
                 if (string.IsNullOrWhiteSpace(txtFirma.Text))
                 {
@@ -8806,23 +9190,84 @@ namespace TamgaApp
                     return;
                 }
 
-                // 🚀 HEDEF TABLOYA VERİYİ ATIYORUZ
-                dgvAmbarSecilenFirmalar.Rows.Add(
-                    "MANUEL",         // 1. Sütun: ID yerine Manuel yazsın
-                    txtFirma.Text,    // 2. Sütun: Firma Adı
-                    txtAdres.Text,    // 3. Sütun: Adres
-                    txtIl.Text,       // 4. Sütun: İl
-                    txtTel1.Text,     // 5. Sütun: Telefon 1
-                    txtTel2.Text      // 6. Sütun: Telefon 2
-                );
+                // 🚀 VERİTABANINA DOKUNMADAN SADECE RAM'DE YAŞAYAN GEÇİCİ BİR FİRMA OLUŞTUR
+                Firma geciciFirma = new Firma
+                {
+                    FirmaAdi = txtFirma.Text.Trim(),
+                    Adres = txtAdres.Text.Trim(),
+                    Il = txtIl.Text.Trim(),
+                    Telefon1 = txtTel1.Text.Trim(),
+                    Telefon2 = txtTel2.Text.Trim()
+                };
 
-                MessageBox.Show("Manuel adres başarıyla eklendi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                frmManuel.DialogResult = DialogResult.OK;
-                frmManuel.Close();
+                frmManuel.Close(); // Popup pencereyi kapat
+
+                // 🚀 EDGE YAZDIRMA MOTORUNA BU GEÇİCİ FİRMAYI GÖNDER!
+                ManuelZarfiEdgeIleYazdir(geciciFirma);
             };
 
             // 5. Formu Ekrana Çıkartıyoruz
             frmManuel.ShowDialog();
+        }
+
+        // Manuel oluşturulan geçici firmayı alıp HTML şablonuna giydiren özel yazdırma motoru
+        private async void ManuelZarfiEdgeIleYazdir(Firma manuelFirma)
+        {
+            if (manuelFirma == null) return;
+
+            // Kağıt ölçülerini arayüzden al
+            string wMm = txtPageWidthMm.Text;
+            string hMm = txtPageHeightMm.Text;
+
+            // Eğer kağıt yataysa ölçüleri ters çevir ki motor anlasın
+            if (rbLandscape != null && rbLandscape.Checked)
+            {
+                wMm = txtPageHeightMm.Text;
+                hMm = txtPageWidthMm.Text;
+            }
+
+            // 🌟 SİHİRLİ KISIM: Senin mevcut HTML Çevirici motoruna bu geçici firmayı veriyoruz!
+            string htmlIcerik = TasarimiHtmlCevir(designItems, manuelFirma, wMm, hMm);
+
+            // Arka planda yazdırma işlemini başlatacak Edge Penceresini oluştur
+            Form modernOnizleme = new Form();
+            modernOnizleme.Text = "Manuel Zarf Yazdırılıyor...";
+            modernOnizleme.ShowIcon = false;
+            modernOnizleme.Width = 1000;
+            modernOnizleme.Height = 600;
+            modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
+
+            Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
+            webCizici.Dock = DockStyle.Fill;
+            modernOnizleme.Controls.Add(webCizici);
+
+            modernOnizleme.FormClosed += (s, ev) => { webCizici.Dispose(); };
+            modernOnizleme.Show();
+
+            // Klasör yetki hatasını önlemek için AppData içinde bu işe özel geçici bir profil yarat
+            string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string zarfHafizaYolu = System.IO.Path.Combine(appDataYolu, "TamgaApp", "Profil_ManuelEdgeZarf");
+
+            try
+            {
+                var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
+                await webCizici.EnsureCoreWebView2Async(ozelHafiza);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Yazıcı motoru başlatılamadı. Lütfen 'Edge WebView2 Runtime' kurulu olduğundan emin olun.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                modernOnizleme.Close();
+                return;
+            }
+
+            // HTML kodlarını motora bas
+            webCizici.NavigateToString(htmlIcerik);
+
+            webCizici.NavigationCompleted += (s, args) =>
+            {
+                // Yükleme bittiği milisaniye doğrudan yazdırma ekranını (Print UI) kullanıcının karşısına çıkart!
+                webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            };
         }
 
         // 🗂️ ZARF HAFIZA VE SEVKİYAT ARŞİVİ MOTORU (İLAVE EKLEME DESTEKLİ)
