@@ -9154,25 +9154,24 @@ namespace TamgaApp
 
         #region ✉️ 16. ÇOKLU ZARF YAZDIRMA (MANUEL GİRİŞ VE İŞLEMLER)
 
-        // Normal Zarf sayfasındaki "Manuel Yazdır" butonunun tıklanma olayı
-        private void btnManuelAdresEkle_Click(object sender, EventArgs e)
+        // Çoklu Zarf sayfasındaki "Manuel Ekle" butonunun tıklanma olayı
+        private void btnManuelAdresEkle_Click(object sender, EventArgs e)
         {
-            // 1. Şık ve Dinamik Bir Popup Form Oluşturuyoruz
-            Form frmManuel = new Form
+            // 1. Şık ve Dinamik Bir Popup Form Oluşturuyoruz
+            Form frmManuel = new Form
             {
                 Width = 400,
                 Height = 350,
-                Text = "Manuel Zarf Yazdırma (Tek Seferlik)",
+                Text = "Manuel Adres Girişi (Tek Seferlik)",
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 StartPosition = FormStartPosition.CenterParent,
                 MaximizeBox = false,
                 MinimizeBox = false,
-                Icon = this.Icon,
-                BackColor = Color.WhiteSmoke
+                Icon = this.Icon
             };
 
-            // 2. Kutuları ve Etiketleri Hazırlıyoruz
-            Label lblFirma = new Label { Text = "Firma Adı:", Left = 20, Top = 20, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            // 2. Kutuları ve Etiketleri Hazırlıyoruz
+            Label lblFirma = new Label { Text = "Firma Adı:", Left = 20, Top = 20, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             TextBox txtFirma = new TextBox { Left = 120, Top = 20, Width = 240 };
 
             Label lblAdres = new Label { Text = "Adres:", Left = 20, Top = 60, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
@@ -9187,31 +9186,29 @@ namespace TamgaApp
             Label lblTel2 = new Label { Text = "Telefon 2:", Left = 20, Top = 220, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             TextBox txtTel2 = new TextBox { Left = 120, Top = 220, Width = 240 };
 
-            // 🌟 SİHİRLİ DOKUNUŞ: Buton artık DGV'ye kaydetmez, doğrudan yazıcıya gönderir!
-            Button btnYazdir = new Button
+            Button btnEkle = new Button
             {
-                Text = "🖨️ DİREKT YAZDIR",
+                Text = "YAZDIRMA LİSTESİNE EKLE",
                 Left = 120,
                 Top = 260,
                 Width = 240,
                 Height = 40,
-                BackColor = Color.Orange,
-                ForeColor = Color.Black,
+                BackColor = Color.Teal,
+                ForeColor = Color.White,
                 Font = new Font("Segoe UI", 10, FontStyle.Bold),
-                Cursor = Cursors.Hand,
-                FlatStyle = FlatStyle.Flat
+                Cursor = Cursors.Hand
             };
 
-            // 3. Hepsini Forma Monte Ediyoruz
-            frmManuel.Controls.Add(lblFirma); frmManuel.Controls.Add(txtFirma);
+            // 3. Hepsini Forma Monte Ediyoruz
+            frmManuel.Controls.Add(lblFirma); frmManuel.Controls.Add(txtFirma);
             frmManuel.Controls.Add(lblAdres); frmManuel.Controls.Add(txtAdres);
             frmManuel.Controls.Add(lblIl); frmManuel.Controls.Add(txtIl);
             frmManuel.Controls.Add(lblTel1); frmManuel.Controls.Add(txtTel1);
             frmManuel.Controls.Add(lblTel2); frmManuel.Controls.Add(txtTel2);
-            frmManuel.Controls.Add(btnYazdir);
+            frmManuel.Controls.Add(btnEkle);
 
-            // 4. Yazdır Butonuna Basıldığında Ne Olacak?
-            btnYazdir.Click += (s, args) =>
+            // 4. Kaydet Butonuna Basıldığında Ne Olacak?
+            btnEkle.Click += (s, args) =>
             {
                 if (string.IsNullOrWhiteSpace(txtFirma.Text))
                 {
@@ -9219,24 +9216,23 @@ namespace TamgaApp
                     return;
                 }
 
-                // 🚀 VERİTABANINA DOKUNMADAN SADECE RAM'DE YAŞAYAN GEÇİCİ BİR FİRMA OLUŞTUR
-                Firma geciciFirma = new Firma
-                {
-                    FirmaAdi = txtFirma.Text.Trim(),
-                    Adres = txtAdres.Text.Trim(),
-                    Il = txtIl.Text.Trim(),
-                    Telefon1 = txtTel1.Text.Trim(),
-                    Telefon2 = txtTel2.Text.Trim()
-                };
+                // 🚀 HEDEF TABLOYA VERİYİ ATIYORUZ
+                dgvAmbarSecilenFirmalar.Rows.Add(
+                    "MANUEL",         // 1. Sütun: ID yerine Manuel yazsın
+                    txtFirma.Text,    // 2. Sütun: Firma Adı
+                    txtAdres.Text,    // 3. Sütun: Adres
+                    txtIl.Text,       // 4. Sütun: İl
+                    txtTel1.Text,     // 5. Sütun: Telefon 1
+                    txtTel2.Text      // 6. Sütun: Telefon 2
+                );
 
-                frmManuel.Close(); // Popup pencereyi kapat
-
-                // 🚀 EDGE YAZDIRMA MOTORUNA BU GEÇİCİ FİRMAYI GÖNDER!
-                ManuelZarfiEdgeIleYazdir(geciciFirma);
+                MessageBox.Show("Manuel adres başarıyla eklendi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                frmManuel.DialogResult = DialogResult.OK;
+                frmManuel.Close();
             };
 
-            // 5. Formu Ekrana Çıkartıyoruz
-            frmManuel.ShowDialog();
+            // 5. Formu Ekrana Çıkartıyoruz
+            frmManuel.ShowDialog();
         }
 
         // Manuel oluşturulan geçici firmayı alıp HTML şablonuna giydiren özel yazdırma motoru
