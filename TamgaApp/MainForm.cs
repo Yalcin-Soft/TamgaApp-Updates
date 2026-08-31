@@ -810,7 +810,9 @@ namespace TamgaApp
     {
         "txtBarkod", "dgvPaletMatrisi", "dgvMalzemeler", "dgvYarimSevkler", "dgvPaletler",
         "btnSevkAskayaAl", "btnSevkBeklet", "btnTamSevk", "btnKismiSevk", "btnAnlikPaletEtiketi",
-        "btnSevkRaporla" // 🌟 RAPORLA BUTONUNU DA KORUMAYA ALDIK
+        "btnSevkRaporla", "btnSiparisYenile", "btnSevkAra", "btnTumBelgeleriSec", "cmbSevkPaletSayisi", "cmbAktifPalet",
+        "btnOncekiPalet", "btnSonrakiPalet", "btnBarkodKilidi", "btnManuelEksilt", "btnManuelEkle", "numManuelAdet",
+        "btnPalettenSil", "btnSevkTemizle"// 🌟 RAPORLA BUTONUNU DA KORUMAYA ALDIK
     };
 
             if (tabPage13 != null)
