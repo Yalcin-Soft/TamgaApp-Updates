@@ -357,7 +357,8 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.button1 = new System.Windows.Forms.Button();
+            this.button2 = new System.Windows.Forms.Button();
+            this.btnNormalManuelYazdir = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
             this.splitContainer5.Panel1.SuspendLayout();
@@ -2202,7 +2203,7 @@ namespace TamgaApp
             this.tabPage6.Location = new System.Drawing.Point(4, 22);
             this.tabPage6.Name = "tabPage6";
             this.tabPage6.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage6.Size = new System.Drawing.Size(1757, 842);
+            this.tabPage6.Size = new System.Drawing.Size(1757, 886);
             this.tabPage6.TabIndex = 4;
             this.tabPage6.Text = "Yazdırma Ayarları";
             this.tabPage6.UseVisualStyleBackColor = true;
@@ -2217,7 +2218,7 @@ namespace TamgaApp
             this.panel10.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel10.Location = new System.Drawing.Point(3, 3);
             this.panel10.Name = "panel10";
-            this.panel10.Size = new System.Drawing.Size(1751, 836);
+            this.panel10.Size = new System.Drawing.Size(1751, 880);
             this.panel10.TabIndex = 5;
             // 
             // btnSavePrinterMapping
@@ -2278,7 +2279,7 @@ namespace TamgaApp
             this.tabPage8.Location = new System.Drawing.Point(4, 22);
             this.tabPage8.Name = "tabPage8";
             this.tabPage8.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage8.Size = new System.Drawing.Size(1757, 842);
+            this.tabPage8.Size = new System.Drawing.Size(1757, 886);
             this.tabPage8.TabIndex = 5;
             this.tabPage8.Text = "Barkod Verileri";
             this.tabPage8.UseVisualStyleBackColor = true;
@@ -2379,7 +2380,7 @@ namespace TamgaApp
             this.tabPage9.Location = new System.Drawing.Point(4, 22);
             this.tabPage9.Name = "tabPage9";
             this.tabPage9.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage9.Size = new System.Drawing.Size(1757, 842);
+            this.tabPage9.Size = new System.Drawing.Size(1757, 886);
             this.tabPage9.TabIndex = 6;
             this.tabPage9.Text = "Yönetim";
             this.tabPage9.UseVisualStyleBackColor = true;
@@ -2390,7 +2391,7 @@ namespace TamgaApp
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnTumVerileriTemizle.BackColor = System.Drawing.Color.Red;
             this.btnTumVerileriTemizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnTumVerileriTemizle.Location = new System.Drawing.Point(35, 745);
+            this.btnTumVerileriTemizle.Location = new System.Drawing.Point(35, 789);
             this.btnTumVerileriTemizle.Name = "btnTumVerileriTemizle";
             this.btnTumVerileriTemizle.Size = new System.Drawing.Size(879, 37);
             this.btnTumVerileriTemizle.TabIndex = 26;
@@ -2403,7 +2404,7 @@ namespace TamgaApp
             this.btnSifreYenileAdmin.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnSifreYenileAdmin.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSifreYenileAdmin.Location = new System.Drawing.Point(676, 614);
+            this.btnSifreYenileAdmin.Location = new System.Drawing.Point(676, 658);
             this.btnSifreYenileAdmin.Name = "btnSifreYenileAdmin";
             this.btnSifreYenileAdmin.Size = new System.Drawing.Size(879, 37);
             this.btnSifreYenileAdmin.TabIndex = 25;
@@ -2417,7 +2418,7 @@ namespace TamgaApp
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnKullaniciSil.BackColor = System.Drawing.Color.Red;
             this.btnKullaniciSil.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnKullaniciSil.Location = new System.Drawing.Point(676, 657);
+            this.btnKullaniciSil.Location = new System.Drawing.Point(676, 701);
             this.btnKullaniciSil.Name = "btnKullaniciSil";
             this.btnKullaniciSil.Size = new System.Drawing.Size(879, 37);
             this.btnKullaniciSil.TabIndex = 24;
@@ -2430,7 +2431,7 @@ namespace TamgaApp
             this.btnKullaniciListele.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.btnKullaniciListele.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnKullaniciListele.Location = new System.Drawing.Point(676, 571);
+            this.btnKullaniciListele.Location = new System.Drawing.Point(676, 615);
             this.btnKullaniciListele.Name = "btnKullaniciListele";
             this.btnKullaniciListele.Size = new System.Drawing.Size(879, 37);
             this.btnKullaniciListele.TabIndex = 23;
@@ -2446,7 +2447,7 @@ namespace TamgaApp
             this.dgvKullanicilar.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dgvKullanicilar.Location = new System.Drawing.Point(676, 53);
             this.dgvKullanicilar.Name = "dgvKullanicilar";
-            this.dgvKullanicilar.Size = new System.Drawing.Size(982, 512);
+            this.dgvKullanicilar.Size = new System.Drawing.Size(982, 556);
             this.dgvKullanicilar.TabIndex = 22;
             // 
             // label42
@@ -2572,7 +2573,7 @@ namespace TamgaApp
             this.tabPage10.Location = new System.Drawing.Point(4, 22);
             this.tabPage10.Name = "tabPage10";
             this.tabPage10.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage10.Size = new System.Drawing.Size(1757, 842);
+            this.tabPage10.Size = new System.Drawing.Size(1757, 886);
             this.tabPage10.TabIndex = 7;
             this.tabPage10.Text = "SQL Ayarları";
             this.tabPage10.UseVisualStyleBackColor = true;
@@ -2676,7 +2677,7 @@ namespace TamgaApp
             this.tabPage15.Location = new System.Drawing.Point(4, 22);
             this.tabPage15.Name = "tabPage15";
             this.tabPage15.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage15.Size = new System.Drawing.Size(1757, 842);
+            this.tabPage15.Size = new System.Drawing.Size(1757, 886);
             this.tabPage15.TabIndex = 8;
             this.tabPage15.Text = "Port İşlemleri";
             this.tabPage15.UseVisualStyleBackColor = true;
@@ -2715,7 +2716,7 @@ namespace TamgaApp
             this.tabPage16.Location = new System.Drawing.Point(4, 22);
             this.tabPage16.Name = "tabPage16";
             this.tabPage16.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage16.Size = new System.Drawing.Size(1757, 842);
+            this.tabPage16.Size = new System.Drawing.Size(1757, 886);
             this.tabPage16.TabIndex = 9;
             this.tabPage16.Text = "Klasör Konumları";
             this.tabPage16.UseVisualStyleBackColor = true;
@@ -3408,7 +3409,7 @@ namespace TamgaApp
             // 
             // panel1
             // 
-            this.panel1.Controls.Add(this.button1);
+            this.panel1.Controls.Add(this.btnNormalManuelYazdir);
             this.panel1.Controls.Add(this.labell);
             this.panel1.Controls.Add(this.btnTemizle);
             this.panel1.Controls.Add(this.cmbCokluPrinter);
@@ -3985,17 +3986,27 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // button1
+            // button2
             // 
-            this.button1.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.button1.Location = new System.Drawing.Point(6, 671);
-            this.button1.Margin = new System.Windows.Forms.Padding(2);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(180, 57);
-            this.button1.TabIndex = 71;
-            this.button1.Text = "Manuel Zarf";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.btnManuelAdresEkle_Click);
+            this.button2.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.button2.Location = new System.Drawing.Point(6, 671);
+            this.button2.Margin = new System.Windows.Forms.Padding(2);
+            this.button2.Name = "button2";
+            this.button2.Size = new System.Drawing.Size(180, 57);
+            this.button2.TabIndex = 71;
+            this.button2.Text = "Manuel Zarf";
+            this.button2.UseVisualStyleBackColor = true;
+            // 
+            // btnNormalManuelYazdir
+            // 
+            this.btnNormalManuelYazdir.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnNormalManuelYazdir.Location = new System.Drawing.Point(6, 671);
+            this.btnNormalManuelYazdir.Margin = new System.Windows.Forms.Padding(2);
+            this.btnNormalManuelYazdir.Name = "btnNormalManuelYazdir";
+            this.btnNormalManuelYazdir.Size = new System.Drawing.Size(180, 57);
+            this.btnNormalManuelYazdir.TabIndex = 71;
+            this.btnNormalManuelYazdir.Text = "Yenile";
+            this.btnNormalManuelYazdir.UseVisualStyleBackColor = true;
             // 
             // MainForm
             // 
@@ -4438,7 +4449,8 @@ namespace TamgaApp
         private TextBox txtSevkMusteri;
         private TextBox txtMusteriAdi;
         private ComboBox cmbAktifPalet;
-        private Button button1;
+        private Button button2;
+        private Button btnNormalManuelYazdir;
     }
 }
 

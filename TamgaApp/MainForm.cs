@@ -724,6 +724,8 @@ namespace TamgaApp
                 btnBeklet.Click += btnSevkBeklet_Click;
             }
 
+            if (btnNormalManuelYazdir != null) btnNormalManuelYazdir.Click += btnNormalManuelYazdir_Click;
+
         }
         #endregion
 
@@ -812,7 +814,7 @@ namespace TamgaApp
         "btnSevkAskayaAl", "btnSevkBeklet", "btnTamSevk", "btnKismiSevk", "btnAnlikPaletEtiketi",
         "btnSevkRaporla", "btnSiparisYenile", "btnSevkAra", "btnTumBelgeleriSec", "cmbSevkPaletSayisi", "cmbAktifPalet",
         "btnOncekiPalet", "btnSonrakiPalet", "btnBarkodKilidi", "btnManuelEksilt", "btnManuelEkle", "numManuelAdet",
-        "btnPalettenSil", "btnSevkTemizle"// 🌟 RAPORLA BUTONUNU DA KORUMAYA ALDIK
+        "btnPalettenSil", "btnSevkTemizle", "clbBelgeNo", "btnAmbarKaydet", "btnAmbarGetir", "btnAmbarGoruntule"// 🌟 RAPORLA BUTONUNU DA KORUMAYA ALDIK
     };
 
             if (tabPage13 != null)
@@ -2792,6 +2794,83 @@ namespace TamgaApp
         private void btnTemizle_Click(object sender, EventArgs e)
         {
             lstSecilenFirmalar.Items.Clear();
+        }
+
+        // 🌟 SADECE "NORMAL ZARF" SAYFASINDAKİ YENİ BUTON İÇİN DİREKT YAZDIRMA MOTORU 🌟
+        private void btnNormalManuelYazdir_Click(object sender, EventArgs e)
+        {
+            Form frmManuel = new Form
+            {
+                Width = 400,
+                Height = 350,
+                Text = "Manuel Zarf Yazdırma (Tek Seferlik)",
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                Icon = this.Icon,
+                BackColor = Color.WhiteSmoke
+            };
+
+            Label lblFirma = new Label { Text = "Firma Adı:", Left = 20, Top = 20, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtFirma = new TextBox { Left = 120, Top = 20, Width = 240 };
+
+            Label lblAdres = new Label { Text = "Adres:", Left = 20, Top = 60, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtAdres = new TextBox { Left = 120, Top = 60, Width = 240, Height = 60, Multiline = true };
+
+            Label lblIl = new Label { Text = "İl / İlçe:", Left = 20, Top = 140, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtIl = new TextBox { Left = 120, Top = 140, Width = 240 };
+
+            Label lblTel1 = new Label { Text = "Telefon 1:", Left = 20, Top = 180, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtTel1 = new TextBox { Left = 120, Top = 180, Width = 240 };
+
+            Label lblTel2 = new Label { Text = "Telefon 2:", Left = 20, Top = 220, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            TextBox txtTel2 = new TextBox { Left = 120, Top = 220, Width = 240 };
+
+            Button btnYazdir = new Button
+            {
+                Text = "🖨️ DİREKT YAZDIR",
+                Left = 120,
+                Top = 260,
+                Width = 240,
+                Height = 40,
+                BackColor = Color.Orange,
+                ForeColor = Color.Black,
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Cursor = Cursors.Hand,
+                FlatStyle = FlatStyle.Flat
+            };
+
+            frmManuel.Controls.Add(lblFirma); frmManuel.Controls.Add(txtFirma);
+            frmManuel.Controls.Add(lblAdres); frmManuel.Controls.Add(txtAdres);
+            frmManuel.Controls.Add(lblIl); frmManuel.Controls.Add(txtIl);
+            frmManuel.Controls.Add(lblTel1); frmManuel.Controls.Add(txtTel1);
+            frmManuel.Controls.Add(lblTel2); frmManuel.Controls.Add(txtTel2);
+            frmManuel.Controls.Add(btnYazdir);
+
+            btnYazdir.Click += (s, args) =>
+            {
+                if (string.IsNullOrWhiteSpace(txtFirma.Text))
+                {
+                    MessageBox.Show("Firma Adı zorunludur!", "Eksik Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // Listeye VEYA Tabloya bulaşmadan sanal firma oluşturuyoruz
+                Firma geciciFirma = new Firma
+                {
+                    FirmaAdi = txtFirma.Text.Trim(),
+                    Adres = txtAdres.Text.Trim(),
+                    Il = txtIl.Text.Trim(),
+                    Telefon1 = txtTel1.Text.Trim(),
+                    Telefon2 = txtTel2.Text.Trim()
+                };
+
+                frmManuel.Close();
+                ManuelZarfiEdgeIleYazdir(geciciFirma);
+            };
+
+            frmManuel.ShowDialog();
         }
 
         // Dışarıdan bir CSV veya Metin belgesindeki yüzlerce firmayı tek tıkla veritabanına ekler
@@ -7708,32 +7787,9 @@ namespace TamgaApp
             }
         }
 
-
         // 🌟 Anında Palet Etiketi Basma (TEKLİ VEYA SERİ) ve Barkod Hafızaya Alma
         private async void btnAnlikPaletEtiketi_Click(object sender, EventArgs e)
         {
-
-            // Örnek: Seçili paletin satırını alıyoruz
-            DataGridViewRow seciliSatir = dgvPaletler.CurrentRow;
-
-            // Zaten bir barkodu var mı kontrol et
-            string mevcutBarkod = seciliSatir.Cells["BarkodNo"].Value?.ToString();
-            string basilacakBarkod = "";
-
-            if (!string.IsNullOrWhiteSpace(mevcutBarkod))
-            {
-                // 🌟 KORUMA: Paletin zaten barkodu var! Kiosk unutmasın diye aynısını kullan.
-                basilacakBarkod = mevcutBarkod;
-            }
-            else
-            {
-                // Palet yeni, ilk defa yazdırılıyor. O zaman yeni barkod üret.
-                basilacakBarkod = $"PLT-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
-
-                // Ürettiğin barkodu DGV'ye kaydet ki hafızada kalsın!
-                seciliSatir.Cells["BarkodNo"].Value = basilacakBarkod;
-            }
-
             if (dgvPaletMatrisi.Columns.Count == 0)
             {
                 MessageBox.Show("Yazdırılacak palet bulunamadı!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -7756,7 +7812,8 @@ namespace TamgaApp
             // Eğer Tekli dediyse ama sağdan palet seçmediyse uyar
             if (!seriYazdir && cmbAktifPalet.SelectedItem == null)
             {
-                MessageBox.Show("Lütfen etiketini basmak istediğiniz paleti seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                HataSesCal();
+                MessageBox.Show("Lütfen etiketini basmak istediğiniz aktif paleti seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -7768,27 +7825,7 @@ namespace TamgaApp
 
             // 🌟 2. HTML BAŞLANGICI VE CSS (Sayfa Kesme Özelliği Eklendi)
             System.Text.StringBuilder html = new System.Text.StringBuilder();
-            html.AppendLine(@"<html>
-    <head>
-       <meta charset='utf-8'>
-       <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>
-       <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 0; padding: 0; }
-          .sayfa { width: 100%; height: 100vh; box-sizing: border-box; padding: 20px; page-break-after: always; background: white; }
-          .firma { font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-          .sevk-musteri { font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }
-          .belge { font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }
-          .palet { font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }
-          .urunler { text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }
-          ul { margin: 0; padding-left: 0; list-style-type: none; }
-          li { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }
-          .k-kod { flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }
-          .k-ad { flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }
-          .k-adet { flex: 2; text-align: right; font-size: 20px; color: black; }
-          .barkod-alani { margin-top: 20px; } 
-       </style>
-    </head>
-    <body>");
+            html.AppendLine(@"<html><head>   <meta charset='utf-8'>   <script src='https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js'></script>   <style>      body { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; margin: 0; padding: 0; }      .sayfa { width: 100%; height: 100vh; box-sizing: border-box; padding: 20px; page-break-after: always; background: white; }      .firma { font-size: 42px; font-weight: bold; text-transform: uppercase; color: black; margin-bottom: 5px; line-height: 1.1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }      .sevk-musteri { font-size: 24px; font-weight: 600; text-transform: uppercase; color: #444; margin-bottom: 5px; }      .belge { font-size: 22px; margin-bottom: 5px; color: #333; font-weight: bold; }      .palet { font-size: 55px; margin: 10px 0; background: transparent; color: black; font-weight: bold; }      .urunler { text-align: left; font-size: 20px; font-weight: bold; border: 4px dashed black; padding: 15px; width: 98%; box-sizing: border-box; margin: 0 auto; min-height: 140px; }      ul { margin: 0; padding-left: 0; list-style-type: none; }      li { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1.5px dashed #ccc; padding-bottom: 6px; }      .k-kod { flex: 3; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; font-size: 19px; color: black; }      .k-ad { flex: 5; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; color: #444; font-size: 17px; }      .k-adet { flex: 2; text-align: right; font-size: 20px; color: black; }      .barkod-alani { margin-top: 20px; }    </style></head><body>");
 
             // 🌟 3. HANGİ PALETLERİN YAZDIRILACAĞINI BELİRLE
             List<int> basilacakSutunlar = new List<int>();
@@ -7854,40 +7891,30 @@ namespace TamgaApp
 
                 enAzBirPaletDolu = true;
 
-                // EAN13 Barkod Ataması
+                // 🌟 İŞTE GERÇEK KİOSK HAFIZA ZIRHI BURADA! 🌟
                 string paletBarkodu = "";
                 if (aktifPaletBarkodlari.ContainsKey(paletAdi))
+                {
+                    // Zaten basılmış, Kiosk'un beklediği o sabit barkodu kullan
                     paletBarkodu = aktifPaletBarkodlari[paletAdi];
+                }
                 else
                 {
+                    // İlk defa yazdırılıyor, yeni üret ve hafızaya (Sözlüğe) ekle
                     paletBarkodu = Ean13Olustur();
                     aktifPaletBarkodlari.Add(paletAdi, paletBarkodu);
                 }
 
                 string listeHtml = string.Join("", paletIcerigi);
-
-                // Birden çok SVG (Barkod) aynı kağıda basılacağı için her birine benzersiz bir kimlik (ID) veriyoruz!
                 string barkodId = "barkod_" + j.ToString();
 
-                html.AppendLine($@"
-       <div class='sayfa'>
-           <div class='firma'>{musteriAdi}</div>
-           <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>
-           <div class='belge'>Belge No: {belgeNo}</div>
-           <div class='palet'>{gosterilenPaletAdi}</div>
-           
-           <div class='urunler'><ul>{listeHtml}</ul></div>
-           
-           <div class='barkod-alani'><svg id='{barkodId}'></svg></div>
-           <script>
-              JsBarcode('#{barkodId}', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});
-           </script>
-       </div>");
+                html.AppendLine($@"   <div class='sayfa'>       <div class='firma'>{musteriAdi}</div>       <div class='sevk-musteri'>Sevk: {sevkMusteriAdi}</div>       <div class='belge'>Belge No: {belgeNo}</div>       <div class='palet'>{gosterilenPaletAdi}</div>                  <div class='urunler'><ul>{listeHtml}</ul></div>                  <div class='barkod-alani'><svg id='{barkodId}'></svg></div>       <script>          JsBarcode('#{barkodId}', '{paletBarkodu}', {{ format: 'EAN13', width: 5, height: 90, displayValue: true, fontSize: 34, fontOptions: 'bold', margin: 0 }});       </script>   </div>");
             }
 
             if (!enAzBirPaletDolu)
             {
-                MessageBox.Show("Seçilen kriterlere uygun DOLU palet bulunamadı! Lütfen önce ürün okutun.", "Boş Palet", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                HataSesCal();
+                MessageBox.Show("Seçilen kriterlere uygun DOLU palet bulunamadı! Lütfen yazdırmadan önce ürün okutun.", "Boş Palet", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -9128,10 +9155,10 @@ namespace TamgaApp
         #region ✉️ 16. ÇOKLU ZARF YAZDIRMA (MANUEL GİRİŞ VE İŞLEMLER)
 
         // Normal Zarf sayfasındaki "Manuel Yazdır" butonunun tıklanma olayı
-        private void btnManuelAdresEkle_Click(object sender, EventArgs e)
+        private void btnManuelAdresEkle_Click(object sender, EventArgs e)
         {
-            // 1. Şık ve Dinamik Bir Popup Form Oluşturuyoruz
-            Form frmManuel = new Form
+            // 1. Şık ve Dinamik Bir Popup Form Oluşturuyoruz
+            Form frmManuel = new Form
             {
                 Width = 400,
                 Height = 350,
@@ -9144,8 +9171,8 @@ namespace TamgaApp
                 BackColor = Color.WhiteSmoke
             };
 
-            // 2. Kutuları ve Etiketleri Hazırlıyoruz
-            Label lblFirma = new Label { Text = "Firma Adı:", Left = 20, Top = 20, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
+            // 2. Kutuları ve Etiketleri Hazırlıyoruz
+            Label lblFirma = new Label { Text = "Firma Adı:", Left = 20, Top = 20, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             TextBox txtFirma = new TextBox { Left = 120, Top = 20, Width = 240 };
 
             Label lblAdres = new Label { Text = "Adres:", Left = 20, Top = 60, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
@@ -9160,8 +9187,8 @@ namespace TamgaApp
             Label lblTel2 = new Label { Text = "Telefon 2:", Left = 20, Top = 220, Width = 100, Font = new Font("Segoe UI", 9, FontStyle.Bold) };
             TextBox txtTel2 = new TextBox { Left = 120, Top = 220, Width = 240 };
 
-            // 🌟 SİHİRLİ DOKUNUŞ: Buton artık DGV'ye kaydetmez, doğrudan yazıcıya gönderir!
-            Button btnYazdir = new Button
+            // 🌟 SİHİRLİ DOKUNUŞ: Buton artık DGV'ye kaydetmez, doğrudan yazıcıya gönderir!
+            Button btnYazdir = new Button
             {
                 Text = "🖨️ DİREKT YAZDIR",
                 Left = 120,
@@ -9175,16 +9202,16 @@ namespace TamgaApp
                 FlatStyle = FlatStyle.Flat
             };
 
-            // 3. Hepsini Forma Monte Ediyoruz
-            frmManuel.Controls.Add(lblFirma); frmManuel.Controls.Add(txtFirma);
+            // 3. Hepsini Forma Monte Ediyoruz
+            frmManuel.Controls.Add(lblFirma); frmManuel.Controls.Add(txtFirma);
             frmManuel.Controls.Add(lblAdres); frmManuel.Controls.Add(txtAdres);
             frmManuel.Controls.Add(lblIl); frmManuel.Controls.Add(txtIl);
             frmManuel.Controls.Add(lblTel1); frmManuel.Controls.Add(txtTel1);
             frmManuel.Controls.Add(lblTel2); frmManuel.Controls.Add(txtTel2);
             frmManuel.Controls.Add(btnYazdir);
 
-            // 4. Yazdır Butonuna Basıldığında Ne Olacak?
-            btnYazdir.Click += (s, args) =>
+            // 4. Yazdır Butonuna Basıldığında Ne Olacak?
+            btnYazdir.Click += (s, args) =>
             {
                 if (string.IsNullOrWhiteSpace(txtFirma.Text))
                 {
@@ -9192,8 +9219,8 @@ namespace TamgaApp
                     return;
                 }
 
-                // 🚀 VERİTABANINA DOKUNMADAN SADECE RAM'DE YAŞAYAN GEÇİCİ BİR FİRMA OLUŞTUR
-                Firma geciciFirma = new Firma
+                // 🚀 VERİTABANINA DOKUNMADAN SADECE RAM'DE YAŞAYAN GEÇİCİ BİR FİRMA OLUŞTUR
+                Firma geciciFirma = new Firma
                 {
                     FirmaAdi = txtFirma.Text.Trim(),
                     Adres = txtAdres.Text.Trim(),
@@ -9204,12 +9231,12 @@ namespace TamgaApp
 
                 frmManuel.Close(); // Popup pencereyi kapat
 
-                // 🚀 EDGE YAZDIRMA MOTORUNA BU GEÇİCİ FİRMAYI GÖNDER!
-                ManuelZarfiEdgeIleYazdir(geciciFirma);
+                // 🚀 EDGE YAZDIRMA MOTORUNA BU GEÇİCİ FİRMAYI GÖNDER!
+                ManuelZarfiEdgeIleYazdir(geciciFirma);
             };
 
-            // 5. Formu Ekrana Çıkartıyoruz
-            frmManuel.ShowDialog();
+            // 5. Formu Ekrana Çıkartıyoruz
+            frmManuel.ShowDialog();
         }
 
         // Manuel oluşturulan geçici firmayı alıp HTML şablonuna giydiren özel yazdırma motoru
@@ -12280,6 +12307,5 @@ namespace TamgaApp
         // =========================================================================================
 
         #endregion
-
     }
 }
