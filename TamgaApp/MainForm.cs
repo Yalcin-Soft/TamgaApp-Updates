@@ -3678,7 +3678,6 @@ namespace TamgaApp
 
             Button btnFiltrele = new Button { Text = "🔍 Sorgula", Location = new Point(765, 20), Width = 100, Height = 30, BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), FlatStyle = FlatStyle.Flat };
 
-            // 🚨 İŞTE O KAN KIRMIZISI "SEVKİYATI GERİ AL" BUTONU BURADA
             Button btnGeriAl = new Button();
             btnGeriAl.Text = "↩️ SEVKİYATI GERİ AL";
             btnGeriAl.BackColor = Color.FromArgb(231, 76, 60);
@@ -3689,7 +3688,17 @@ namespace TamgaApp
             btnGeriAl.Cursor = Cursors.Hand;
             btnGeriAl.FlatStyle = FlatStyle.Flat;
 
-            pnlUst.Controls.AddRange(new Control[] { lblTur, cmbTur, lblYil, cmbYil, lblAy, cmbAy, lblGun, cmbGun, lblFirma, txtFirmaAra, btnFiltrele, btnGeriAl });
+            Button btnDuzenle = new Button();
+            btnDuzenle.Text = "✏️ DÜZENLE (REVİZE)";
+            btnDuzenle.BackColor = Color.DarkOrange;
+            btnDuzenle.ForeColor = Color.Black;
+            btnDuzenle.Font = new Font("Segoe UI", 9, FontStyle.Bold);
+            btnDuzenle.Size = new Size(150, 30);
+            btnDuzenle.Location = new Point(1040, 20);
+            btnDuzenle.Cursor = Cursors.Hand;
+            btnDuzenle.FlatStyle = FlatStyle.Flat;
+
+            pnlUst.Controls.AddRange(new Control[] { lblTur, cmbTur, lblYil, cmbYil, lblAy, cmbAy, lblGun, cmbGun, lblFirma, txtFirmaAra, btnFiltrele, btnGeriAl, btnDuzenle });
 
             try
             {
@@ -3761,7 +3770,6 @@ namespace TamgaApp
             btnFiltrele.Click += (btnSender, btnEv) => AgaciDoldur();
             AgaciDoldur();
 
-            // 🚨 GERİ AL BUTONU TIKLANMA MOTORU (CS0136 HATASINI ÖNLEME VE DATASOURCE TEMİZLİĞİ)
             btnGeriAl.Click += (btnSender, btnEv) =>
             {
                 if (tvArsiv.SelectedNode == null || tvArsiv.SelectedNode.Tag == null || !tvArsiv.SelectedNode.Tag.ToString().EndsWith(".csv"))
@@ -3781,22 +3789,20 @@ namespace TamgaApp
                     {
                         if (File.Exists(dosyaYolu))
                         {
-                            // 🌟 1. ADIM: GERÇEK GERİ ALMA (GHOST MODU KARA LİSTESİNDEN ÇIKARTMA)
                             string[] satirlar = File.ReadAllLines(dosyaYolu, System.Text.Encoding.UTF8);
                             if (satirlar.Length > 1)
                             {
                                 string[] huc = satirlar[1].Split(';');
                                 if (huc.Length >= 3)
                                 {
-                                    string belgeNolar = huc[2]; // Örn: SE-001, SE-002
+                                    string belgeNolar = huc[2];
                                     string[] belgeler = belgeNolar.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
                                     foreach (string b in belgeler)
                                     {
-                                        TamamlananBelgeNolar.Remove(b); // RAM'deki kara listeden sil
+                                        TamamlananBelgeNolar.Remove(b);
                                     }
 
-                                    // TXT Dosyasını (Kalıcı Kara Listeyi) de güncelle
                                     string txtYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "KapananBelgeler.txt");
                                     if (File.Exists(txtYol))
                                     {
@@ -3806,24 +3812,159 @@ namespace TamgaApp
                                 }
                             }
 
-                            // 🌟 2. ADIM: DOSYAYI UÇUR
                             File.Delete(dosyaYolu);
 
-                            MessageBox.Show("Sevkiyat başarıyla iptal edildi ve geri alındı!\n\nSipariş numaraları Ghost modundan çıkartıldı ve ana ekrandaki açık sipariş listesine döndü.", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            MessageBox.Show("Sevkiyat başarıyla iptal edildi ve geri alındı!", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                            // 🌟 3. ADIM: ARAYÜZÜ (UI) HATASIZ TEMİZLE
-                            tvArsiv.Nodes.Remove(tvArsiv.SelectedNode); // Ağaçtan sil
+                            tvArsiv.Nodes.Remove(tvArsiv.SelectedNode);
                             dgvDetay.DataSource = null;
                             dgvDetay.Rows.Clear();
                             dgvDetay.Columns.Clear();
 
-                            // 🌟 4. ADIM: ANA EKRANI OTOMATİK YENİLE! (Müşteri Kutusunu Geri Doldurur)
                             btnSiparisYenile_Click(null, null);
                         }
                     }
                     catch (Exception ex)
                     {
                         MessageBox.Show("Geri alma işlemi sırasında hata oluştu: \n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+
+            // 🌟 İŞTE HATA VEREN DÜZENLE BUTONUNU TVARSIV OLUŞTURULDUKTAN SONRAYA ALDIK!
+            btnDuzenle.Click += (btnSender, btnEv) =>
+            {
+                if (tvArsiv.SelectedNode == null || tvArsiv.SelectedNode.Tag == null || !tvArsiv.SelectedNode.Tag.ToString().EndsWith(".csv"))
+                {
+                    MessageBox.Show("Lütfen düzenlemek istediğiniz geçmiş sevkiyat dosyasını sol ağaçtan seçin!", "Seçim Yok", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                string dosyaYolu = tvArsiv.SelectedNode.Tag.ToString();
+                string dosyaAdi = tvArsiv.SelectedNode.Text.Replace("📄 ", "");
+
+                DialogResult onay = MessageBox.Show($"'{dosyaAdi}' isimli sevkiyat raporu REVİZE edilmek üzere açılacak.\n\nBu işlem mevcut arşivi silecektir. Dosya, ana ekrandaki 'Askıdaki Sevkiyatlar' (Yarım Kalanlar) listesine aktarılacak. Düzenleyip tekrar Tam Sevk yapabilirsiniz.\n\nEmin misiniz?", "Düzenleme Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                if (onay == DialogResult.Yes)
+                {
+                    try
+                    {
+                        string[] satirlar = File.ReadAllLines(dosyaYolu, System.Text.Encoding.UTF8);
+                        if (satirlar.Length < 4) { MessageBox.Show("Dosya formatı bozuk!"); return; }
+
+                        string[] huc = satirlar[1].Split(';');
+                        string musteri = huc[0];
+                        string sevkMusteri = huc[1];
+                        string belgeler = huc[2];
+
+                        YarimSevkiyatHafizasi hfz = new YarimSevkiyatHafizasi
+                        {
+                            MusteriAdi = musteri,
+                            SevkMusteri = sevkMusteri,
+                            BelgeNo = belgeler,
+                            KayitTarihi = DateTime.Now,
+                            AnaOkutulanlar = new Dictionary<string, int>(),
+                            PaletMatrisiDurumu = new Dictionary<int, Dictionary<int, string>>(),
+                            PaletBarkodlari = new Dictionary<string, string>()
+                        };
+
+                        List<string> paletListesi = new List<string>();
+                        bool detayBasladi = false;
+
+                        foreach (string l in satirlar)
+                        {
+                            if (l.Contains("--- DETAYLAR ---")) { detayBasladi = true; continue; }
+                            if (detayBasladi && !l.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(l))
+                            {
+                                string pAdi = l.Split(';')[0].Trim();
+                                if (!paletListesi.Contains(pAdi)) paletListesi.Add(pAdi);
+                            }
+                        }
+                        hfz.PaletSayisi = paletListesi.Count;
+
+                        detayBasladi = false;
+                        int rIdx = 0;
+                        foreach (string l in satirlar)
+                        {
+                            if (l.Contains("--- DETAYLAR ---")) { detayBasladi = true; continue; }
+                            if (detayBasladi && !l.StartsWith("Palet No") && !string.IsNullOrWhiteSpace(l))
+                            {
+                                string[] pCols = l.Split(';');
+                                string pAdi = pCols[0].Trim();
+                                string icerik = pCols[1].Trim();
+                                string pBarkod = pCols[2].Trim();
+
+                                if (!hfz.PaletBarkodlari.ContainsKey(pAdi)) hfz.PaletBarkodlari.Add(pAdi, pBarkod);
+
+                                int cIdx = paletListesi.IndexOf(pAdi);
+
+                                if (!hfz.PaletMatrisiDurumu.ContainsKey(rIdx)) hfz.PaletMatrisiDurumu[rIdx] = new Dictionary<int, string>();
+                                hfz.PaletMatrisiDurumu[rIdx][cIdx] = icerik;
+
+                                string[] adetBol = icerik.Split(new string[] { " | Adet: " }, StringSplitOptions.None);
+                                if (adetBol.Length == 2)
+                                {
+                                    string urunKismi = adetBol[0];
+                                    int adet = 0; int.TryParse(adetBol[1], out adet);
+
+                                    string bNo = "";
+                                    int pAc = urunKismi.LastIndexOf('('); int pKapa = urunKismi.LastIndexOf(')');
+                                    if (pAc > 0 && pKapa > pAc)
+                                    {
+                                        bNo = urunKismi.Substring(pAc + 1, pKapa - pAc - 1).Trim();
+                                        urunKismi = urunKismi.Substring(0, pAc).Trim();
+                                    }
+
+                                    string mKodu = urunKismi; string renk = "";
+                                    int kAc = urunKismi.LastIndexOf('['); int kKapa = urunKismi.LastIndexOf(']');
+                                    if (kAc > 0 && kKapa > kAc)
+                                    {
+                                        renk = urunKismi.Substring(kAc + 1, kKapa - kAc - 1).Trim();
+                                        urunKismi = urunKismi.Substring(0, kAc).Trim();
+                                    }
+
+                                    int tire = urunKismi.IndexOf(" - ");
+                                    if (tire > 0) mKodu = urunKismi.Substring(0, tire).Trim();
+                                    else mKodu = urunKismi.Trim();
+
+                                    string anahtar = $"{bNo}_{mKodu}_{renk}";
+                                    if (!hfz.AnaOkutulanlar.ContainsKey(anahtar)) hfz.AnaOkutulanlar[anahtar] = adet;
+                                    else hfz.AnaOkutulanlar[anahtar] += adet;
+                                }
+                                rIdx++;
+                            }
+                        }
+
+                        string anaYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp Yarım Sevkiyatlar");
+                        if (!Directory.Exists(anaYol)) Directory.CreateDirectory(anaYol);
+
+                        string musteriTemiz = string.Join("_", hfz.MusteriAdi.Split(Path.GetInvalidFileNameChars()));
+                        string yeniDosyaAdi = $"[REVİZE] {musteriTemiz} - {DateTime.Now:dd.MM.yyyy HH-mm-ss}.json";
+                        string jsonYol = Path.Combine(anaYol, yeniDosyaAdi);
+
+                        File.WriteAllText(jsonYol, Newtonsoft.Json.JsonConvert.SerializeObject(hfz, Newtonsoft.Json.Formatting.Indented));
+
+                        string[] iptalEdilenBelgeler = belgeler.Split(new[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (string b in iptalEdilenBelgeler) TamamlananBelgeNolar.Remove(b);
+
+                        string txtYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "KapananBelgeler.txt");
+                        if (File.Exists(txtYol))
+                        {
+                            var guncelListe = File.ReadAllLines(txtYol).Where(x => !iptalEdilenBelgeler.Contains(x.Trim())).ToList();
+                            File.WriteAllLines(txtYol, guncelListe);
+                        }
+
+                        File.Delete(dosyaYolu);
+
+                        MessageBox.Show("Sevkiyat başarıyla 'Düzenleme (Revize)' moduna alındı!\n\nAna ekrandaki 'Askıdakileri Getir' butonundan çağırarak düzenleme yapabilirsiniz.", "Revize Modu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                        frmArsiv.Close();
+                        btnSiparisYenile_Click(null, null);
+                        btnYarimGetir_Click(null, null);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show("Düzenleme işlemi sırasında hata oluştu:\n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             };
@@ -10216,6 +10357,40 @@ namespace TamgaApp
                                 ToolStripMenuItem btnAtla = new ToolStripMenuItem("⏭️ Manuel Onayla (Atla)");
                                 btnAtla.Click += (ms, me) => { DisaridanBarkodGeldi(seciliModel.Barkod); };
                                 menu.Items.Add(btnAtla);
+
+                                // 🌟 YENİ: PALET İPTAL (YÜKLEMEDEN ÇIKARTMA) BUTONU
+                                ToolStripMenuItem btnIptal = new ToolStripMenuItem("❌ Paleti İptal Et (Yüklemeden Çıkar)");
+                                btnIptal.ForeColor = Color.DarkRed;
+                                btnIptal.Click += (ms, me) =>
+                                {
+                                    DialogResult onay = MessageBox.Show($"'{seciliModel.PaletAdi}' kamyona yüklenmekten İPTAL edilecek.\n\nBu işlem paleti listeden çıkartır ve sistem bu paleti araca yüklemenizi beklemez. Emin misiniz?", "Palet İptal", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                                    if (onay == DialogResult.Yes)
+                                    {
+                                        paletModelleri.Remove(seciliModel);
+                                        if (okutulanBarkodlar.Contains(seciliModel.Barkod)) okutulanBarkodlar.Remove(seciliModel.Barkod);
+
+                                        ListeyiGuncelle();
+
+                                        if (paletModelleri.Count > 0 && okutulanBarkodlar.Count == paletModelleri.Count)
+                                        {
+                                            renkSifirlayici.Stop();
+                                            pnlOrta.BackColor = Color.FromArgb(46, 204, 113);
+                                            lblMesaj.Text = "🎉 YÜKLEME TAMAMLANDI!\nTÜM PALETLER ARAÇTA.";
+                                            MessageBox.Show("Kalan tüm paletler başarıyla araca yüklendi. Araç çıkış yapabilir.", "Sevkiyat Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                            this.DialogResult = DialogResult.OK;
+                                            this.Close();
+                                        }
+                                        else if (paletModelleri.Count == 0)
+                                        {
+                                            MessageBox.Show("Yüklenecek hiçbir palet kalmadı. İşlem iptal edildi.", "İptal", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                            this.Close();
+                                        }
+                                    }
+                                };
+
+                                menu.Items.Add(new ToolStripSeparator());
+                                menu.Items.Add(btnIptal);
 
                                 menu.Show(Cursor.Position);
                             }
