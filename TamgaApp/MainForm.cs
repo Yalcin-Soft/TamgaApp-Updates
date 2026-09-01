@@ -8468,6 +8468,49 @@ namespace TamgaApp
                 }
 
                 btnSevkAra_Click(null, null);
+                btnSevkAra_Click(null, null);
+
+                // 🌟 KAPANMIŞ (İRSALİYE KESİLMİŞ) SİPARİŞLER İÇİN REVİZE ZIRHI 🌟
+                // Eğer sipariş SQL'de kapandığı için sol tablo (dgvMalzemeler) boş geldiyse, 
+                // sistemi kandırıp ürünleri hafızadaki dosyanın içinden suni olarak tabloya diziyoruz!
+                if (dgvMalzemeler.Rows.Count == 0 && hafiza.AnaOkutulanlar.Count > 0)
+                {
+                    var yerelUrunler = DataAccess.GetAllUrunler();
+                    DataTable dtEkran = new DataTable();
+                    dtEkran.Columns.Add("Belge No", typeof(string));
+                    dtEkran.Columns.Add("Malzeme Kodu", typeof(string));
+                    dtEkran.Columns.Add("Barkod", typeof(string));
+                    dtEkran.Columns.Add("Malzeme Adı", typeof(string));
+                    dtEkran.Columns.Add("Açıklama", typeof(string));
+                    dtEkran.Columns.Add("Sipariş Adedi", typeof(int));
+                    dtEkran.Columns.Add("Okutulan", typeof(int));
+
+                    foreach (var kvp in hafiza.AnaOkutulanlar)
+                    {
+                        // anahtar = "SE-001_KOD_Renk"
+                        string[] parcalar = kvp.Key.Split('_');
+                        string bNo = parcalar[0];
+                        string mKodu = parcalar.Length > 1 ? parcalar[1] : "";
+                        string renk = parcalar.Length > 2 ? parcalar[2] : "";
+
+                        // Ürünün adını ve barkodunu yerel veritabanımızdan bul
+                        var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == mKodu && u.Renk.Equals(renk, StringComparison.OrdinalIgnoreCase));
+                        if (urun == null) urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == mKodu);
+
+                        string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : "BARKOD YOK";
+                        string mAdi = urun != null ? urun.Aciklama : "Bilinmeyen Ürün";
+
+                        // Sipariş adedini mecburen arşivdeki miktar kadar yapıyoruz, çünkü orijinal siparişi artık bilmiyoruz.
+                        // Okutulan'ı 0 yapıyoruz, çünkü hemen aşağıdaki "Şelale Mantığı" döngüsü onu alıp olması gerektiği gibi dolduracak!
+                        int adet = kvp.Value;
+                        dtEkran.Rows.Add(bNo, mKodu, barkod, mAdi, renk, adet, 0);
+                    }
+
+                    dgvMalzemeler.DataSource = dtEkran;
+                    dgvMalzemeler.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+                }
+
+                // MÜKEMMEL DAĞITIM VE ŞELALE MANTIĞI
 
                 // MÜKEMMEL DAĞITIM VE ŞELALE MANTIĞI
                 foreach (DataGridViewRow row in dgvMalzemeler.Rows)
