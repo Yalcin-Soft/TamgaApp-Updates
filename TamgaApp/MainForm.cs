@@ -6037,7 +6037,6 @@ namespace TamgaApp
                                         if (solSatir.IsNewRow) continue;
                                         if (solSatir.Cells["Malzeme Kodu"].Value?.ToString().Trim() == mKodu)
                                         {
-                                            // 🌟 YENİ ZIRH: SQL'den gelen gizli alt satır (Enter) karakterlerini temizle ve boşluğa çevir!
                                             string mAdi = solSatir.Cells["Malzeme Adı"].Value?.ToString() ?? "";
                                             string mAciklama = solSatir.Cells["Açıklama"].Value?.ToString() ?? "";
 
@@ -6102,23 +6101,24 @@ namespace TamgaApp
                     // 🌟 TÜM ÇALIŞMA SAYFASI İÇİN "METNİ KAYDIR" ÖZELLİĞİNİ KOMPLE KAPATTIK!
                     ws.Style.Alignment.WrapText = false;
 
-                    // Başlıklar
+                    // 🌟 YENİ BAŞLIKLAR (Sevk Müşterisi Sütunu Eklendi)
                     ws.Cell(1, 1).Value = "Müşteri Adı";
-                    ws.Cell(1, 2).Value = "Belge No";
-                    ws.Cell(1, 3).Value = "Malzeme Kodu";
-                    ws.Cell(1, 4).Value = "Malzeme Adı";
-                    ws.Cell(1, 5).Value = "Açıklaması";
-                    ws.Cell(1, 6).Value = "Toplam Adet";
+                    ws.Cell(1, 2).Value = "Sevk Müşterisi";
+                    ws.Cell(1, 3).Value = "Belge No";
+                    ws.Cell(1, 4).Value = "Malzeme Kodu";
+                    ws.Cell(1, 5).Value = "Malzeme Adı";
+                    ws.Cell(1, 6).Value = "Açıklaması";
+                    ws.Cell(1, 7).Value = "Toplam Adet";
 
-                    // Palet Başlıkları
-                    int colIndex = 7;
+                    // Palet Başlıkları (Sütunlar 1 kaydığı için 8'den başlıyor)
+                    int colIndex = 8;
                     for (int i = 0; i < paletSayisi; i++)
                     {
                         ws.Cell(1, colIndex).Value = $"PALET {i + 1}";
                         colIndex++;
                     }
 
-                    // Verileri Doldur
+                    // 🌟 VERİLERİ DOLDUR
                     int satir = 2;
                     foreach (var rv in raporHavuzu.Values)
                     {
@@ -6126,13 +6126,14 @@ namespace TamgaApp
                         if (genelToplam == 0) continue;
 
                         ws.Cell(satir, 1).Value = txtMusteriAdi.Text.Trim();
-                        ws.Cell(satir, 2).Value = rv.BelgeNo;
-                        ws.Cell(satir, 3).Value = rv.MalzemeKodu;
-                        ws.Cell(satir, 4).Value = rv.MalzemeAdi;
-                        ws.Cell(satir, 5).Value = rv.Aciklama;
-                        ws.Cell(satir, 6).Value = genelToplam;
+                        ws.Cell(satir, 2).Value = txtSevkMusteri.Text.Trim(); // 🌟 YENİ VERİ EKLENDİ
+                        ws.Cell(satir, 3).Value = rv.BelgeNo;
+                        ws.Cell(satir, 4).Value = rv.MalzemeKodu;
+                        ws.Cell(satir, 5).Value = rv.MalzemeAdi;
+                        ws.Cell(satir, 6).Value = rv.Aciklama;
+                        ws.Cell(satir, 7).Value = genelToplam;
 
-                        int pCol = 7;
+                        int pCol = 8; // Palet verileri de 8. sütundan başlıyor
                         for (int j = 0; j < paletSayisi; j++)
                         {
                             if (rv.PaletAdetleri[j] > 0)
@@ -6918,35 +6919,30 @@ namespace TamgaApp
         // 🌟 KISMİ SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
         private void btnKismiSevk_Click(object sender, EventArgs e)
         {
-
             // 🌟 ZIRH 1: Havada Kalan Verileri Tabloya Yazdır
             dgvPaletler.EndEdit();
             dgvPaletMatrisi.EndEdit();
 
             // 🌟 ZIRH 2: Barkodsuz ve Boş Palet Dedektörü
-            List<string> hataliPaletler = new List<string>();
+            System.Collections.Generic.List<string> hataliPaletler = new System.Collections.Generic.List<string>();
 
             foreach (DataGridViewRow row in dgvPaletler.Rows)
             {
                 if (row.IsNewRow) continue;
 
-                // NOT: Kendi dgvPaletler tablondaki sütun isimlerine göre buraları güncelle!
                 string paletNo = row.Cells["PaletAdi"].Value?.ToString() ?? "Bilinmeyen Palet";
                 string barkod = row.Cells["BarkodNo"].Value?.ToString();
 
-                // Paletin içindeki ürün sayısını kontrol et (Miktar sütunu)
                 int miktar = 0;
                 if (row.Cells["Miktar"] != null && row.Cells["Miktar"].Value != null)
                 {
                     int.TryParse(row.Cells["Miktar"].Value.ToString(), out miktar);
                 }
 
-                // KURAL 1: Barkod boş mu?
                 if (string.IsNullOrWhiteSpace(barkod))
                 {
                     hataliPaletler.Add($"{paletNo} (Barkodu Yok veya Yazdırılmamış)");
                 }
-                // KURAL 2: Palet boş mu?
                 else if (miktar == 0)
                 {
                     hataliPaletler.Add($"{paletNo} (İçi Boş, Ürün Eklenmemiş)");
@@ -6960,7 +6956,7 @@ namespace TamgaApp
                                 string.Join("\n👉 ", hataliPaletler) +
                                 "\n\nLütfen hataları düzeltip tekrar deneyin.",
                                 "Kritik Eksiklik", MessageBoxButtons.OK, MessageBoxIcon.Stop);
-                return; // 🛑 İŞLEMİ KESER, KAYDETMEZ!
+                return;
             }
 
             // 🌟 ZIRH 3: Çift Tıklama Koruması
@@ -6977,21 +6973,22 @@ namespace TamgaApp
 
                     if (otoOnay == DialogResult.Yes)
                     {
-                        btnYarimAc_Click(null, null); // Ekrana saniyesinde yükle
-                        if (dgvMalzemeler.Rows.Count == 0) return; // Yükleme hatası varsa devam etme
+                        btnYarimAc_Click(null, null);
+                        if (dgvMalzemeler.Rows.Count == 0) return;
                     }
                     else return;
                 }
                 else return;
             }
 
-            List<string> eksikListesi = new List<string>();
+            System.Collections.Generic.List<string> eksikListesi = new System.Collections.Generic.List<string>();
             foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
             {
                 if (satir.IsNewRow || satir.Cells["Malzeme Kodu"].Value == null) continue;
 
-                int siparis = Convert.ToInt32(satir.Cells["Sipariş Adedi"].Value);
-                int okutulan = Convert.ToInt32(satir.Cells["Okutulan"].Value);
+                int siparis = 0, okutulan = 0;
+                if (satir.Cells["Sipariş Adedi"].Value != null) int.TryParse(satir.Cells["Sipariş Adedi"].Value.ToString(), out siparis);
+                if (satir.Cells["Okutulan"].Value != null) int.TryParse(satir.Cells["Okutulan"].Value.ToString(), out okutulan);
 
                 if (okutulan < siparis)
                 {
@@ -7008,30 +7005,66 @@ namespace TamgaApp
 
                     MessageBox.Show("Kısmi Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    HashSet<string> bitenBelgeler = new HashSet<string>();
+                    // 🌟 İŞTE ZEKİ FİLTRE (KAPANAN BELGE ZIRHI) BURADA BAŞLIYOR 🌟
+                    System.Collections.Generic.List<string> islemGorenBelgeler = new System.Collections.Generic.List<string>();
+                    System.Collections.Generic.List<string> tamBitenBelgeler = new System.Collections.Generic.List<string>();
+
+                    // 1. Masadaki tüm belgeleri (eksik/tam fark etmez) topla
                     foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                     {
-                        if (satir.Cells["Belge No"].Value != null)
-                            bitenBelgeler.Add(satir.Cells["Belge No"].Value.ToString());
+                        if (!satir.IsNewRow && satir.Cells["Belge No"].Value != null)
+                        {
+                            string bNo = satir.Cells["Belge No"].Value.ToString().Trim();
+                            if (!islemGorenBelgeler.Contains(bNo)) islemGorenBelgeler.Add(bNo);
+                        }
                     }
 
-                    string birlesikBelgeIsmi = string.Join("_", bitenBelgeler);
+                    // 2. Her bir belge için %100 bitti mi kontrolü yap
+                    foreach (string aktifBelge in islemGorenBelgeler)
+                    {
+                        bool belgeTamamenBittiMi = true;
+                        foreach (DataGridViewRow row in dgvMalzemeler.Rows)
+                        {
+                            if (!row.IsNewRow && row.Cells["Belge No"].Value?.ToString().Trim() == aktifBelge)
+                            {
+                                int siparisAdedi = 0, okutulanAdet = 0;
+                                if (row.Cells["Sipariş Adedi"].Value != null) int.TryParse(row.Cells["Sipariş Adedi"].Value.ToString(), out siparisAdedi);
+                                if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulanAdet);
+
+                                // 1 tane bile eksik okutulan varsa, o belge KAPANAMAZ!
+                                if (okutulanAdet < siparisAdedi)
+                                {
+                                    belgeTamamenBittiMi = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (belgeTamamenBittiMi) tamBitenBelgeler.Add(aktifBelge);
+                    }
+
+                    // Arşivi kaydederken masadaki eksik veya tam fark etmez TİKLİ tüm belgelerin ismini kullan
+                    string birlesikBelgeIsmi = string.Join("_", islemGorenBelgeler);
                     string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
                     SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "KISMI_SEVK", secilenPalet);
 
-                    KaliciKaraListeyeTopluEkle(bitenBelgeler);
-
-                    foreach (string bitenBelge in bitenBelgeler)
+                    // 🚀 SADECE %100 BİTENLERİ KARA LİSTEYE AL VE TABLODAN SİL (Kısmiler açıkta kalır!)
+                    if (tamBitenBelgeler.Count > 0)
                     {
-                        for (int i = dtTumSiparisler.Rows.Count - 1; i >= 0; i--)
+                        KaliciKaraListeyeTopluEkle(tamBitenBelgeler);
+
+                        foreach (string bitenBelge in tamBitenBelgeler)
                         {
-                            if (dtTumSiparisler.Rows[i]["BelgeNo"].ToString().Trim() == bitenBelge)
+                            for (int i = dtTumSiparisler.Rows.Count - 1; i >= 0; i--)
                             {
-                                dtTumSiparisler.Rows.RemoveAt(i);
+                                if (dtTumSiparisler.Rows[i]["BelgeNo"] != DBNull.Value && dtTumSiparisler.Rows[i]["BelgeNo"].ToString().Trim() == bitenBelge)
+                                {
+                                    dtTumSiparisler.Rows.RemoveAt(i);
+                                }
                             }
                         }
+                        dtTumSiparisler.AcceptChanges();
                     }
-                    dtTumSiparisler.AcceptChanges();
+                    // 🌟 ZEKİ FİLTRE BURADA BİTTİ 🌟
 
                     // Ekranı temizle
                     txtMusteriAdi.Clear();
@@ -7040,21 +7073,28 @@ namespace TamgaApp
                     clbBelgeNo.Items.Clear();
 
                     cmbSevkPaletSayisi.SelectedIndex = -1;
-
                     dgvMalzemeler.DataSource = null;
 
                     dgvPaletMatrisi.Columns.Clear();
                     dgvPaletMatrisi.Rows.Clear();
                     cmbAktifPalet.Items.Clear();
 
+                    // 🌟 CS0411 (LINQ KOPYALAMA) HATASINI ÖNLEYEN KLASİK MÜŞTERİ YENİLEME
                     cmbMusteri.Items.Clear();
-                    var kalanMusteriler = dtTumSiparisler.AsEnumerable()
-                                                        .Select(r => r.Field<string>("MusteriAdi")?.Trim())
-                                                        .Where(m => !string.IsNullOrEmpty(m))
-                                                        .Distinct()
-                                                        .OrderBy(m => m)
-                                                        .ToArray();
-                    cmbMusteri.Items.AddRange(kalanMusteriler);
+                    System.Collections.Generic.List<string> kalanMusteriler = new System.Collections.Generic.List<string>();
+                    foreach (DataRow r in dtTumSiparisler.Rows)
+                    {
+                        if (r["MusteriAdi"] != DBNull.Value)
+                        {
+                            string mAdi = r["MusteriAdi"].ToString().Trim();
+                            if (!string.IsNullOrEmpty(mAdi) && !kalanMusteriler.Contains(mAdi))
+                            {
+                                kalanMusteriler.Add(mAdi);
+                            }
+                        }
+                    }
+                    kalanMusteriler.Sort();
+                    cmbMusteri.Items.AddRange(kalanMusteriler.ToArray());
                 }
             }
             else
@@ -7063,7 +7103,6 @@ namespace TamgaApp
             }
 
             KarantinayaAl(false);
-
         }
 
         #endregion
@@ -9423,6 +9462,13 @@ namespace TamgaApp
         private async void ManuelZarfiEdgeIleYazdir(Firma manuelFirma)
         {
             if (manuelFirma == null) return;
+
+            // 🌟 ZIRH: Eğer ekranda (tasarım masasında) hiçbir nesne yoksa boş kağıt çıkartmasını engelle!
+            if (designItems == null || designItems.Count == 0)
+            {
+                MessageBox.Show("DUR! Tasarım masası şu an bomboş.\n\nYazıcının girdiğiniz bilgileri (Firma, Adres vb.) kağıdın neresine ve hangi boyutta yazacağını bilmesi için lütfen önce:\n\n1. Kayıtlı bir Şablon Yükleyin\nVEYA\n2. 'Dinamik Alan Ekle' butonlarıyla ekrana kutucuklar yerleştirin.", "Şablon Eksik", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             // Kağıt ölçülerini arayüzden al
             string wMm = txtPageWidthMm.Text;

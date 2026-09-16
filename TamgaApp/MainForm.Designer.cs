@@ -357,7 +357,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.button2 = new System.Windows.Forms.Button();
             this.btnNormalManuelYazdir = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
@@ -3986,17 +3985,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // button2
-            // 
-            this.button2.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.button2.Location = new System.Drawing.Point(6, 671);
-            this.button2.Margin = new System.Windows.Forms.Padding(2);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(180, 57);
-            this.button2.TabIndex = 71;
-            this.button2.Text = "Manuel Zarf";
-            this.button2.UseVisualStyleBackColor = true;
-            // 
             // btnNormalManuelYazdir
             // 
             this.btnNormalManuelYazdir.Font = new System.Drawing.Font("Times New Roman", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
@@ -4005,7 +3993,7 @@ namespace TamgaApp
             this.btnNormalManuelYazdir.Name = "btnNormalManuelYazdir";
             this.btnNormalManuelYazdir.Size = new System.Drawing.Size(180, 57);
             this.btnNormalManuelYazdir.TabIndex = 71;
-            this.btnNormalManuelYazdir.Text = "Yenile";
+            this.btnNormalManuelYazdir.Text = "Manuel Zarf Yazdır";
             this.btnNormalManuelYazdir.UseVisualStyleBackColor = true;
             // 
             // MainForm
@@ -4449,7 +4437,6 @@ namespace TamgaApp
         private TextBox txtSevkMusteri;
         private TextBox txtMusteriAdi;
         private ComboBox cmbAktifPalet;
-        private Button button2;
         private Button btnNormalManuelYazdir;
     }
 }
