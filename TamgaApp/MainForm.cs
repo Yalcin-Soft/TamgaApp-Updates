@@ -7570,7 +7570,7 @@ namespace TamgaApp
         private ComboBox cmbSayimRaporSec;
         private ComboBox cmbSayimDepo;
         private ComboBox cmbSayimStokYeri;
-        private TextBox txtSayimFiltre;
+        private ComboBox cmbSayimModelFiltre; // 🌟 YENİ: TextBox yerine ComboBox oldu
         private DataGridView dgvSayimV2;
         private ListBox lstSayimHafiza;
         private TextBox txtSayimBarkod;
@@ -7620,10 +7620,11 @@ namespace TamgaApp
 
             Button btnVeriGetir = new Button { Text = "⬇️ LİSTEYİ GETİR", Location = new Point(465, 20), Size = new Size(150, 40), BackColor = Color.DodgerBlue, ForeColor = Color.White, Font = new Font("Segoe UI", 10, FontStyle.Bold), Cursor = Cursors.Hand };
 
-            Label l4 = new Label { Text = "🔍 Tabloda Malzeme Ara:", Location = new Point(650, 10), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.DarkRed };
-            txtSayimFiltre = new TextBox { Location = new Point(650, 30), Width = 300, Font = new Font("Segoe UI", 11) };
+            // 🌟 YENİ: ARAMA KUTUSU YERİNE MODEL SEÇME KUTUSU EKLENDİ
+            Label l4 = new Label { Text = "🔍 Tabloda Model Filtrele:", Location = new Point(650, 10), AutoSize = true, Font = new Font("Segoe UI", 9, FontStyle.Bold), ForeColor = Color.DarkRed };
+            cmbSayimModelFiltre = new ComboBox { Location = new Point(650, 30), Width = 300, Font = new Font("Segoe UI", 11), DropDownStyle = ComboBoxStyle.DropDownList };
 
-            pnlUstFiltre.Controls.AddRange(new Control[] { l1, cmbSayimRaporSec, l2, cmbSayimDepo, l3, cmbSayimStokYeri, btnVeriGetir, l4, txtSayimFiltre });
+            pnlUstFiltre.Controls.AddRange(new Control[] { l1, cmbSayimRaporSec, l2, cmbSayimDepo, l3, cmbSayimStokYeri, btnVeriGetir, l4, cmbSayimModelFiltre });
 
             // TABLO (Grid)
             dgvSayimV2 = new DataGridView
@@ -7651,7 +7652,7 @@ namespace TamgaApp
 
             cmbSayimRaporSec.SelectedIndexChanged += (s, e) => SayimIcinDepolariDoldur();
             btnVeriGetir.Click += (s, e) => SayimVerileriniTabloyaBas();
-            txtSayimFiltre.TextChanged += (s, e) => SayimTablosunuFiltrele();
+            cmbSayimModelFiltre.SelectedIndexChanged += (s, e) => SayimTablosunuFiltrele(); // 🌟 YENİ BAĞLANTI
             btnSayimBasla.Click += (s, e) => SayimKilidiniAcKapat(true, pnlUstFiltre, btnSayimBasla);
             txtSayimBarkod.KeyDown += TxtSayimBarkodV2_KeyDown;
             btnSayimBeklet.Click += BtnSayimBeklet_Click;
@@ -7715,7 +7716,6 @@ namespace TamgaApp
             if (cmbSayimStokYeri.Items.Count > 0) cmbSayimStokYeri.SelectedIndex = 0;
         }
 
-        // 🌟 3. GETİR BUTONU: VERİLERİ HARMANLA VE TABLOYA DÖK
         private void SayimVerileriniTabloyaBas()
         {
             if (cmbSayimRaporSec.SelectedItem == null) { MessageBox.Show("Lütfen bir rapor seçin!"); return; }
@@ -7731,7 +7731,7 @@ namespace TamgaApp
             dtSayimHavuzu.Columns.Add("Aciklama", typeof(string));
             dtSayimHavuzu.Columns.Add("Renk", typeof(string));
             dtSayimHavuzu.Columns.Add("SistemStogu", typeof(int));
-            dtSayimHavuzu.Columns.Add("SiparisAdedi", typeof(int)); // 🌟 YENİ EKLENDİ
+            dtSayimHavuzu.Columns.Add("SiparisAdedi", typeof(int));
             dtSayimHavuzu.Columns.Add("SayimAdedi", typeof(int));
 
             var yerelUrunler = DataAccess.GetAllUrunler();
@@ -7756,11 +7756,20 @@ namespace TamgaApp
                 if (dgvStok.Columns.Contains("ToplamStok")) int.TryParse(row.Cells["ToplamStok"].Value?.ToString(), out miktar);
                 else if (dgvStok.Columns.Contains("Miktar")) int.TryParse(row.Cells["Miktar"].Value?.ToString(), out miktar);
 
-                // 🌟 SQL Raporundan Sipariş Adedini Yakala (Eğer raporda sütun varsa)
+                // 🌟 SİPARİŞ ADEDİNİ BULMA ZIRHI (Canlı Entegrasyon)
                 int siparis = 0;
                 if (dgvStok.Columns.Contains("SiparisAdedi")) int.TryParse(row.Cells["SiparisAdedi"].Value?.ToString(), out siparis);
                 else if (dgvStok.Columns.Contains("Siparis")) int.TryParse(row.Cells["Siparis"].Value?.ToString(), out siparis);
                 else if (dgvStok.Columns.Contains("SiparisMiktari")) int.TryParse(row.Cells["SiparisMiktari"].Value?.ToString(), out siparis);
+                else if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
+                {
+                    // 🌟 EĞER SQL RAPORUNDA YOKSA: Arkadaki 'Açık Siparişler' havuzundan (dtTumSiparisler) çekip topla!
+                    DataRow[] bekleyenler = dtTumSiparisler.Select($"Malzeme = '{mKodu}'");
+                    foreach (DataRow bRow in bekleyenler)
+                    {
+                        if (bRow["Bakiye"] != DBNull.Value) siparis += Convert.ToInt32(Convert.ToDecimal(bRow["Bakiye"]));
+                    }
+                }
 
                 if (string.IsNullOrEmpty(mKodu)) continue;
 
@@ -7773,43 +7782,63 @@ namespace TamgaApp
                 if (mevcutSatir != null)
                 {
                     mevcutSatir["SistemStogu"] = Convert.ToInt32(mevcutSatir["SistemStogu"]) + miktar;
-                    mevcutSatir["SiparisAdedi"] = Convert.ToInt32(mevcutSatir["SiparisAdedi"]) + siparis; // Üstüne topla
+                    mevcutSatir["SiparisAdedi"] = Convert.ToInt32(mevcutSatir["SiparisAdedi"]) + siparis;
                 }
                 else
                 {
-                    dtSayimHavuzu.Rows.Add(barkod, mKodu, mAdi, "", renk, miktar, siparis, 0); // Siparişi araya ekledik
+                    dtSayimHavuzu.Rows.Add(barkod, mKodu, mAdi, "", renk, miktar, siparis, 0);
                 }
             }
 
             dgvSayimV2.DataSource = null;
             dgvSayimV2.DataSource = dtSayimHavuzu;
 
+            // 🌟 MODELLERİ (Örn: Curvo, Modico) COMBOBOX'A OTOMATİK DİZME
+            System.Collections.Generic.HashSet<string> modeller = new System.Collections.Generic.HashSet<string>();
+            foreach (DataRow r in dtSayimHavuzu.Rows)
+            {
+                string mAdi = r["MalzemeAdi"].ToString().Trim();
+                if (!string.IsNullOrEmpty(mAdi))
+                {
+                    string modelAdi = mAdi.Split(' ')[0]; // Sadece ilk kelimeyi al (Örn: Curvo)
+                    modeller.Add(modelAdi);
+                }
+            }
+
+            cmbSayimModelFiltre.Items.Clear();
+            cmbSayimModelFiltre.Items.Add("TÜM MODELLER");
+            cmbSayimModelFiltre.Items.AddRange(modeller.OrderBy(m => m).ToArray());
+            cmbSayimModelFiltre.SelectedIndex = 0;
+
+            // Kilit ve Renk Ayarları
             dgvSayimV2.Columns["Barkod"].ReadOnly = true;
             dgvSayimV2.Columns["MalzemeKodu"].ReadOnly = true;
             dgvSayimV2.Columns["MalzemeAdi"].ReadOnly = true;
             dgvSayimV2.Columns["SistemStogu"].ReadOnly = true;
-            dgvSayimV2.Columns["SiparisAdedi"].ReadOnly = true; // Kilitlendi
+            dgvSayimV2.Columns["SiparisAdedi"].ReadOnly = true;
 
             dgvSayimV2.Columns["SistemStogu"].DefaultCellStyle.BackColor = Color.LightCyan;
-            dgvSayimV2.Columns["SiparisAdedi"].DefaultCellStyle.BackColor = Color.FromArgb(230, 230, 250); // Açık Mor (Dikkat çekici)
+            dgvSayimV2.Columns["SiparisAdedi"].DefaultCellStyle.BackColor = Color.FromArgb(230, 230, 250);
             dgvSayimV2.Columns["SayimAdedi"].DefaultCellStyle.BackColor = Color.LightYellow;
             dgvSayimV2.Columns["SayimAdedi"].DefaultCellStyle.Font = new Font("Segoe UI", 12, FontStyle.Bold);
 
             SayimSatirRenkleriniGuncelle();
         }
 
+        // 🌟 YENİ: COMBOBOX'A GÖRE TABLOYU FİLTRELEYEN MOTOR
         private void SayimTablosunuFiltrele()
         {
-            if (dtSayimHavuzu == null) return;
-            string ara = txtSayimFiltre.Text.Trim().Replace("'", "''");
+            if (dtSayimHavuzu == null || cmbSayimModelFiltre.SelectedItem == null) return;
+            string secilenModel = cmbSayimModelFiltre.SelectedItem.ToString().Replace("'", "''");
 
-            if (string.IsNullOrEmpty(ara))
+            if (secilenModel == "TÜM MODELLER")
             {
                 dtSayimHavuzu.DefaultView.RowFilter = "";
             }
             else
             {
-                dtSayimHavuzu.DefaultView.RowFilter = $"MalzemeKodu LIKE '%{ara}%' OR MalzemeAdi LIKE '%{ara}%'";
+                // 'MalzemeAdi' sütunu seçilen kelimeyle BAŞLAYANLARI getirir
+                dtSayimHavuzu.DefaultView.RowFilter = $"MalzemeAdi LIKE '{secilenModel}%'";
             }
         }
 
@@ -7822,18 +7851,44 @@ namespace TamgaApp
             }
 
             sayimKilitliMi = kilitlensinMi;
-            pnlUst.Enabled = !kilitlensinMi;
+            if (pnlUst != null) pnlUst.Enabled = !kilitlensinMi;
 
-            if (kilitlensinMi)
+            // 🌟 AKILLI DEDEKTÖR ZIRHI: Eğer buton boş (null) gönderildiyse, sistem arayüzü tarayıp butonu kendi bulur!
+            if (btnBasla == null)
             {
-                btnBasla.Text = "🔒 SAYIM DEVAM EDİYOR (Açmak için tıkla)";
-                btnBasla.BackColor = Color.MediumSeaGreen;
-                txtSayimBarkod.Focus();
+                TabPage sekmeSayim = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "Depo Sayım");
+                if (sekmeSayim != null)
+                {
+                    void ButonAra(Control parent)
+                    {
+                        foreach (Control c in parent.Controls)
+                        {
+                            if (c is Button b && (b.Text.Contains("SAYIMI BAŞLAT") || b.Text.Contains("SAYIM DEVAM EDİYOR")))
+                            {
+                                btnBasla = b;
+                                return;
+                            }
+                            if (btnBasla == null && c.Controls.Count > 0) ButonAra(c); // Matruşka gibi iç içe ara
+                        }
+                    }
+                    ButonAra(sekmeSayim); // Radarı çalıştır
+                }
             }
-            else
+
+            // Buton bulunduysa renklerini ve yazılarını güvenle değiştir
+            if (btnBasla != null)
             {
-                btnBasla.Text = "🚀 SAYIMI BAŞLAT";
-                btnBasla.BackColor = Color.DarkOrange;
+                if (kilitlensinMi)
+                {
+                    btnBasla.Text = "🔒 SAYIM DEVAM EDİYOR (Açmak için tıkla)";
+                    btnBasla.BackColor = Color.MediumSeaGreen;
+                    if (txtSayimBarkod != null) txtSayimBarkod.Focus();
+                }
+                else
+                {
+                    btnBasla.Text = "🚀 SAYIMI BAŞLAT";
+                    btnBasla.BackColor = Color.DarkOrange;
+                }
             }
         }
 
