@@ -6,18 +6,47 @@ using System.Data.OleDb;
 using System.Drawing;
 using System.Drawing.Printing;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using ExcelDataReader;
 using System.IO.Ports;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Data.Sqlite;
 using static TamgaApp.DataAccess;
 
 namespace TamgaApp
 {
+    /// <summary>
+    /// TamgaApp'in ana çalışma penceresidir. Bu dosya, mevcut WinForms iş akışını koruyarak
+    /// uygulamanın başlangıç işlemlerini, ekran davranışlarını ve depo/sevkiyat modüllerini
+    /// tek bir kısmi form sınıfında barındırır. Bölümler, önce ortak altyapı ve açılış akışı,
+    /// ardından kullanıcı işlevleri, en son raporlama ve veri koruma işlemleri gelecek şekilde
+    /// numaralandırılmıştır. Bir bölüm taşınırken Designer tarafından bağlanan olay adları ve
+    /// mevcut metot imzaları korunmalıdır.
+    /// </summary>
     public partial class MainForm : Form
     {
-        #region 🌐 00.TamgaApp
+        #region 🌐 00 | TAMGAAPP ANA FORMU — DOSYA HARİTASI
+
+        // BÖLÜM SIRASI
+        // 01     Ortak durum, oturum ve veri modelleri
+        // 02     Formun açılışı, yetki filtreleri ve ortak arayüz ayarları
+        // 03-05  Tasarım masası, şablon düzenleme ve fare/klavye etkileşimi
+        // 06     Yazıcı eşleştirme, önizleme ve toplu yazdırma
+        // 07-10  Firma/ürün verileri, üretim ve Excel işlemleri
+        // 11     Kullanıcı yönetimi ve oturum işlemleri
+        // 12-14  Ambar, sipariş, barkod, sevkiyat ve sayım akışları
+        // 15-21  Yazıcı, zarf, etiket ve genel klasör ayarları
+        // 22-26  Kamyon/kiosk, kullanım kılavuzu ve operasyon raporları
+        // 27     Dinamik stok raporları ve SQL bağlantıları
+        // 28-29  Otomatik yedek, güvenli geri yükleme ve tam sistem yedeği
+        //
+        // Bu harita kod içinde gezinmek içindir. İş mantığını değiştirmeden yapılan düzenlemelerde
+        // aynı özelliğe ait metotları kendi numaralı bölümü içinde tutmak bakım ve hata takibini
+        // kolaylaştırır.
 
         #region 🌐 01. ÇEKİRDEK SİSTEM VE GLOBAL DEĞİŞKENLER (CORE SYSTEM VARIABLES)
 
@@ -84,6 +113,21 @@ namespace TamgaApp
         // ------------------------------------------------------------------------
         public static string AktifKullaniciAdi = "";
         public static string AktifYetkiler = "";
+
+        /// <summary>
+        /// Geçerli oturumun uygulamanın tüm ekranlarına ve yönetim işlevlerine erişebildiğini
+        /// belirler. Kaynakta tanımlı TamgaApp ana yönetici girişi, yetki metni eksik veya farklı
+        /// olsa bile tam yetkili kalır. Veritabanı üzerinden açılan ve yetkisi "Sınırsız" olarak
+        /// tanımlanan yönetici hesapları da aynı erişim seviyesindedir. Form sekmeleri, yardım
+        /// içeriği ve yöneticiye özel işlemler bu ortak kontrolden yararlanmalıdır; böylece ana
+        /// yönetici hesabı bir ekranın yerel yetki filtresi nedeniyle uygulama dışına itilmez.
+        /// </summary>
+        public static bool AktifOturumTamYetkiliMi()
+        {
+            return string.Equals(AktifKullaniciAdi, "TamgaApp", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(AktifKullaniciAdi, "Kurucu (TamgaApp)", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(AktifYetkiler, "Sınırsız", StringComparison.Ordinal);
+        }
         #endregion
 
         #region 📐 01.3 GÖRSEL TASARIM MOTORU (DRAG & DROP ENGINE)
@@ -280,12 +324,12 @@ namespace TamgaApp
                 }
             }
 
+            GeriYuklemeKesintisiniKurtar(); // Herhangi bir başlangıç ayarı veri klasörünü yeniden oluşturmadan önce rollback'i kontrol et.
             SesMotorlariniHazirla(); // Sesleri RAM'e yükle
 
-            // 🛡️ ULTRA GÜVENLİ GOD MODE DESTEKLİ YETKİ KALKANI
-            // Giriş yapan kullanıcı "TamgaApp" (Ana Admin) değilse ve yetkisi "Sınırsız" değilse çalışır.
-            // Kullanıcının yetkisi olmayan sekmeleri program açılırken fiziksel olarak siler/gizler.
-            if (AktifKullaniciAdi != "TamgaApp" && AktifYetkiler != "Sınırsız")
+            // Yetki filtresi yalnızca normal kullanıcılar için uygulanır. Ana yönetici hesabı ve
+            // "Sınırsız" yetkili oturumlar burada sekme kaybetmez; helper tek ve ortak karar noktasıdır.
+            if (!AktifOturumTamYetkiliMi())
             {
                 var yetkiListesi = AktifYetkiler.Split(',').Select(y => y.Trim()).ToList();
 
@@ -332,6 +376,7 @@ namespace TamgaApp
             YeniNesilSevkiyatSisteminiKur();
             KlasorAyarlariniEkranaGetir();
             YedeklemeMotorunuBaslat();
+            YoneticiTaniAraclariniHazirla();
 
             // 🌟 TASARIM MOTORLARINI ÇALIŞTIR
             SekmeleriModernlestir();  // (Sekmeleri jilet gibi yapar)
@@ -4908,7 +4953,7 @@ namespace TamgaApp
         // Kullanıcı "Ebatlar" hücresine veri girdiğinde veya değiştirdiğinde anında tetiklenir ve Desi'yi hesaplar.
         private void dgvPaletler_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
-            
+
         }
         #endregion
 
@@ -5270,8 +5315,10 @@ namespace TamgaApp
 
         #region 📥 13.3 AÇIK SİPARİŞLERİ YENİLEME (SQL ÇEKİMİ)
         // "Yenile" butonuna basıldığında ERP sistemindeki açık, sevk edilmemiş siparişleri çeker.
-        private void btnSiparisYenile_Click(object sender, EventArgs e)
+        private async void btnSiparisYenile_Click(object sender, EventArgs e)
         {
+            AdminTraceYaz("BİLGİ", "ERP", "Sipariş yenileme başladı.");
+
             // DİKKAT: Ana global değişkende Ev Modu açıksa SQL'e gitme, sahte verileri yükle!
             if (EvModuAktif) // Bu değişkeni Region 01'den alıyor. Canlıya alırken false olacak.
             {
@@ -5298,6 +5345,10 @@ namespace TamgaApp
             // ====================================================================
             // 🏢 CANLI ORTAM: ORİJİNAL SQL BAĞLANTISI (Ev Modu kapalıyken çalışır)
             // ====================================================================
+            Button yenileButonu = sender as Button;
+            if (yenileButonu != null && !yenileButonu.Enabled) return;
+            if (yenileButonu != null) yenileButonu.Enabled = false;
+
             try
             {
                 string baglantiDizesi = SqlBaglantiDizesiGetir();
@@ -5371,14 +5422,20 @@ namespace TamgaApp
             AND IASBAS010.PRICELIST = B.PRICELIST 
         ORDER BY A.COMPANY, A.CUSTOMER, A.DOCTYPE, A.DOCNUM, B.ITEMNUM;";
 
-                using (OleDbConnection baglanti = new OleDbConnection(baglantiDizesi))
+                // Ağır ERP sorgusunu UI iş parçacığından çıkar. Yeni tablo tamamen gelmeden
+                // ekrandaki son başarılı sipariş listesini temizlemeyiz.
+                DataTable yeniSiparisler = new DataTable();
+                await Task.Run(() =>
                 {
+                    using (OleDbConnection baglanti = new OleDbConnection(baglantiDizesi))
                     using (OleDbDataAdapter adaptor = new OleDbDataAdapter(sorgu, baglanti))
                     {
-                        dtTumSiparisler.Clear();
-                        adaptor.Fill(dtTumSiparisler); // Çekilen veriyi yerel tabloya (RAM) at
+                        adaptor.Fill(yeniSiparisler);
                     }
-                }
+                });
+
+                dtTumSiparisler.Clear();
+                dtTumSiparisler.Merge(yeniSiparisler);
 
                 // 👻 GHOST MODU KARA LİSTESİ: 
                 // SQL siparişi hala "açık" gösterse de, biz onu 'Tam Sevk' yaptıysak
@@ -5405,11 +5462,18 @@ namespace TamgaApp
                                                          .ToArray();
                 cmbMusteri.Items.AddRange(benzersizMusteriler);
 
+                AdminTraceYaz("BİLGİ", "ERP", "Sipariş yenileme tamamlandı.");
                 MessageBox.Show("Açık siparişler çekildi! Lütfen önce Müşteri seçin.", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show("SQL Bağlantı Hatası: \n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AdminTraceYaz("HATA", "ERP", ex.GetType().Name + ": " + ex.Message);
+                MessageBox.Show("SQL Bağlantı Hatası: \n" + ex.Message, "Hata",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (yenileButonu != null && !yenileButonu.IsDisposed) yenileButonu.Enabled = true;
             }
         }
         #endregion
@@ -8147,7 +8211,7 @@ namespace TamgaApp
             }
         }
 
-        
+
 
         #endregion
 
@@ -11227,16 +11291,46 @@ namespace TamgaApp
 
         // =========================================================================================
 
-        #region 📖 24. DİNAMİK KULLANIM KILAVUZU MOTORU (ANSİKLOPEDİK SÜRÜM)
+        #region 📖 24. YETKİYE DUYARLI, ARANABİLİR KULLANIM ANSİKLOPEDİSİ
 
+        // Bu yardım bölümü, kullanıcının o oturumda gerçekten görebildiği ana ve alt sekmeleri
+        // tarar. Yetki filtresinin kaldırdığı ekranlar normal kullanıcıların içindekiler listesine
+        // eklenmez. Tam yetkili oturumda ayrıca yönetici kullanım kılavuzu gösterilir.
+        //
+        // Kurulum: MainForm_Load içindeki YardimSekmesiniKur() çağrısı korunmalıdır.
+
+        private sealed class YardimMakalesi
+        {
+            public string Kimlik { get; set; }
+            public string Kategori { get; set; }
+            public string Baslik { get; set; }
+            public string Icerik { get; set; }
+        }
+
+        private readonly List<YardimMakalesi> yardimMakaleleri = new List<YardimMakalesi>();
+        private TabPage yardimSekmesi;
+        private TreeView yardimIcindekiler;
+        private RichTextBox yardimMakaleGoruntuleyici;
+        private TextBox yardimAramaKutusu;
+        private Label yardimAltBilgi;
+
+        /// <summary>
+        /// Yardım sekmesinin arayüzünü kurar. İçindekiler ve arama alanı, ana ve alt sekmelerden
+        /// oluşturulan makaleleri gösterir. Metinler yalnızca görünür/izinli ekranlara göre hazırlanır.
+        /// </summary>
         public void YardimSekmesiniKur()
         {
-            // 1. "❓ Yardım" sekmesi var mı kontrol et, yoksa en sona oluştur
-            TabPage yardimSekmesi = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "❓ Yardım");
+            yardimSekmesi = tabControl1.TabPages
+                .Cast<TabPage>()
+                .FirstOrDefault(t => string.Equals(t.Text, "❓ Yardım", StringComparison.OrdinalIgnoreCase));
+
             if (yardimSekmesi == null)
             {
-                yardimSekmesi = new TabPage("❓ Yardım");
-                yardimSekmesi.BackColor = Color.WhiteSmoke;
+                yardimSekmesi = new TabPage("❓ Yardım")
+                {
+                    BackColor = Color.FromArgb(246, 248, 250),
+                    Padding = new Padding(8)
+                };
                 tabControl1.TabPages.Add(yardimSekmesi);
             }
             else
@@ -11244,210 +11338,691 @@ namespace TamgaApp
                 yardimSekmesi.Controls.Clear();
             }
 
-            Panel pnlIcerik = new Panel
+            TableLayoutPanel anaYerlesim = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(40),
-                BackColor = Color.WhiteSmoke
+                ColumnCount = 1,
+                RowCount = 3,
+                BackColor = Color.FromArgb(246, 248, 250),
+                Padding = new Padding(10)
+            };
+            anaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
+            anaYerlesim.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            anaYerlesim.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+
+            TableLayoutPanel ustBilgi = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.White,
+                Padding = new Padding(10, 5, 10, 5)
+            };
+            ustBilgi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 68));
+            ustBilgi.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 32));
+
+            FlowLayoutPanel baslikPaneli = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                BackColor = Color.White,
+                Padding = new Padding(2)
+            };
+            baslikPaneli.Controls.Add(new Label
+            {
+                Text = "TAMGAAPP KULLANIM ANSİKLOPEDİSİ",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 15, FontStyle.Bold),
+                ForeColor = Color.FromArgb(25, 70, 95)
+            });
+            baslikPaneli.Controls.Add(new Label
+            {
+                Text = "Adım adım kullanım, işlem öncesi kontroller ve sorun giderme rehberi",
+                AutoSize = true,
+                Font = new Font("Segoe UI", 9, FontStyle.Regular),
+                ForeColor = Color.DimGray
+            });
+
+            TableLayoutPanel aramaPaneli = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = Color.White,
+                Padding = new Padding(8, 4, 4, 4)
+            };
+            aramaPaneli.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+            aramaPaneli.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            aramaPaneli.Controls.Add(new Label
+            {
+                Text = "Konu veya kelime ara",
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 9, FontStyle.Bold),
+                ForeColor = Color.FromArgb(55, 65, 75)
+            }, 0, 0);
+            yardimAramaKutusu = new TextBox
+            {
+                Dock = DockStyle.Fill,
+                Font = new Font("Segoe UI", 10),
+                MaxLength = 120
+            };
+            yardimAramaKutusu.TextChanged += (s, e) => YardimIcindekileriGuncelle(null);
+            aramaPaneli.Controls.Add(yardimAramaKutusu, 0, 1);
+
+            ustBilgi.Controls.Add(baslikPaneli, 0, 0);
+            ustBilgi.Controls.Add(aramaPaneli, 1, 0);
+
+            TableLayoutPanel anaIcerik = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = Color.White,
+                Padding = new Padding(0, 8, 0, 4)
+            };
+            anaIcerik.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 29));
+            anaIcerik.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 71));
+
+            yardimIcindekiler = new TreeView
+            {
+                Dock = DockStyle.Fill,
+                HideSelection = false,
+                FullRowSelect = true,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 9),
+                BackColor = Color.FromArgb(250, 251, 252)
+            };
+            yardimIcindekiler.AfterSelect += (s, e) =>
+            {
+                YardimMakalesi makale = e.Node == null ? null : e.Node.Tag as YardimMakalesi;
+                if (makale != null)
+                    YardimMakalesiniGoster(makale);
             };
 
-            RichTextBox rtbIcerik = new RichTextBox
+            yardimMakaleGoruntuleyici = new RichTextBox
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Segoe UI", 12),
                 ReadOnly = true,
-                BackColor = Color.WhiteSmoke,
-                BorderStyle = BorderStyle.None
+                DetectUrls = true,
+                WordWrap = true,
+                ScrollBars = RichTextBoxScrollBars.Vertical,
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Segoe UI", 10),
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(35, 42, 48),
+                Padding = new Padding(12)
             };
 
-            List<string> yetkiler = (AktifKullaniciAdi == "TamgaApp" || AktifYetkiler == "Sınırsız")
-                                    ? new List<string> { "Sınırsız" }
-                                    : AktifYetkiler.Split(',').Select(y => y.Trim()).ToList();
+            anaIcerik.Controls.Add(yardimIcindekiler, 0, 0);
+            anaIcerik.Controls.Add(yardimMakaleGoruntuleyici, 1, 0);
 
-            System.Text.StringBuilder kilavuzMetni = new System.Text.StringBuilder();
-
-            kilavuzMetni.AppendLine($"SİSTEME HOŞ GELDİNİZ SAYIN {AktifKullaniciAdi.ToUpper()}!\n");
-            kilavuzMetni.AppendLine("TAMGAAPP OTOMASYON V2.0 - KAPSAMLI SİSTEM MİMARİSİ VE KULLANIM ANSİKLOPEDİSİ");
-            kilavuzMetni.AppendLine("Bu doküman, sistemin tüm modüllerinin arka plan çalışma prensiplerini, operasyonel iş akışlarını (Workflow) ve hata giderme (Troubleshooting) prosedürlerini detaylandıran resmi ansiklopedik rehberdir.\n");
-            kilavuzMetni.AppendLine(new string('=', 100) + "\n");
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Ana Panel"))
+            yardimAltBilgi = new Label
             {
-                kilavuzMetni.AppendLine("📌 MODÜL 1: ANA PANEL (KONTROL MERKEZİ VE SİSTEM GÜVENLİĞİ)\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Ana Panel, uygulamanın yaşam döngüsünü (Lifecycle) yöneten kök dizindir. Asenkron saat motoru, oturum yönetimi ve RAM/Port temizlik (Garbage Collection) süreçleri buradan komuta edilir.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Güvenli Çıkış (Kırmızı Buton): Sistemden ayrılırken pencereyi (X) ikonundan kapatmak yerine bu modül kullanılmalıdır. Bu işlem; açık olan donanımsal COM (Barkod) portlarını güvenlice serbest bırakır, veritabanı yığınlarını (Cache) temizler ve donmayı/kilitlenmeyi engelleyen Asenkron Kapanış (Fade-out) motorunu tetikler.");
-                kilavuzMetni.AppendLine("➤ Oturumu Kapat: Vardiya değişimlerinde, programın çekirdek dosyalarını kapatmadan yalnızca Aktif Kullanıcı (Session) kimliğini sıfırlayarak giriş ekranına döner.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Depo Kabul"))
-            {
-                kilavuzMetni.AppendLine("📌 MODÜL 2: DEPO KABUL VE ÜRETİM TAKİP (GİRİŞ KALİTE KONTROL)\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Fabrika üretim hattından çıkan mamullerin veya dış tedarikçiden gelen malzemelerin, SQL veritabanındaki Master Data (Ana Veri) ile eşleştirilerek envantere dahil edilmesini sağlar.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Akıllı Barkod Eşleştirme (Smart Matching): Okutulan her barkod, saliseler içinde SQL veritabanında taranır. Eşleşme bulunursa Ürün Kodu, Adı ve Lavabo Rengi otomatik olarak tabloya yansıtılır. Eşleşme bulunamazsa sistem 'KAYITSIZ' statüsünde dummy (sanal) bir kayıt oluşturur.");
-                kilavuzMetni.AppendLine("➤ Otomatik Yığma (Aggregation): Aynı barkod peş peşe okutulduğunda, sistem yorgunluğunu önlemek adına yeni satır açılmaz; mevcut satırın 'Adet' hücresindeki sayı matematiksel olarak (+1) güncellenir.");
-                kilavuzMetni.AppendLine("➤ Hata İzolasyonu (Geri Alma): Yanlış veya fazla okutulan kalemler, satır seçilip 'Seçilen Kalemleri Sil' komutuyla listeden çıkartılır.");
-                kilavuzMetni.AppendLine("➤ CSV Dışa Aktarım ve Yazdırma: 'Kaydet ve Yazdır' komutu, oluşturulan listeyi öncelikle Masaüstündeki 'Günlük Üretim Takip' klasörüne o günün tarihiyle .csv formatında (Excel uyumlu) mühürler. Ardından GDI+ çizim motorunu kullanarak endüstriyel standartlarda A4 Kabul Fişi önizlemesini ekrana yansıtır.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Sevkiyat Plan"))
-            {
-                kilavuzMetni.AppendLine("📌 MODÜL 3: SEVKİYAT PLAN (WMS ÇEKİRDEĞİ VE DESİ/PALETLEME)\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Canias/ERP veritabanından çekilen 'Açık Siparişlerin (Backorders)' lojistik kurallarına göre toplanması, paletlere bölünmesi ve hatasız çıkış (Poka-Yoke) yapılmasını sağlayan kompleks yönlendirme motorudur.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ OLEDB SQL Entegrasyonu: 'Yenile' komutu; SE (Yurtiçi) ve O1 (İhracat) belge tiplerindeki, silinmemiş ve sevk edilmemiş tüm açık siparişleri devasa bir JOIN sorgusuyla ERP'den çeker.");
-                kilavuzMetni.AppendLine("➤ FİFO (İlk Giren İlk Çıkar) Konsolidasyonu: 'Tüm Belge No Seç' komutu, bir müşteriye ait birden fazla sipariş belgesini tarih sırasına göre birleştirerek tek bir yükleme ekranında (Konsolide) sunar.");
-                kilavuzMetni.AppendLine("➤ Palet Matrisi ve Desi Algoritması: Açılan palet kolonlarına okutulan her ürün yerleştirilir. 'Palet ve Desiyi Düzenle' menüsü ile En x Boy x Yükseklik / 3000 formülü arka planda çalıştırılarak Lojistik Desi hesaplaması otomatik yapılır.");
-                kilavuzMetni.AppendLine("➤ Manyetik İmleç Zırhı (Magnetic Focus): Operatör ekranda başka bir yere tıklasa dahi, barkod okuyucunun gönderdiği ilk veri byte'ı algılandığı an, sistem imleci ışık hızında barkod giriş kutusuna kilitler (Sıfır Veri Kaybı).");
-                kilavuzMetni.AppendLine("➤ Kapanış (Sevk) Stratejileri:");
-                kilavuzMetni.AppendLine("   - TAM SEVK (Green State): Tüm satırlar hedeflenen adede (Yeşil) ulaştığında çalışır. Belgeyi Ghost (Hayalet) Modu kara listesine alır, arşivler ve ERP'de açık görünse dahi bir daha ekrana yansıtmaz.");
-                kilavuzMetni.AppendLine("   - KISMİ SEVK (Orange State): Eksik okutulan (Sarı) satırları analiz eder. Mevcut okutulanı arşive atıp, kalan bakiyeyi sistemde açık (bekleyen) olarak bırakır.");
-                kilavuzMetni.AppendLine("   - ASKIYA AL (Snapshot): Yüklemenin yarım kalması durumunda, ekranın birebir kopyasını (Snapshot) JSON formatında diske yazar. 'Askıdakileri Getir' ile milisaniyeler içinde tüm tablo geri yüklenir.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Sevkiyat"))
-            {
-                kilavuzMetni.AppendLine("📌 MODÜL 4: SEVKİYAT ARŞİVİ, AMBAR KONSOLİDASYONU VE KIOSK\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Kapanmış belgelerin Hiyerarşik Ağaç (Tree) mimarisiyle saklandığı, çapraz sorguların yapıldığı ve forklift/yükleme personeli için Kiosk (Tam Ekran) barkod doğrulamasının yapıldığı istasyondur.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Çok Yönlü Arama (Cross-Search): Sağ üstteki arama çubuğu, binlerce CSV dosyası içindeki her bir satırı tarayarak, spesifik bir barkodun veya ürünün hangi tarihte, hangi müşteriye ve hangi palet içinde gönderildiğini anında ekrana basar.");
-                kilavuzMetni.AppendLine("➤ Ambar (Parsiyel Yükleme) Modülü: Farklı müşterilere ait küçük hacimli siparişlerin (Örn: 1 palet A müşterisi, 2 palet B müşterisi) 'Ambar Aracı' isimli sanal bir havuzda (JSON) toplanmasını sağlar. 'Ambarı Tamamla' komutuyla bu havuz tek bir araca yüklenmiş gibi konsolide (Toplu) Excel Raporu üretir.");
-                kilavuzMetni.AppendLine("➤ Kamyon Yükleme Kiosk (Terminal Modu): Araç yükleme rampasında çalışır. Araca bindirilen her paletin EAN-13 etiketi okutulduğunda sistem yeşil onay verir. Yanlış palet yüklemesinde kırmızı hata ekranı ve sesli alarm devreye girerek Poka-Yoke (Hata Önleme) kuralını uygular. Etiketsiz paletler için sağ tık menüsünden anında 'Edge WebView2' motoruyla etiket basılabilir.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Depo Sayım"))
-            {
-                kilavuzMetni.AppendLine("📌 MODÜL 5: FİZİKSEL ENVANTER VE DEPO SAYIM\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Periyodik veya anlık stok sayımlarının (Cycle Count) yapılarak ERP sistemi ile fiziki ambarın karşılaştırılmasına olanak tanıyan hızlı kayıt modülüdür.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Çift Yönlü Algılama: Kullanıcı barkod okuttuğunda sistem hem 'Barkod (EAN)' alanına hem de 'Malzeme Kodu' alanına bakar. Kayıtsız ürünlerde dahi sayım durdurulmaz, manuel müdahale için listeye eklenir.");
-                kilavuzMetni.AppendLine("➤ Arşiv Mimarisi: Sayımlar, kullanıcının belirlediği isimle (Örn: A_Koridoru_Hirdavat) Yıl ve Ay klasörlerine ayrıştırılarak CSV formatında kaydedilir. Ağaç (Tree) menüsünden eski sayımlara ulaşılıp canlı filtreleme (Live Filter) yapılabilir.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Normal Zarf Yazdırma") || yetkiler.Contains("Çoklu Zarf Yazdırma"))
-            {
-                kilavuzMetni.AppendLine("📌 MODÜL 6: DİNAMİK TASARIM, ŞABLON VE EDGE (WEBVIEW2) YAZDIRMA\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Firmanın kargo etiketi, mektup zarfı veya palet fişlerini Sürükle-Bırak (Drag & Drop) mantığıyla tasarladığı ve Chromium altyapısıyla sıfır çözünürlük kaybıyla kağıda döktüğü motordur.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Akıllı Koordinat Sistemi: Ekrana eklenen nesnelerin X,Y konumları Px (Piksel) yerine donanımdan bağımsız Mm (Milimetre) cinsinden hesaplanarak JSON olarak kaydedilir. Bu sayede tasarım her marka yazıcıda milimi milimine aynı yerden çıkar.");
-                kilavuzMetni.AppendLine("➤ Değişken (Placeholder) Mimarisi: Metinlerin içine gömülen {FirmaAdi}, {Il} gibi değişkenler, yazdırma anında (Runtime) SQL'den veya UI'dan gelen gerçek firma bilgileriyle Replace edilerek basılır.");
-                kilavuzMetni.AppendLine("➤ Edge Render Motoru (WebView2): Tasarımlar, arka planda dinamik olarak CSS3 ve HTML5 kodlarına dönüştürülür. WebView2 Runtime motoru bu kodları derleyerek, klasik WinForms yazdırmasındaki pikselleşmeyi (Bulanıklığı) %100 yok eder ve Vektörel (Cam gibi) baskı alınmasını sağlar.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Stok"))
-            {
-                kilavuzMetni.AppendLine("📌 MODÜL 8: CANLI STOK PİVOTLARI VE SQL ENTEGRASYONU\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Kullanıcıların kendi yazdıkları özel SQL sorgularını (Query) sisteme entegre edip, dinamik rapor sekmeleri (Pivot Tablolar) yaratmasını sağlayan Business Intelligence (İş Zekası) aracıdır.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Dinamik Sekme Yaratımı (Runtime Injection): Girilen SQL sorgusu çalıştırılır ve dönen DataTable sonucu, programı yeniden başlatmaya gerek kalmadan anında yeni bir sekme (TabPage) olarak üst menüye enjekte edilir.");
-                kilavuzMetni.AppendLine("➤ Asenkron Veri Çekimi (Task.Run): Veritabanı sorguları arka plan iş parçacıklarında (Background Thread) çalıştırılır, böylece devasa veriler çekilirken programın arayüzü asla donmaz veya kilitlenmez (Not Responding hatası engellenir).");
-                kilavuzMetni.AppendLine("➤ Kalıcı Hafıza (JSON Serialization): Eklenen her SQL rapor ayarı AppData klasörüne şifrelenerek kaydedilir. Uygulama açıldığında raporlar otomatik olarak son güncel halleriyle tabloya dökülür.\n");
-                kilavuzMetni.AppendLine(new string('-', 100) + "\n");
-            }
-
-            if (yetkiler.Contains("Sınırsız") || yetkiler.Contains("Yönetim"))
-            {
-                kilavuzMetni.AppendLine("👑 MODÜL 7: YÖNETİCİ KONTROLLERİ VE GÜVENLİK KATMANI\n");
-                kilavuzMetni.AppendLine("SİSTEM MİMARİSİ VE AMACI:");
-                kilavuzMetni.AppendLine("Sistemin kriptografik güvenlik politikalarının (Hashing), yetki bazlı menü gizlemelerinin (Isolation) ve yıkıcı/toplu veri silme işlemlerinin (CRUD Destructive) yönetildiği 'Super Admin' terminalidir.\n");
-                kilavuzMetni.AppendLine("OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:");
-                kilavuzMetni.AppendLine("➤ Kriptolojik Veri Güvenliği: Yönetim panelinden kaydedilen SQL bağlantı dizesi şifreleri (Connection String Passwords) ve Kullanıcı giriş şifreleri, AES/SHA algoritması benzeri özel Hashing kütüphanesiyle şifrelenir (Encrypted). Diske açık metin (Cleartext) olarak hiçbir şifre yazılmaz.");
-                kilavuzMetni.AppendLine("➤ Yetki İzolasyonu (Role-Based Access Control): Bir personele sadece 'Depo Kabul' yetkisi verilirse, Sistem Açılış (Init) motoru diğer tüm sekmeleri (Sevkiyat, Ayarlar vs.) RAM'den fiziksel olarak siler. Kullanıcı ekranı büyüterek veya kısayol deneyerek bu sekmelere ulaşamaz.");
-                kilavuzMetni.AppendLine("➤ Yıkıcı Komut Zırhı: 'Operasyonel Fabrika Ayarlarına Dön' veya 'Tüm Firmaları Sil' gibi kritik komutlar, kazara tıklanmaları önlemek amacıyla Çift Katmanlı Onay diyaloğuna (Double-Check Confirmation) ve Focus kaybı zırhına tabi tutulmuştur.\n");
-            }
-
-            kilavuzMetni.AppendLine(new string('=', 100));
-            kilavuzMetni.AppendLine("\nSistem Mimarisi, Geliştirme ve Optimizasyon: TamgaApp Operasyon Otomasyonu V2.0");
-            kilavuzMetni.AppendLine("TamgaApp altyapısı, C# / .NET / OLEDB / WebView2 Teknolojileri kullanılarak yüksek performans ve lojistik standartlarına göre inşa edilmiştir.");
-
-            rtbIcerik.Text = kilavuzMetni.ToString();
-
-            // 5. Renklendirme Motorunu Çalıştır (Kurumsal Ansiklopedi Formatı)
-            Renklendir(rtbIcerik, "TAMGAAPP OTOMASYON V2.0 - KAPSAMLI SİSTEM MİMARİSİ VE KULLANIM ANSİKLOPEDİSİ", Color.DarkBlue);
-            Renklendir(rtbIcerik, $"SİSTEME HOŞ GELDİNİZ SAYIN {AktifKullaniciAdi.ToUpper()}!", Color.DarkRed);
-
-            // Başlıkları renklendir
-            string[] basliklar = {
-                "📌 MODÜL 1: ANA PANEL (KONTROL MERKEZİ VE SİSTEM GÜVENLİĞİ)",
-                "📌 MODÜL 2: DEPO KABUL VE ÜRETİM TAKİP (GİRİŞ KALİTE KONTROL)",
-                "📌 MODÜL 3: SEVKİYAT PLAN (WMS ÇEKİRDEĞİ VE DESİ/PALETLEME)",
-                "📌 MODÜL 4: SEVKİYAT ARŞİVİ, AMBAR KONSOLİDASYONU VE KIOSK",
-                "📌 MODÜL 5: FİZİKSEL ENVANTER VE DEPO SAYIM",
-                "📌 MODÜL 6: DİNAMİK TASARIM, ŞABLON VE EDGE (WEBVIEW2) YAZDIRMA",
-                "📌 MODÜL 8: CANLI STOK PİVOTLARI VE SQL ENTEGRASYONU",
-                "👑 MODÜL 7: YÖNETİCİ KONTROLLERİ VE GÜVENLİK KATMANI"
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font("Segoe UI", 8),
+                ForeColor = Color.DimGray
             };
 
-            foreach (var baslik in basliklar)
-            {
-                Renklendir(rtbIcerik, baslik, Color.DarkRed);
-            }
+            anaYerlesim.Controls.Add(ustBilgi, 0, 0);
+            anaYerlesim.Controls.Add(anaIcerik, 0, 1);
+            anaYerlesim.Controls.Add(yardimAltBilgi, 0, 2);
+            yardimSekmesi.Controls.Add(anaYerlesim);
 
-            // Alt Başlıkları ve Önemli Uyarıları Renklendir
-            string[] altBasliklar = { "SİSTEM MİMARİSİ VE AMACI:", "OPERASYONEL İŞ AKIŞI VE TEKNİK DETAYLAR:" };
-            foreach (var alt in altBasliklar) Renklendir(rtbIcerik, alt, Color.Blue);
+            // Form açılırken daha sonra eklenen stok veya yönetici sekmeleri varsa kullanıcı
+            // Yardım'a ilk geçtiğinde içerik listesi yeniden okunur.
+            yardimSekmesi.Enter -= YardimSekmesi_Enter;
+            yardimSekmesi.Enter += YardimSekmesi_Enter;
 
-            // Maddeleri Kalın Yap (Siyah kalsın, sadece kalınlaşsın)
-            string[] maddeler = {
-                "➤ Güvenli Çıkış (Kırmızı Buton):", "➤ Oturumu Kapat:",
-                "➤ Akıllı Barkod Eşleştirme (Smart Matching):", "➤ Otomatik Yığma (Aggregation):", "➤ Hata İzolasyonu (Geri Alma):", "➤ CSV Dışa Aktarım ve Yazdırma:",
-                "➤ OLEDB SQL Entegrasyonu:", "➤ FİFO (İlk Giren İlk Çıkar) Konsolidasyonu:", "➤ Palet Matrisi ve Desi Algoritması:", "➤ Manyetik İmleç Zırhı (Magnetic Focus):", "➤ Kapanış (Sevk) Stratejileri:",
-                "➤ Çok Yönlü Arama (Cross-Search):", "➤ Ambar (Parsiyel Yükleme) Modülü:", "➤ Kamyon Yükleme Kiosk (Terminal Modu):",
-                "➤ Çift Yönlü Algılama:", "➤ Arşiv Mimarisi:",
-                "➤ Akıllı Koordinat Sistemi:", "➤ Değişken (Placeholder) Mimarisi:", "➤ Edge Render Motoru (WebView2):",
-                "➤ Dinamik Sekme Yaratımı (Runtime Injection):", "➤ Asenkron Veri Çekimi (Task.Run):", "➤ Kalıcı Hafıza (JSON Serialization):",
-                "➤ Kriptolojik Veri Güvenliği:", "➤ Yetki İzolasyonu (Role-Based Access Control):", "➤ Yıkıcı Komut Zırhı:"
-            };
-
-            foreach (var madde in maddeler) Renklendir(rtbIcerik, madde, Color.Black);
-
-            // Özel Terim Vurguları
-            Renklendir(rtbIcerik, "- TAM SEVK (Green State):", Color.DarkGreen);
-            Renklendir(rtbIcerik, "- KISMİ SEVK (Orange State):", Color.DarkOrange);
-            Renklendir(rtbIcerik, "- ASKIYA AL (Snapshot):", Color.DarkBlue);
-            Renklendir(rtbIcerik, "Ghost (Hayalet) Modu", Color.Purple);
-            Renklendir(rtbIcerik, "Poka-Yoke (Hata Önleme)", Color.DarkMagenta);
-
-            // Kutuyu panele, paneli de sekmeye ekle
-            pnlIcerik.Controls.Add(rtbIcerik);
-            yardimSekmesi.Controls.Add(pnlIcerik);
+            YardimMakaleleriniHazirla();
         }
 
-        // Metin içindeki başlıkları otomatik bulup kalın ve renkli yapan küçük yardımcı metot
-        private void Renklendir(RichTextBox rtb, string kelime, Color renk)
+        private void YardimSekmesi_Enter(object sender, EventArgs e)
         {
-            int baslangic = 0;
-            while (baslangic < rtb.TextLength)
+            YardimMakaleleriniHazirla();
+        }
+
+        /// <summary>
+        /// Oturumdaki gerçek sekmeleri yeniden okuyarak içindekiler listesini oluşturur.
+        /// Ana formdaki yetki filtresi çalıştıktan sonra çağrıldığı için kullanıcının göremediği
+        /// sekme adları standart kullanıcıya yardım konusu olarak da gösterilmez.
+        /// </summary>
+        private void YardimMakaleleriniHazirla()
+        {
+            if (yardimIcindekiler == null || yardimMakaleGoruntuleyici == null)
+                return;
+
+            string seciliKimlik = null;
+            YardimMakalesi oncekiMakale = yardimIcindekiler.SelectedNode == null
+                ? null
+                : yardimIcindekiler.SelectedNode.Tag as YardimMakalesi;
+            if (oncekiMakale != null)
+                seciliKimlik = oncekiMakale.Kimlik;
+
+            yardimMakaleleri.Clear();
+            yardimMakaleleri.Add(new YardimMakalesi
             {
-                int pos = rtb.Text.IndexOf(kelime, baslangic, StringComparison.OrdinalIgnoreCase);
-                if (pos >= 0)
+                Kimlik = "genel|baslangic",
+                Kategori = "ÖNCE BURADAN BAŞLAYIN",
+                Baslik = "Programı ilk kez kullananlar için",
+                Icerik = YardimBaslangicMakalesi()
+            });
+            yardimMakaleleri.Add(new YardimMakalesi
+            {
+                Kimlik = "genel|islem-guvenligi",
+                Kategori = "ÖNCE BURADAN BAŞLAYIN",
+                Baslik = "Günlük işlem düzeni ve güvenli kullanım",
+                Icerik = YardimGunlukKullanimMakalesi()
+            });
+
+            HashSet<string> eklenenSekmeler = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (TabPage anaSekme in tabControl1.TabPages.Cast<TabPage>().ToList())
+            {
+                if (anaSekme == yardimSekmesi
+                    || string.Equals(anaSekme.Text, "❓ Yardım", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                YardimGorunenSekmeyiEkle(anaSekme.Text, "Erişebildiğin ekranlar", eklenenSekmeler);
+                YardimAltSekmeleriTopla(anaSekme, eklenenSekmeler);
+            }
+
+            if (AktifOturumTamYetkiliMi())
+            {
+                yardimMakaleleri.Add(new YardimMakalesi
                 {
-                    rtb.Select(pos, kelime.Length);
-                    rtb.SelectionColor = renk;
-                    rtb.SelectionFont = new Font(rtb.Font, FontStyle.Bold);
-                    baslangic = pos + kelime.Length;
+                    Kimlik = "yonetici|genel",
+                    Kategori = "YÖNETİCİ ANSİKLOPEDİSİ",
+                    Baslik = "Yönetici başlangıç rehberi",
+                    Icerik = YardimYoneticiGenelMakalesi()
+                });
+                yardimMakaleleri.Add(new YardimMakalesi
+                {
+                    Kimlik = "yonetici|kullanicilar",
+                    Kategori = "YÖNETİCİ ANSİKLOPEDİSİ",
+                    Baslik = "Kullanıcı oluşturma ve yetki verme",
+                    Icerik = YardimYoneticiKullaniciMakalesi()
+                });
+                yardimMakaleleri.Add(new YardimMakalesi
+                {
+                    Kimlik = "yonetici|yedek",
+                    Kategori = "YÖNETİCİ ANSİKLOPEDİSİ",
+                    Baslik = "Yedekleme, geri yükleme ve kurtarma",
+                    Icerik = YardimYoneticiYedekMakalesi()
+                });
+                yardimMakaleleri.Add(new YardimMakalesi
+                {
+                    Kimlik = "yonetici|sql",
+                    Kategori = "YÖNETİCİ ANSİKLOPEDİSİ",
+                    Baslik = "SQL raporları ve bağlantı güvenliği",
+                    Icerik = YardimYoneticiSqlMakalesi()
+                });
+                yardimMakaleleri.Add(new YardimMakalesi
+                {
+                    Kimlik = "yonetici|test-trace",
+                    Kategori = "YÖNETİCİ ANSİKLOPEDİSİ",
+                    Baslik = "Program Testi ve Trace",
+                    Icerik = YardimYoneticiTestTraceMakalesi()
+                });
+            }
+
+            YardimIcindekileriGuncelle(seciliKimlik);
+            yardimAltBilgi.Text = AktifOturumTamYetkiliMi()
+                ? "Yardım kapsamı: bu oturumdaki erişilebilir ekranlar ve yönetici kılavuzları. Yardım sekmesi yetki vermez."
+                : "Yardım kapsamı: bu oturumda erişebildiğin ekranlar. Yardım sekmesi yeni bir yetki vermez."
+                    + " Kullanıcı: " + (AktifKullaniciAdi ?? "");
+        }
+
+        private void YardimAltSekmeleriTopla(Control ustKontrol, HashSet<string> eklenenSekmeler)
+        {
+            if (ustKontrol == null)
+                return;
+
+            foreach (Control kontrol in ustKontrol.Controls)
+            {
+                TabControl altTabControl = kontrol as TabControl;
+                if (altTabControl != null)
+                {
+                    foreach (TabPage altSekme in altTabControl.TabPages.Cast<TabPage>().ToList())
+                    {
+                        YardimGorunenSekmeyiEkle(altSekme.Text, "Erişebildiğin ekranlar", eklenenSekmeler);
+                        YardimAltSekmeleriTopla(altSekme, eklenenSekmeler);
+                    }
                 }
                 else
                 {
-                    break;
+                    YardimAltSekmeleriTopla(kontrol, eklenenSekmeler);
                 }
             }
-            rtb.Select(0, 0); // Seçimi bırak
         }
+
+        private void YardimGorunenSekmeyiEkle(string sekmeAdi, string kategori, HashSet<string> eklenenSekmeler)
+        {
+            string temizAd = (sekmeAdi ?? string.Empty).Trim();
+            if (temizAd.Length == 0
+                || string.Equals(temizAd, "❓ Yardım", StringComparison.OrdinalIgnoreCase)
+                || !eklenenSekmeler.Add(temizAd))
+                return;
+
+            yardimMakaleleri.Add(new YardimMakalesi
+            {
+                Kimlik = "ekran|" + temizAd,
+                Kategori = kategori,
+                Baslik = temizAd,
+                Icerik = YardimEkranMakalesiOlustur(temizAd)
+            });
+        }
+
+        private void YardimIcindekileriGuncelle(string seciliKimlik)
+        {
+            if (yardimIcindekiler == null)
+                return;
+
+            string aranan = yardimAramaKutusu == null ? string.Empty : yardimAramaKutusu.Text.Trim();
+            yardimIcindekiler.BeginUpdate();
+            yardimIcindekiler.Nodes.Clear();
+
+            Dictionary<string, TreeNode> kategoriDugumleri = new Dictionary<string, TreeNode>(StringComparer.OrdinalIgnoreCase);
+            TreeNode secilecekDugum = null;
+
+            foreach (YardimMakalesi makale in yardimMakaleleri)
+            {
+                if (aranan.Length > 0
+                    && makale.Baslik.IndexOf(aranan, StringComparison.OrdinalIgnoreCase) < 0
+                    && makale.Icerik.IndexOf(aranan, StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+
+                TreeNode kategoriDugumu;
+                if (!kategoriDugumleri.TryGetValue(makale.Kategori, out kategoriDugumu))
+                {
+                    kategoriDugumu = new TreeNode(makale.Kategori);
+                    kategoriDugumleri.Add(makale.Kategori, kategoriDugumu);
+                    yardimIcindekiler.Nodes.Add(kategoriDugumu);
+                }
+
+                TreeNode makaleDugumu = new TreeNode(makale.Baslik) { Tag = makale };
+                kategoriDugumu.Nodes.Add(makaleDugumu);
+                if (seciliKimlik != null && string.Equals(makale.Kimlik, seciliKimlik, StringComparison.OrdinalIgnoreCase))
+                    secilecekDugum = makaleDugumu;
+            }
+
+            if (yardimIcindekiler.Nodes.Count == 0)
+            {
+                yardimIcindekiler.Nodes.Add(new TreeNode("Aramanla eşleşen konu bulunamadı."));
+                if (yardimMakaleGoruntuleyici != null)
+                    yardimMakaleGoruntuleyici.Text = "Arama sonucunda konu bulunamadı. Daha kısa bir kelime deneyebilir veya arama kutusunu temizleyebilirsin.";
+            }
+            else
+            {
+                yardimIcindekiler.ExpandAll();
+                if (secilecekDugum == null)
+                {
+                    TreeNode ilkKategori = yardimIcindekiler.Nodes[0];
+                    secilecekDugum = ilkKategori.Nodes.Count > 0 ? ilkKategori.Nodes[0] : ilkKategori;
+                }
+
+                yardimIcindekiler.SelectedNode = secilecekDugum;
+            }
+
+            yardimIcindekiler.EndUpdate();
+        }
+
+        private void YardimMakalesiniGoster(YardimMakalesi makale)
+        {
+            if (yardimMakaleGoruntuleyici == null || makale == null)
+                return;
+
+            yardimMakaleGoruntuleyici.SuspendLayout();
+            yardimMakaleGoruntuleyici.Text = makale.Icerik;
+            yardimMakaleGoruntuleyici.SelectionStart = 0;
+            yardimMakaleGoruntuleyici.SelectionLength = 0;
+            yardimMakaleGoruntuleyici.ScrollToCaret();
+            yardimMakaleGoruntuleyici.ResumeLayout();
+        }
+
+        private string YardimBasliklariyla(string baslik, string amac, string adimlar, string kontroller, string sorunlar)
+        {
+            return "TAMGAAPP KULLANIM ANSİKLOPEDİSİ\r\n"
+                + "Konu: " + baslik + "\r\n"
+                + "Kullanıcı: " + (AktifKullaniciAdi ?? "") + "\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ BU EKRAN NE İŞE YARAR?\r\n" + amac.Trim() + "\r\n\r\n"
+                + "■ ADIM ADIM KULLANIM\r\n" + adimlar.Trim() + "\r\n\r\n"
+                + "■ İŞLEMİ TAMAMLAMADAN ÖNCE KONTROL ET\r\n" + kontroller.Trim() + "\r\n\r\n"
+                + "■ SORUN GİDERME\r\n" + sorunlar.Trim() + "\r\n\r\n"
+                + "■ YARDIMCI İPUCU\r\n"
+                + "Bir işlemden emin değilsen önce listeyi ve seçili firma/belgeyi kontrol et. Sonuç ekrana gelmeden aynı kaydetme, silme veya sevk işlemini art arda çalıştırma. Hata mesajının tamamını not al ve yöneticine ilet.";
+        }
+
+        private string YardimBaslangicMakalesi()
+        {
+            return "TAMGAAPP KULLANIM ANSİKLOPEDİSİ\r\n"
+                + "Hoş geldin, " + (AktifKullaniciAdi ?? "kullanıcı") + ".\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ BU KILAVUZ NASIL ÇALIŞIR?\r\n"
+                + "Sol taraftaki içindekiler ağacından bir ekran seç. Üstteki arama alanına işlem adı, hata sözü veya konu yazarsan eşleşen makaleler listelenir. Her makale ekranın amacını, adım adım kullanımını, işlem öncesi kontrolleri ve sık karşılaşılan sorunları açıklar.\r\n\r\n"
+                + "■ YETKİNE GÖRE GÖRÜNÜM\r\n"
+                + "İçindekilerde, bu oturumda görebildiğin ana ve alt ekranlar listelenir. Yönetici kılavuzları yalnızca tam yetkili oturumda eklenir. Yardım sekmesi tek başına hiçbir ekranı açmaz ve hiçbir kullanıcıya yeni yetki vermez. Görmediğin bir bölüm için yöneticinden erişim istemen gerekir.\r\n\r\n"
+                + "■ İLK KEZ KULLANANLAR İÇİN GENEL SIRA\r\n"
+                + "1. Uygulamada yalnızca sana açık olan sekmeleri kullan. Bir ekranın adını bilmiyorsan içindekilerde aynı adı ara.\r\n"
+                + "2. İşleme başlamadan önce doğru firma, belge, ürün, tarih aralığı veya yazıcının seçili olduğunu kontrol et.\r\n"
+                + "3. Barkod okuyucu kullanıyorsan imlecin barkod giriş alanında olduğunu ve doğru belgenin açık olduğunu doğrula.\r\n"
+                + "4. Satırları, miktarları ve toplamları kontrol et. Yazdırma öncesinde mümkünse önizlemeyi kullan.\r\n"
+                + "5. Kaydetme, sevk, silme veya geri yükleme gibi sonuç doğuran işlemlerde ekrandaki onay metnini baştan sona oku.\r\n"
+                + "6. Başarı mesajını görmeden işlemi tamamlanmış sayma. Sonuç belirsizse aynı düğmeye peş peşe basma; önce listeyi yenileyip kaydın oluşup oluşmadığını kontrol et.\r\n\r\n"
+                + "■ HATA OLDUĞUNDA\r\n"
+                + "Hata mesajının ekran görüntüsünü al; hangi sekmede olduğun, hangi düğmeye bastığın ve işlem öncesinde hangi firma/belgenin seçili olduğu bilgisini ekle. Barkod verisini, müşteri bilgilerini veya parolaları herkese açık mesajlarda paylaşma. Sorun ERP bağlantısı, yazıcı veya kullanıcı yetkisiyle ilgiliyse yöneticine ilet.\r\n\r\n"
+                + "■ BU REHBERİN SINIRI\r\n"
+                + "Anlatım, uygulamanın şu anki arayüzündeki ekran adlarına göre hazırlanır. İşletme kuralları, ERP tarafındaki onay süreci veya şirket içi çalışma talimatları bu program kılavuzundan ayrı olabilir.";
+        }
+
+        private string YardimGunlukKullanimMakalesi()
+        {
+            return "GÜNLÜK İŞLEM DÜZENİ VE VERİ GÜVENLİĞİ\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ İŞE BAŞLARKEN\r\n"
+                + "Kendi kullanıcı hesabınla giriş yap. Açılışta görünen kullanıcı adını ve erişebildiğin sekmeleri kontrol et. Ekran eksikse veya beklemediğin bir sekme görünüyorsa işlemi zorlamadan yöneticine bildir. Kullanıcı hesabını başkasıyla paylaşma.\r\n\r\n"
+                + "■ VERİ GİRİŞİNDE\r\n"
+                + "Firma ve belge numarasını işlemden önce doğrula. Barkod okutmalarında ekranda ürün adı, barkod, adet ve bağlı belgeyi kontrol et. Aynı ürünün ikinci kez okutulması bazı listelerde adedi artırabilir; satırın beklediğin şekilde güncellendiğini gözünle doğrula.\r\n\r\n"
+                + "■ KAYDETME VE YAZDIRMADA\r\n"
+                + "Kaydetmeden önce zorunlu alanların dolu olduğunu, yanlış satır seçilmediğini ve miktarların doğru olduğunu kontrol et. Yazdırmada doğru şablon, kağıt boyutu, yazıcı ve baskı adedini seç. Önizleme ile kaymış alanları kontrol et; hatalı çıktı alırsan aynı belgeyi tekrar basmadan önce ilk çıktının kullanılıp kullanılmadığını netleştir.\r\n\r\n"
+                + "■ SEVKİYAT VE SAYIMDA\r\n"
+                + "Sevkiyat adımlarında doğru açık belgeyi seçmeden barkod okutma. Tamamla, kısmi tamamla veya askıya al gibi seçeneklerin anlamını ilgili makaleden oku. Sayımda başlamadan önce sayım adını/tarihini doğrula ve raporu kaydettiğin klasörü not et.\r\n\r\n"
+                + "■ DÜZELTME VE GERİ ALMA\r\n"
+                + "Satır silme, kullanıcı silme, sevkiyat tamamlama, klasör temizleme ve geri yükleme işlemleri sonuç doğurur. Onay penceresindeki hedefi ve seçili satırı tekrar kontrol et. Emin değilsen işlemi iptal edip amirine sor.\r\n\r\n"
+                + "■ UYGULAMA YANIT VERMİYORSA\r\n"
+                + "Bir rapor veya liste yüklenirken kısa süre bekle. Aynı sorguyu tekrar başlatma. Uzun sürerse bağlantı durumunu kontrol et ve yöneticine hangi işlemde beklediğini bildir. Programı zorla kapatmak son kaydedilmeyen işlemi kaybettirebilir.";
+        }
+
+        private string YardimEkranMakalesiOlustur(string sekmeAdi)
+        {
+            string ad = (sekmeAdi ?? string.Empty)
+                .Replace("📦", "")
+                .Replace("❓", "")
+                .Trim();
+            string kucukAd = ad.ToLowerInvariant();
+
+            if (kucukAd.Contains("ana panel"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Ana Panel, kullanıcının ana çalışma alanıdır. Buradan üst menüdeki izinli operasyon ekranlarına geçilir ve oturum bilgisi takip edilir.",
+                    "1. Üstteki sekmelerden işinle ilgili ekranı seç.\r\n2. İşleme ait yönergeleri bu yardımın aynı adlı ekran makalesinden oku.\r\n3. Oturum başlığındaki kullanıcı adını kontrol et; paylaşılan oturumla işlem yapma.\r\n4. İşin bitince uygulamanın kendi güvenli çıkış/oturum kapatma akışını kullan.",
+                    "Doğru kullanıcıyla giriş yaptığını ve gereken sekmelerin görünür olduğunu doğrula. Görünmeyen bir sekmeye başka bir yoldan ulaşmaya çalışma.",
+                    "Oturum veya sekmeler beklenenden farklıysa çıkış yapıp doğru hesapla yeniden giriş yap. Yetki eksikliği sürerse yöneticine kullanıcı adını ve eksik ekranı ilet.");
+            }
+
+            if (kucukAd.Contains("depo kabul"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Depo Kabul ekranı, gelen malzemelerin barkodla listeye alınması, kontrol edilmesi ve kabul kaydının/çıktısının hazırlanması için kullanılır.",
+                    "1. Ekrandaki gerekli firma, üretim veya kabul bilgilerini doldur.\r\n2. Barkodları giriş alanına tek tek okut. Her okutma sonrasında ürün açıklamasını ve adedi kontrol et.\r\n3. Aynı ürün yeniden okutulduğunda satır adedinin güncellenip güncellenmediğine bak.\r\n4. Hatalı satırı seçip ekrandaki silme/düzeltme komutunu kullan; doğru ürünleri yeniden okut.\r\n5. Liste tamamlandığında kaydetme veya yazdırma komutundan önce toplamı ve seçili bilgileri gözden geçir.\r\n6. Kaydetme/çıktı sonucu mesajını bekle; başarı mesajı görmeden ekranı kapatma.",
+                    "Barkod okuyucunun doğru alana yazdığını, her satırda doğru ürün ve adet bulunduğunu, kayıtsız ürün uyarılarının incelendiğini ve çıktı gerekiyorsa doğru yazıcının seçili olduğunu kontrol et.",
+                    "Barkod bulunamazsa etiketi ve ürün kodunu karşılaştır; ürünü yanlışlıkla kabul edilmiş sayma. Okutma tekrarlanırsa satır adedini kontrol et. Kaydetme hata verirse aynı listeyi yeniden oluşturmadan önce önceki kaydın oluşup oluşmadığını yöneticinle doğrula.");
+            }
+
+            if (kucukAd.Contains("sevkiyat plan"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Sevkiyat Plan, ERP'den gelen açık siparişlerin seçilmesi, ürünlerin paletlere ayrılması, barkodla doğrulanması ve sevkiyat durumunun tamamlanması için kullanılır.",
+                    "1. Sipariş yenileme komutuyla açık sipariş listesini güncelle ve yüklemenin bitmesini bekle.\r\n2. Arama alanını kullanarak doğru müşteri ve belge numarasını bul; birden fazla belgeyi birleştireceksen FIFO/toplu seçim davranışını doğrula.\r\n3. Doğru belgeyi aç. Ürün, istenen adet ve palet sütunlarının doğru olduğundan emin ol.\r\n4. Barkodları ilgili palet alanına okut; her okutma sonrasında satırdaki gerçekleşen adet ile beklenen adedi karşılaştır.\r\n5. Yanlış okutmayı ekrandaki düzeltme/geri alma komutuyla düzelt. Palet veya desi bilgisi gerekiyorsa ilgili düzenleme aracını kullan ve sonucu kontrol et.\r\n6. İş yarım kalacaksa askıya alma/askıdakileri getirme akışını kullan. Başka belgeye geçmeden önce kilit uyarılarını dikkate al.\r\n7. Tam sevk veya kısmi sevk kararı vermeden önce belge, müşteri, okutulan adet ve kalan miktarı yeniden kontrol et. Onaydan sonra başarı mesajını bekle.",
+                    "Tam sevk, belgenin tamamlandığı anlamına gelir; kısmi sevkte kalan miktar açık kalabilir. Bu iki sonucu karıştırma. Barkod okuyucunun hangi palet sütununa yazdığını, satırların hedef adede ulaşıp ulaşmadığını ve seçili müşteriyi kontrol et.",
+                    "Sipariş gelmiyorsa bağlantı/yenileme sonucunu kontrol et. Barkod eşleşmiyorsa doğru belge ve doğru palet seçimini doğrula. Askı kilidi görünürse mevcut işlemi tamamlamadan sekme değiştirme. İşlem sonucundan emin değilsen sevkiyat düğmesine tekrar basmadan önce listeyi yenileyip durumu yöneticinle teyit et.");
+            }
+
+            if (kucukAd == "sevkiyat" || kucukAd.Contains("sevkiyat arşiv"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Sevkiyat ekranı kapanmış veya arşivlenmiş sevkiyatların bulunması, geçmiş kayıtların incelenmesi ve ilgili yükleme/kiosk iş akışlarının yürütülmesi için kullanılır.",
+                    "1. Arama veya tarih/filtre alanları varsa aradığın sevkiyatın bilgilerini gir.\r\n2. Ağaç/listeden doğru tarih, firma ve belgeyi aç.\r\n3. Ürün, palet ve adet bilgilerini karşılaştır; benzer isimli kayıtları belge numarasıyla ayır.\r\n4. Kiosk veya yükleme doğrulaması kullanıyorsan araca ait doğru ekranı aç ve palet barkodunu okut.\r\n5. Yeşil/kabul sonucu görmeden paletin yüklendiğini varsayma. Yanlış palet uyarısında işlemi durdur ve doğru paleti bul.",
+                    "Arşiv kaydı geçmişi gösterir; listede gördüğün satırın aktif sipariş olduğu anlamına gelmeyebilir. Firma, tarih, belge ve palet etiketini birlikte doğrula.",
+                    "Arama sonuç vermiyorsa filtreyi temizle ve belge numarasını eksiksiz yaz. Kiosk yanlış palet uyarısı verirse etiketi yeniden okutmak yerine palet kimliğini fiziksel yükle karşılaştır.");
+            }
+
+            if (kucukAd.Contains("depo sayım") || kucukAd.Contains("sayım"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Depo Sayım, fiziksel stokların barkodla sayılması, adetlerin listelenmesi ve sayım raporlarının saklanması için kullanılır.",
+                    "1. Yeni sayım başlatmadan önce sayımın adını, tarihini ve sayım yapılacak alanı belirle.\r\n2. Her ürünü barkod alanına okut; eklenen satırın ürün ve adet bilgisini kontrol et. Aynı barkod tekrar okutulursa adedin arttığını doğrula.\r\n3. Kayıtsız üründe listede oluşan satırı incele; ürün bilgisi belirsizse tahmin yürütme, yetkiline sor.\r\n4. Alanı tamamlayınca listeyi gözden geçir, eksik/fazla okutulanları ekrandaki düzeltme araçlarıyla düzenle.\r\n5. Sayım raporunu kaydet ve başarı bildirimini bekle. Geçmiş sayımı açarken doğru yıl/ay ve sayım adına göre ara.",
+                    "Sayım başlamadan önce doğru depo/alan üzerinde olduğunu, okutma tekrarıyla adedin beklenmedik biçimde artmadığını ve rapor adının ayırt edici olduğunu kontrol et.",
+                    "Yanlış adet varsa sayım devam ederken düzelt; raporu kaydettikten sonra değiştirmek gerekiyorsa yöneticine danış. Geçmiş rapor görünmüyorsa arama filtresini ve yıl/ay klasörünü kontrol et.");
+            }
+
+            if (kucukAd.Contains("normal zarf"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Normal Zarf Yazdırma, seçilen bir firma için kayıtlı şablonu kullanarak tek firma/tekil zarf çıktısı almayı sağlar.",
+                    "1. Firma listesinden doğru firmayı seç veya arama alanıyla bul.\r\n2. Zarf tasarımının ve yazıcının doğru olduğunu kontrol et. Şablon tasarımı gerekiyorsa önce izinli tasarım sekmesinde güncelle ve kaydet.\r\n3. Baskı önizlemesi sunuluyorsa firma adı, adres ve değişken alanları önizlemede kontrol et.\r\n4. Kağıt yönü, boyut ve yazıcıyı doğrula; önce tek deneme çıktısı al.\r\n5. Çıktı doğruysa diğer zarfları bas.",
+                    "Yanlış firma seçimi yanlış adrese baskı oluşturur. Şablon değişikliğinin kaydedildiğini, seçilen yazıcının doğru olduğunu ve fiziksel zarfın kağıt yönünü kontrol et.",
+                    "Adres alanı boşsa firma kartındaki adres verisini ve şablon değişkenlerini kontrol et. Baskı kayıksa kağıt boyutu/yazıcı eşleşmesini düzeltip yeni deneme yap; hatalı zarfı kullanma.");
+            }
+
+            if (kucukAd.Contains("çoklu zarf"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Çoklu Zarf Yazdırma, birden fazla firma/adres için liste halinde zarf hazırlama ve baskı alma iş akışıdır.",
+                    "1. Firma kayıtlarından seçim yap veya ekrandaki izinli alanları kullanarak listeyi oluştur.\r\n2. Her satırdaki firma/adres bilgisini kontrol et; aynı firmanın yinelenmediğinden emin ol.\r\n3. Şablon ve yazıcı ayarını seç. Çok sayfalı işlerde baskı adedi ve kağıt yönünü kontrol et.\r\n4. Mümkünse önizleme/örnek çıktı al. Alanlar doğru hizalanmışsa toplu baskıyı başlat.\r\n5. Yazdırma tamamlanana kadar pencereyi kapatma; hata veya yazıcı kuyruğu uyarısını not et.",
+                    "Toplu baskı çok sayıda çıktı üretir. Liste, sıralama, firma adresleri, baskı adedi, şablon ve hedef yazıcıyı başlat düğmesine basmadan önce birlikte kontrol et.",
+                    "Yazıcı durursa aynı işi hemen yeniden başlatma; önce yazdırma kuyruğunu ve çıkan zarf sayısını kontrol et. Eksik/tekrarlı baskı riskini yöneticinle değerlendir.");
+            }
+
+            if (kucukAd.Contains("manuel etiket"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Manuel Etiket ekranı, standart akış dışında gereken etiket içeriğini hazırlama, yerleşimi kontrol etme ve yazdırma amacı taşır.",
+                    "1. Doğru etiket tasarımını ve kağıt ölçüsünü seç.\r\n2. Metin, barkod veya görsel alanı ekle; her nesneyi seçip özelliklerini düzenle.\r\n3. Nesneleri sürükleyerek konumlandır. Boyut, hizalama, döndürme ve metin içeriğini etiket üstünde kontrol et.\r\n4. Tasarımı kaydet. Aynı tasarımı bir sonraki işte kullanacaksan anlaşılır bir ad ver.\r\n5. Yazdırmadan önce önizleme/örnek baskı al; barkodun okunur olduğunu ve etiket ölçüsüne sığdığını doğrula.",
+                    "Gerçek yazıcıdaki etiket ölçüsü ile tasarımdaki kağıt ölçüsünün aynı olduğunu, kenar boşluklarını, barkod içeriğini ve seçili yazıcıyı kontrol et.",
+                    "Barkod basılıyor ama okunmuyorsa boyutu/kontrastı ve yazıcı kalitesini kontrol et. Alan kırpılıyorsa tasarım nesnesini kağıt sınırları içine al ve tek deneme baskısı yap.");
+            }
+
+            if (kucukAd == "ayarlar")
+            {
+                return YardimBasliklariyla(ad,
+                    "Ayarlar ana sekmesi yazıcı, şablon, barkod, kullanıcı yönetimi, SQL, seri port ve klasör gibi alt ayar alanlarını bir arada toplar. Yalnızca izinli olduğun alt sekmeler görünür.",
+                    "1. İçindekilerde gördüğün alt ayar başlığını seç; her alt sekme için ayrı kullanım makalesi bu listede bulunur.\r\n2. Değişiklik yapmadan önce hangi çalışma akışını etkilediğini belirle: yazıcı/şablon baskıyı, barkod alanları okuma-eşleştirmeyi, port ayarı cihaz bağlantısını, klasör ayarı kayıt yerini etkileyebilir.\r\n3. Bir seferde tek ayarı değiştir, kaydet ve küçük bir örnekle doğrula.\r\n4. Yönetim veya SQL gibi ayrıcalıklı başlıklar görünmüyorsa bu yardım metni erişim sağlamaz; yöneticine başvur.",
+                    "Değiştireceğin ayarın hangi yazıcıya, kullanıcıya, ERP bağlantısına veya klasöre uygulandığını doğrula. Birden çok ayarı aynı anda değiştirmek hatanın kaynağını bulmayı zorlaştırır.",
+                    "Ayar sonrası ilgili iş akışı çalışmıyorsa son değiştirdiğin seçeneği not et; başka ayarları rastgele değiştirme. Yöneticiye eski ve yeni değerleri ve aldığın hata mesajını ilet.");
+            }
+
+            if (kucukAd.Contains("yeni firma"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Yeni Firma Ekleme ekranı, sonraki zarf, etiket veya sevkiyat işlemlerinde seçilebilecek firma kartını oluşturur.",
+                    "1. Firma kartındaki zorunlu alanları eksiksiz doldur.\r\n2. Firma unvanı, adres, il/ilçe ve iletişim alanlarını kaynak belgeyle karşılaştır.\r\n3. Barkod veya ERP eşleme alanları varsa yalnızca doğrulanmış değeri gir.\r\n4. Kaydetmeden önce yinelenen firma kaydı olmadığını ara.\r\n5. Kaydet düğmesine bir kez bas ve kayıt başarı bildirimini bekle. Ardından firma listesinden yeni kaydı bulup bilgileri doğrula.",
+                    "Firma adı ve adresin yazımını, gereksiz boşlukları ve zorunlu alanları kontrol et. Yanlış karta bağlı baskı/irsaliye yanlış adrese gidebilir.",
+                    "Kayıt reddedilirse hata mesajını oku; aynı firmayı tekrar tekrar ekleme. İsim zaten varsa önce mevcut kartı arayıp Firma Düzenleme ekranını kullan.");
+            }
+
+            if (kucukAd.Contains("firma düzenle"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Firma Düzenleme ekranı mevcut firma kartı bilgilerini düzeltmek veya güncellemek için kullanılır.",
+                    "1. Listeden düzenlenecek firmayı adıyla ve mümkünse ek tanımlayıcıyla bul.\r\n2. Kaydı açmadan önce doğru satırın seçili olduğundan emin ol.\r\n3. Yalnızca değişmesi gereken alanları güncelle; adres ve baskı alanlarını kaynak bilgiyle karşılaştır.\r\n4. Kaydetmeden önce değişiklikleri baştan sona oku.\r\n5. Kaydet ve listede yeni bilgilerin göründüğünü doğrula.",
+                    "Benzer isimli firmalarda seçim hatasına dikkat et. Bir firma kartını değiştirmek sonraki baskı ve işlemleri etkileyebilir; unvan/adres değişimini kaynağa göre doğrula.",
+                    "Yanlış firmayı düzenlediysen yeni değişiklik yapmayı durdur ve doğru kaydı seç. Önceki değerler biliniyorsa yöneticiye bildir; kaydı silip yeniden oluşturmak yerine düzeltme yöntemini sorun.");
+            }
+
+            if (kucukAd.Contains("stok"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Stok ekranı, ERP'den alınan veya yönetici tarafından tanımlanan stok raporlarını ve sonuç tablolarını görüntülemek için kullanılır.",
+                    "1. Açmak istediğin rapor sekmesini seç.\r\n2. Raporu yenilemeden önce ekrandaki filtreleri ve seçili bağlantı/rapor adını doğrula.\r\n3. Veriler yüklenirken bekle; aynı yenileme düğmesine tekrar basma.\r\n4. Sonuç tablosunda sütun başlıklarını ve satırları kontrol et. Filtre/arama alanı varsa daraltılmış sonucun hâlâ beklediğin ürünü kapsadığını doğrula.\r\n5. Hata mesajı alırsan rapor adı, zaman ve kullanılan filtreleri not et.",
+                    "Stok raporu bir görüntüleme sonucudur; ERP'deki stok hareketini tek başına değiştirdiği varsayılmamalıdır. Raporun yenilenme zamanına ve seçili filtrelere dikkat et.",
+                    "Rapor boşsa önce filtreyi temizleyip yenile. Bağlantı hatasında tekrar tekrar sorgu başlatma; ERP bağlantısı ve kullanıcı yetkisi için yöneticine başvur.");
+            }
+
+            if (kucukAd.Contains("şablon tasarım"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Şablon Tasarım alanı zarf ve etiketlerde kullanılacak metin, barkod, görsel ve alan yerleşimlerini düzenler.",
+                    "1. Düzenlenecek şablonu yükle veya yeni bir tasarım oluştur.\r\n2. Kağıt/etiket boyutunu gerçek malzemeyle eşleştir.\r\n3. Nesne ekleme araçlarından metin, barkod veya görsel seç; çalışma alanına yerleştir.\r\n4. Nesneyi tıklayarak seç; konum, boyut, yazı tipi, içerik ve diğer özelliklerini düzenle.\r\n5. Önizleme ve varsa firma değişkenleriyle örnek kontrol yap.\r\n6. Şablona anlaşılır bir ad verip kaydet; çıktı almadan önce bir test baskısı yap.",
+                    "Şablonda veri değişkenleri kullanılıyorsa değişken adının doğru yazıldığını ve örnek firmada dolduğunu kontrol et. Baskı alanlarını kağıt sınırından taşırma.",
+                    "Nesne seçilemiyorsa kenarından değil gövdesinden tıkla veya başka nesneleri geçici olarak seçimi bırak. Kaydedilen şablon görünmüyorsa doğru şablon klasörünü ve dosya adını kontrol et.");
+            }
+
+            if (kucukAd.Contains("yazdırma ayar"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Yazdırma Ayarları alanı uygulamanın kullanacağı yazıcıları ve ilgili baskı seçeneklerini düzenler.",
+                    "1. Windows'ta kurulu yazıcıların hazır olduğunu kontrol et.\r\n2. İş türüne uygun yazıcıyı/varsayılanı seç ve varsa eşleştirme alanlarını kontrol et.\r\n3. Kağıt boyutu, yön, kopya sayısı ve özel ölçüleri gerçek baskı malzemesine göre ayarla.\r\n4. Değişikliği kaydet.\r\n5. Normal ve çoklu baskıda küçük bir örnek al; kayma veya yanlış yazıcı varsa toplu işe geçme.",
+                    "Bir yazıcı adını seçmek fiziksel kağıt ölçüsünü otomatik doğrulamayabilir. Yazıcı sürücüsü ayarı, uygulama kağıt ölçüsü ve gerçek zarf/etiket ölçüsü birbiriyle uyumlu olmalıdır.",
+                    "Yazıcı listede yoksa Windows yazıcılarının kurulu ve çevrimiçi olduğunu kontrol et. Baskı kuyruğunda bekleyen işi incele; aynı işi kuyruk temizlenmeden tekrar yollama.");
+            }
+
+            if (kucukAd.Contains("barkod veri"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Barkod Verileri alanı uygulamanın barkodla eşleştirme veya ürün tanıma süreçlerinde kullandığı değerleri inceleme/düzenleme amacı taşır.",
+                    "1. Değişiklikten önce mevcut barkod ve ürün eşleşmesini ara.\r\n2. Barkod değerini etiketten veya yetkili ana kaynaktan doğrula; baştaki sıfırları kaybetme.\r\n3. Değiştireceğin satırın doğru ürüne ait olduğunu kontrol et.\r\n4. Kaydetmeden önce eski ve yeni değeri karşılaştır.\r\n5. Bir barkodla test araması yaparak eşleşmenin beklenen ürün olduğunu doğrula.",
+                    "Barkodlar tanımlayıcı bilgidir; benzer kodlar kolay karışır. Aynı barkodun iki ürüne bağlanmadığını ve Excel aktarımında sayı biçiminin baştaki sıfırları silmediğini kontrol et.",
+                    "Ürün yanlış eşleşirse yeni kayıt eklemeye devam etme. Önce hatalı satırı belirle ve yöneticiye/ürün ana verisi sorumlusuna bildir.");
+            }
+
+            if (kucukAd.Contains("sql ayar"))
+            {
+                return YardimBasliklariyla(ad,
+                    "SQL Ayarları ve stok rapor alanları, izin verilen raporların bağlantı ve sorgu tanımlarını yönetir. Sonuçlar uygulama içinde tablo olarak görüntülenir.",
+                    "1. Rapor adını anlaşılır ve benzersiz gir.\r\n2. Bağlantı bilgilerini yalnızca kurumun sağladığı sunucu/hesapla doldur; parolayı yardım metnine veya ekran görüntüsüne kopyalama.\r\n3. Sorguyu yalnızca izinli, salt-okunur rapor amacıyla kullan. Uygulama SELECT biçimi için kontroller uygular; kurumun SQL hesabı da salt okunur yetkide olmalıdır.\r\n4. Raporu kaydetmeden önce doğru ERP/veritabanına bağlandığını ve sorgunun doğru sonuç verdiğini kontrol et.\r\n5. Yenileme işleminin bitmesini bekle; sonuç boyutu büyükse filtre ekle veya tarih aralığını daralt.",
+                    "Rapor adı, bağlantı hedefi, filtreler, sorgu sonucu ve yetki seviyesi önemlidir. SQL hesabının geniş yazma yetkisi varsa bunu uygulama ekranındaki kontrol tek başına güvenli hâle getirmez.",
+                    "Bağlantı kurulamıyorsa sunucu adı, ağ, hesap yetkisi ve parola güncelliğini yöneticinle kontrol et. Sorgu reddedilirse mesajı oku; güvenlik kontrolünü atlatmaya çalışma.");
+            }
+
+            if (kucukAd.Contains("port"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Port İşlemleri, seri port/COM üzerinden çalışan barkod okuyucu gibi donanımların bağlantı durumunu yönetir.",
+                    "1. Barkod okuyucu veya cihazın USB/seri bağlantısını kontrol et.\r\n2. Ayarlarda doğru COM portunu ve cihazın beklediği iletişim seçeneklerini seç. Emin olmadığın hız/parite değerlerini değiştirme; cihaz dokümanına veya yöneticine danış.\r\n3. Bağlantıyı başlat ve arayüzde bağlantı durumunu izle.\r\n4. Önce güvenli bir test barkodu okut; metnin doğru giriş alanına geldiğini doğrula.\r\n5. Cihazı çıkarıp taktıysan port listesini tekrar kontrol et.",
+                    "Aynı COM portunu başka bir uygulama kullanmamalı. Port numarası, okuyucu tipi ve hedef ekran eşleşmelidir. Testte gerçek sevkiyat/sayım kaydı oluşturmamaya dikkat et.",
+                    "Port açılamıyorsa okuyucunun bağlı olduğunu, Windows Aygıt Yöneticisi'nde COM numarasını ve başka programın portu kullanmadığını kontrol et. Hata devam ederse tam hata mesajını yöneticine gönder.");
+            }
+
+            if (kucukAd.Contains("klasör koruma") || kucukAd.Contains("klasör"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Klasör ayarları ve koruma alanları, uygulamanın rapor/şablon gibi çıktılarını kullandığı klasör yollarını gösterir veya yönetir.",
+                    "1. Ekranda gösterilen her klasör yolunun doğru kullanıcı/ bilgisayara ait olduğunu kontrol et.\r\n2. Hedef klasör mevcut olmalı ve uygulamanın yazma izni bulunmalı.\r\n3. Yol değiştiriyorsan önce yeni klasörü seç; mevcut arşivi silme veya taşımadan önce içeriğini kontrol et.\r\n4. Değişikliği kaydedip küçük, geri alınabilir bir işlemle yeni yolu doğrula.\r\n5. Yedek klasörü ile canlı veri klasörünü karıştırma.",
+                    "Klasör yolundaki sürücü harfi, ağ konumu ve kullanıcı erişimi doğru olmalıdır. Canlı veri klasörünü değiştirmek programın kayıtlarına erişimini etkileyebilir.",
+                    "Yetki hatasında klasörün gerçekten var olduğunu ve Windows hesabının izinlerini kontrol et. Canlı veriyi elle silme; yöneticiye mevcut ve hedef yolu bildir.");
+            }
+
+            if (kucukAd.Contains("yönetim"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Yönetim ekranı, tam yetkili kullanıcıların hesapları, erişim izinlerini ve sistem kurtarma işlemlerini yönetir.",
+                    "1. Önce yapmak istediğin işlemi seç ve hangi kullanıcı/veri üzerinde etkili olacağını doğrula.\r\n2. Kullanıcı yönetimi makalesindeki adımlara göre izinleri en az gerekli modüllerle sınırla.\r\n3. Yedekleme ve geri yükleme için ilgili yönetici makalesini oku; geri yükleme seçilen yedeği canlı verinin yerine alır.\r\n4. Yıkıcı işlem onaylarını dikkatle oku. Emin değilsen iptal et ve mevcut yedeği kontrol et.",
+                    "Yönetim işlemleri diğer kullanıcıların erişimini veya canlı verileri etkileyebilir. İşlemi doğru yönetici oturumunda yaptığını ve hedef seçimini iki kez kontrol et.",
+                    "Ekrandaki düğme görünmüyorsa bunun için doğru tam yetkili oturumla giriş yap. Yardım metni hiçbir yetkiyi yükseltmez; erişim değişikliğini yalnızca yetkili yönetici yapmalıdır.");
+            }
+
+            if (kucukAd.Contains("trace"))
+            {
+                return YardimBasliklariyla(ad,
+                    "Trace, uygulamaya açıkça iz kaydı eklenmiş işlemleri zaman damgası ve durum bilgisiyle gösterir. Kaynak kodun her satırını otomatik olarak izlemez.",
+                    "1. Trace sekmesini yalnızca tam yetkili oturumda aç.\r\n2. İşlem akarken yeni satırları gözle; Duraklat düğmesi yalnızca ekrandaki akışı duraklatır.\r\n3. Devam Et ile biriken son kayıtları yeniden göster.\r\n4. Ekranı Temizle, yalnızca mevcut görüntü/bellek kuyruğunu temizler; uygulama günlük dosyasını silmez.\r\n5. Günlük Klasörünü Aç ile dosya konumuna git; gerekli satırları yöneticinin destek sürecinde kullan.",
+                    "Trace sadece kodda AdminTraceYaz çağrısı bulunan olayları ve tanı testlerini gösterir. Parola/bağlantı gibi hassas bilgiler maskelenmeye çalışılır; günlükleri yine de güvenli sakla.",
+                    "Trace boşsa henüz izlenen bir işlem çalışmamış olabilir veya o iş akışına iz kaydı eklenmemiş olabilir. Bu durum kodun çalışmadığı anlamına gelmez. Dosya açılamazsa uygulama klasörü/yazma iznini yöneticinle kontrol et.");
+            }
+
+            return YardimBasliklariyla(ad,
+                "Bu başlık, oturumunda görünür olan bir ana veya alt sekmeye karşılık gelir. Bu ekran için özel adımlar, programın mevcut arayüzünde görünen alan ve düğmelere göre uygulanmalıdır.",
+                "1. Sekmedeki başlıkları ve alan adlarını sırayla incele.\r\n2. Zorunlu bilgileri doğru kaynaktan gir veya doğru satırı seç.\r\n3. Kaydet, sil, yazdır veya tamamla gibi sonuç doğuran komutlardan önce seçimi ve veriyi yeniden kontrol et.\r\n4. Başarı/hata bildirimini bekle; sonucu ekrandan doğrula.\r\n5. Ekrandaki bir alanın ne yaptığından emin değilsen deneme verisiyle işlem yapmadan önce yöneticine sor.",
+                "Firma, belge, ürün, miktar, tarih ve yazıcı seçimini işlem türüne göre kontrol et. Yardımda olmayan bir düğmenin etkisini tahmin etme.",
+                "Hata metnini aynen not et ve hangi işlemde oluştuğunu bildir. Aynı işlemi tekrar ederek veri veya çıktı çoğaltma riskini artırma.");
+        }
+
+        private string YardimYoneticiGenelMakalesi()
+        {
+            return "TAM YETKİLİ OTURUM • YÖNETİCİ BAŞLANGIÇ REHBERİ\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ YÖNETİCİ EKRANI NE SAĞLAR?\r\n"
+                + "Bu oturum, standart kullanıcılara kapalı yönetim alanlarını ve Program Testi/Trace gibi yönetici araçlarını gösterebilir. Yönetici hakları, canlı verileri ve kullanıcı hesaplarını etkileyebildiği için günlük operasyon hesabından ayrı ve dikkatli kullanılmalıdır.\r\n\r\n"
+                + "■ İŞLEM ÖNCESİ KONTROL\r\n"
+                + "Hangi kullanıcı, firma, yedek veya bağlantı üzerinde çalıştığını açıkça doğrula. Yedek/geri yükleme gibi kritik işlemlerden önce yedeğin tarihini ve içeriğini kontrol et. Kullanıcı yetkilerinde yalnızca görev için gereken sekmeleri seç.\r\n\r\n"
+                + "■ ERİŞİM DEĞİŞİKLİĞİ NASIL UYGULANIR?\r\n"
+                + "Yetki ayarları oturum açılırken okunur ve sekme görünürlüğü form açılışında düzenlenir. Bir kullanıcının haklarını değiştirdikten sonra kullanıcının çıkıp yeniden giriş yapmasını sağlayarak yeni görünümü doğrula. Hesabın kullanıcı adı, bitiş tarihi ve parola yenileme şartını da kontrol et.\r\n\r\n"
+                + "■ KULLANICIYA YARDIM ETME\r\n"
+                + "Kullanıcının gördüğü sekme adını, yaptığı son işlemi ve tam hata metnini öğren. Sorunu tekrar üretmeden önce yedekleme, yazıcı kuyruğu veya ERP bağlantısı gibi ilgili durumu kontrol et. Parola veya bağlantı dizesi isteme; günlük paylaşılırken hassas bilgiler bulunmadığını gözden geçir.\r\n\r\n"
+                + "■ KRİTİK İŞLEM KURALI\r\n"
+                + "Geri yükleme canlı veri klasörünü değiştirir ve uygulamayı yeniden başlatır. Kullanıcı silme ve yetki azaltma erişimi kesebilir. SQL bağlantı değişikliği rapor sonuçlarını etkiler. Her birinde hedefi doğrula, başarılı işlem mesajını bekle ve son durumu kontrol et.";
+        }
+
+        private string YardimYoneticiKullaniciMakalesi()
+        {
+            return "YÖNETİCİ • KULLANICI OLUŞTURMA VE YETKİ VERME\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ YENİ KULLANICI EKLEME\r\n"
+                + "1. Yönetim ekranındaki Yeni Kullanıcı Adı ve Yeni Şifre alanlarını doldur. Kullanıcı adı kişiyi ayırt edecek biçimde olmalı; hesap bilgilerini başkalarıyla paylaşma.\r\n"
+                + "2. Hesap Süresi alanından uygun süreyi seç. Süresiz erişim gerekiyorsa uygulamada sunulan seçeneği ve kurum politikasını doğrula.\r\n"
+                + "3. Şifre Yenileme alanını kurum politikasına göre ayarla.\r\n"
+                + "4. Yetki listesindeki onay kutularında yalnızca kullanıcının işini yapması için gereken ekranları işaretle. Yönetim, SQL ayarları, port ve klasör ayarlarını gereksiz yere verme.\r\n"
+                + "5. Kullanıcı Ekle düğmesine bir kez bas. Başarı mesajını ve kullanıcı listesindeki yeni kaydı doğrula. Kullanıcı ilk girişinde kendisine tahsis edilen ekranları görmelidir.\r\n\r\n"
+                + "■ YETKİLERİ KONTROL ETME\r\n"
+                + "Kullanıcıları Listele ile hesap tablosunu yenile. Seçili satırda kullanıcı adını, yetkileri, bitiş tarihini ve parola yenileme şartını oku. Birden fazla kullanıcıda benzer ad varsa doğru satırı seçtiğini doğrula. Yetki değişikliğinden sonra kullanıcı oturumunu kapatıp tekrar açtır; açılış sekmelerinin beklenenle aynı olduğunu kontrol et.\r\n\r\n"
+                + "■ PAROLA SIFIRLAMA VE HESAP SİLME\r\n"
+                + "Parola sıfırlamadan önce tabloda doğru kullanıcı satırını seç; ekrandaki parola yenileme akışını tamamla ve kullanıcıya yeni giriş adımını güvenli kanaldan ilet. Kullanıcı Sil geri alınamaz bir hesap işlemidir; aktif çalışanın hesabını silmek yerine önce erişimi ve kurum prosedürünü kontrol et. Silme onayında adın doğru olduğundan emin ol.\r\n\r\n"
+                + "■ SON KONTROL\r\n"
+                + "Hesap oluşturulduktan sonra kullanıcıyla birlikte oturum açıp yalnızca gereken ekranların göründüğünü test et. Kullanıcıya yönetici parolası verme. Kullanıcı listesi ekran görüntüsü veya dışa aktarımında kişisel bilgileri koru.";
+        }
+
+        private string YardimYoneticiYedekMakalesi()
+        {
+            return "YÖNETİCİ • YEDEKLEME, GERİ YÜKLEME VE KURTARMA\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ YEDEK NEREYE GİDER?\r\n"
+                + "Otomatik ve yönetim ekranındaki normal yedekler, kullanıcının Masaüstündeki TamgaApp_Sistem_Yedekleri klasörüne yazılır. Uygulama verisi Windows kullanıcı profilindeki AppData\\Roaming\\TamgaApp altında bulunur. Kurulum ve klasör ayarları farklıysa ekrandaki gerçek yolu esas al.\r\n\r\n"
+                + "■ YEDEK ALMA\r\n"
+                + "1. Yönetim sekmesindeki Şimdi Yedek Al komutunu kullan.\r\n"
+                + "2. İşlem sırasında uygulama veri dosyalarını geçici bir klasöre kopyalar; dosya boyutları ve SHA-256 özetleri karşılaştırılır, SQLite veritabanı ayrıca açılıp bütünlük kontrolünden geçirilir.\r\n"
+                + "3. Yedek ancak kontroller başarıyla bitip geçici klasör tamamlanmış yedek adına taşınınca başarılı sayılır. Hata mesajı varsa o klasörü sağlam yedek kabul etme.\r\n"
+                + "4. Yedek klasörünü açıp tarihli yeni klasörün oluştuğunu doğrula. Geri yükleme gerekecekse yedeğin okunabildiğini ve tarihinin doğru olduğunu ayrıca kontrol et.\r\n\r\n"
+                + "■ GERİ YÜKLEME\r\n"
+                + "1. Geri yüklemeden önce program kullanıcılarının işlemi durdurduğundan ve doğru yedeği seçtiğinden emin ol.\r\n"
+                + "2. Yedekten Geri Yükle komutunu çalıştır ve tamamlanmış yedek klasörünü seç. .incomplete adlı geçici klasör seçilmemelidir.\r\n"
+                + "3. Program yedeği önce ayrı staging alanına kopyalar ve doğrular. Doğrulama tamamlanmadan canlı klasöre dokunulmamalıdır.\r\n"
+                + "4. Devreye alma sırasında eski canlı veri geri dönüş için rollback klasöründe korunur. Başarılı işlemden sonra program yeniden başlar.\r\n"
+                + "5. Yeniden açıldıktan sonra kritik veri ve ayarları kontrol et. Eski rollback klasörünü hemen silme; yeni sistem doğrulanana kadar koru.\r\n\r\n"
+                + "■ HATA VE KESİNTİ DURUMU\r\n"
+                + "Geri yükleme başarısız olursa hata penceresindeki yol bilgisini sakla. Rollback klasörünü silme, yeniden adlandırma veya içine yeni dosya kopyalama. Uygulama bir sonraki açılışta kesintiye uğramış geri yüklemede eski veri klasörünü geri almayı dener. Otomatik kurtarma mesajı çıkarsa mesajı kaydet ve açılış tamamlanmadan işlemi tekrarlama.\r\n\r\n"
+                + "■ ÖNEMLİ SINIR\r\n"
+                + "Dosya bazlı doğrulama ve SQLite quick_check önemli kontrollerdir; veritabanı aynı anda yoğun biçimde yazılıyorsa kopyalama başarısız olabilir. Böyle bir durumda uygulama hata vermiş yedeği başarı olarak işaretlememelidir. Kritik geri yüklemeyi önce mümkünse test ortamında deneyin.";
+        }
+
+        private string YardimYoneticiSqlMakalesi()
+        {
+            return "YÖNETİCİ • SQL RAPORLARI VE BAĞLANTI GÜVENLİĞİ\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ RAPOR OLUŞTURMA\r\n"
+                + "1. Stok/SQL rapor yönetim alanını aç. Rapor adını açıklayıcı tut ve aynı isimde sekme olmadığını kontrol et.\r\n"
+                + "2. Doğru ERP sunucusunu/veritabanını işaret eden bağlantı dizesini kullan. Parolayı e-posta, Trace çıktısı veya yardım makalesine koyma.\r\n"
+                + "3. Uygulama sorguyu SELECT/SELECT içeren CTE biçimiyle sınırlar ve bazı veri değiştirme komutlarını reddeder. Bu uygulama kontrolü tek başına SQL güvenlik sınırı değildir.\r\n"
+                + "4. ERP tarafında yalnızca gereken tabloları okuyabilen salt-okunur bir servis hesabı kullan. Bu, hatalı veya kötü niyetli sorgunun veri değiştirmesini sunucu tarafında da sınırlar.\r\n"
+                + "5. Sorgu sonucu ve sütunları doğruysa raporu kaydet. Veri çekimi arka planda sürerken bekle; aynı sorguyu tekrar başlatma.\r\n\r\n"
+                + "■ BAĞLANTI DİZESİ VE ŞİFRE\r\n"
+                + "Kaydedilen SQL bağlantı bilgileri Windows DPAPI ile mevcut Windows kullanıcı bağlamında korunur. Bu nedenle ayar başka Windows hesabına veya farklı bilgisayara taşındığında açılmayabilir; bağlantıyı yeni çalışma ortamında yetkili kişiyle yeniden kur. Canlı SQL parolasını yardım metnine veya hata görüntüsüne yazma.\r\n\r\n"
+                + "■ SORGU SÜRESİ VE SONUÇ BOYUTU\r\n"
+                + "Sorgulara uygulama tarafında zaman ve satır sınırı uygulanır. Büyük raporları tarih/depo/ürün filtresiyle daralt. Rapor aşırı uzun sürerse önce sorgu planı ve ERP bağlantısını kontrol et; zaman sınırını yükseltmek ilk çözüm olmamalıdır.\r\n\r\n"
+                + "■ HATA GİDERME\r\n"
+                + "Bağlantı hatasında sunucu erişimi, Windows ağı ve servis hesabının salt-okunur yetkisini kontrol et. Sorgu doğrulamasında reddedilen anahtar sözcüğü dikkatle incele. Sorguyu çalıştırmak için güvenlik kontrolünü kaldırma; gerekiyorsa rapor ihtiyacını veri tabanı yöneticisine ilet.";
+        }
+
+        private string YardimYoneticiTestTraceMakalesi()
+        {
+            return "YÖNETİCİ • PROGRAM TESTİ VE TRACE\r\n"
+                + new string('═', 72) + "\r\n\r\n"
+                + "■ PROGRAM TESTİ NEYİ DENETLER?\r\n"
+                + "Program Testi, uygulamanın belirli çalışma koşullarını denetleyen tanı düğmesidir. Dosya klasörüne yazma/silme denemesi, yerel SQLite veritabanı bütünlük kontrolü, WebView2 Runtime bilgisi, yazıcı/seri port durumu ve yapılandırılmış ERP bağlantısına salt-okunur SELECT 1 kontrolü gibi testleri çalıştırabilir. Bu işlem bütün kaynak kodu satır satır tarayan bir derleyici veya otomatik onarım aracı değildir.\r\n\r\n"
+                + "■ TEST NASIL ÇALIŞTIRILIR?\r\n"
+                + "1. Tam yetkili hesapla giriş yap ve Program Testi ve Hata Analizi düğmesini aç.\r\n"
+                + "2. Test çalışırken düğmenin devre dışı kalmasını bekle; aynı testi tekrar başlatma.\r\n"
+                + "3. Her kontrolün başarılı/uyarı/hata sonucunu oku. ERP bağlantı kontrolünün yalnızca erişimi sınadığını, iş verisini değiştirmediğini unutma.\r\n"
+                + "4. Hata satırında kontrol adını, hata türünü ve zamanı not et. Parola veya bağlantı bilgisini rapora ekleme.\r\n\r\n"
+                + "■ TRACE NASIL OKUNUR?\r\n"
+                + "Trace, uygulamada AdminTraceYaz çağrısı eklenmiş olayları zaman damgalı şekilde ekrana ve günlük dosyasına yazar. Örneğin yedekleme başlangıç/sonuç/hata noktaları, sipariş yenileme durumu ve tanı testlerinin kayıtları görünür. Her metot çağrısı veya her C# satırı otomatik olarak listelenmez; Trace'te satır olmaması o kodun çalışmadığını kanıtlamaz.\r\n\r\n"
+                + "■ TRACE DÜĞMELERİ\r\n"
+                + "Duraklat: ekrandaki yeni satır gösterimini bekletir. Devam Et: birikmiş son kayıtları yeniden gösterir. Ekranı Temizle: ekrandaki/bellekteki geçici listeyi temizler, daha önce yazılmış günlük dosyalarını silmez. Günlük Klasörünü Aç: %AppData%\\TamgaApp\\Logs konumunu açar. Günlükleri kurumun erişim kurallarına göre sakla.\r\n\r\n"
+                + "■ HATA SONRASI\r\n"
+                + "Program Testi hatayı otomatik onarmaz. Önce kontrolün neden başarısız olduğunu belirle: klasör izni, SQLite bütünlüğü, WebView2 kurulumu, yazıcı sürücüsü/port veya ERP erişimi. Değişiklik yapmadan önce mevcut ayarı ve yedek durumunu kaydet. Sonucu ilgili destek kişisine ilet.";
+        }
+
         #endregion
 
         // =========================================================================================
@@ -12491,6 +13066,180 @@ namespace TamgaApp
             public string SqlSorgusu { get; set; }
         }
 
+        private const int DinamikSqlAzamiSatirSayisi = 50000;
+        private const int DinamikSqlZamanAsimiSaniye = 30;
+        private const string KorumaliBaglantiOnEki = "DPAPI:";
+        private static readonly byte[] BaglantiDizesiEkVerisi = Encoding.UTF8.GetBytes("TamgaApp.StokRaporlari.v1");
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct DpapiVeriBlogu
+        {
+            public int Uzunluk;
+            public IntPtr Veri;
+        }
+
+        [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CryptProtectData(ref DpapiVeriBlogu giris, string aciklama, ref DpapiVeriBlogu entropy, IntPtr ayrilmis, IntPtr istem, uint bayraklar, out DpapiVeriBlogu cikis);
+
+        [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool CryptUnprotectData(ref DpapiVeriBlogu giris, IntPtr aciklama, ref DpapiVeriBlogu entropy, IntPtr ayrilmis, IntPtr istem, uint bayraklar, out DpapiVeriBlogu cikis);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr LocalFree(IntPtr bellek);
+
+        /// <summary>
+        /// SQL raporlarını ekleme, yenileme veya silme gibi yönetici işlemlerini korur. Ana
+        /// TamgaApp hesabı ile genel olarak sınırsız yetkili oturumlar doğrudan kabul edilir.
+        /// Eski kurulumlarla uyumluluk için Yönetici adlı yönetici oturumu da ayrıca tanınır.
+        /// Bu metot yalnızca uygulama içi yetki kapısıdır; SQL sunucusunun hesabı yine mümkün
+        /// olan en düşük veritabanı izinleriyle yapılandırılmalıdır.
+        /// </summary>
+        private bool DinamikSqlYoneticiMi()
+        {
+            return AktifOturumTamYetkiliMi()
+                || string.Equals(AktifKullaniciAdi, "yönetici", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool StokRaporAdiGecerliMi(string raporAdi)
+        {
+            if (string.IsNullOrWhiteSpace(raporAdi) || raporAdi.Length > 80) return false;
+            if (!string.Equals(Path.GetFileName(raporAdi), raporAdi, StringComparison.Ordinal)) return false;
+            if (raporAdi.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0) return false;
+            return !raporAdi.EndsWith(".", StringComparison.Ordinal) && !raporAdi.EndsWith(" ", StringComparison.Ordinal);
+        }
+
+        private static string BaglantiDizesiniKoru(string baglantiDizesi)
+        {
+            if (string.IsNullOrWhiteSpace(baglantiDizesi)) throw new InvalidOperationException("SQL bağlantı dizesi boş olamaz.");
+            if (baglantiDizesi.StartsWith(KorumaliBaglantiOnEki, StringComparison.Ordinal)) return baglantiDizesi;
+
+            byte[] acikVeri = Encoding.UTF8.GetBytes(baglantiDizesi);
+            byte[] korumaliVeri = DpapiIleIsle(acikVeri, true);
+            return KorumaliBaglantiOnEki + Convert.ToBase64String(korumaliVeri);
+        }
+
+        private static string BaglantiDizesiniAc(string baglantiDizesi)
+        {
+            if (string.IsNullOrWhiteSpace(baglantiDizesi)) return baglantiDizesi;
+            if (!baglantiDizesi.StartsWith(KorumaliBaglantiOnEki, StringComparison.Ordinal)) return baglantiDizesi;
+
+            byte[] korumaliVeri = Convert.FromBase64String(baglantiDizesi.Substring(KorumaliBaglantiOnEki.Length));
+            byte[] acikVeri = DpapiIleIsle(korumaliVeri, false);
+            return Encoding.UTF8.GetString(acikVeri);
+        }
+
+        private static byte[] DpapiIleIsle(byte[] veri, bool koru)
+        {
+            if (veri == null || veri.Length == 0) throw new CryptographicException("DPAPI için boş veri kullanılamaz.");
+
+            DpapiVeriBlogu giris = new DpapiVeriBlogu { Uzunluk = veri.Length };
+            DpapiVeriBlogu entropy = new DpapiVeriBlogu { Uzunluk = BaglantiDizesiEkVerisi.Length };
+            DpapiVeriBlogu cikis = new DpapiVeriBlogu();
+            try
+            {
+                giris.Veri = Marshal.AllocHGlobal(veri.Length);
+                entropy.Veri = Marshal.AllocHGlobal(BaglantiDizesiEkVerisi.Length);
+                Marshal.Copy(veri, 0, giris.Veri, veri.Length);
+                Marshal.Copy(BaglantiDizesiEkVerisi, 0, entropy.Veri, BaglantiDizesiEkVerisi.Length);
+
+                // CRYPTPROTECT_UI_FORBIDDEN: kullanıcıdan beklenmedik etkileşim istemeden Windows hesabına göre koru.
+                const uint uiGosterme = 0x1;
+                bool basarili = koru
+                    ? CryptProtectData(ref giris, "TamgaApp SQL rapor bağlantısı", ref entropy, IntPtr.Zero, IntPtr.Zero, uiGosterme, out cikis)
+                    : CryptUnprotectData(ref giris, IntPtr.Zero, ref entropy, IntPtr.Zero, IntPtr.Zero, uiGosterme, out cikis);
+
+                if (!basarili)
+                {
+                    int hataKodu = Marshal.GetLastWin32Error();
+                    throw new CryptographicException("Windows DPAPI bağlantı bilgisini koruyamadı veya açamadı. Win32 hata kodu: " + hataKodu);
+                }
+
+                byte[] sonuc = new byte[cikis.Uzunluk];
+                Marshal.Copy(cikis.Veri, sonuc, 0, sonuc.Length);
+                return sonuc;
+            }
+            finally
+            {
+                if (giris.Veri != IntPtr.Zero) Marshal.FreeHGlobal(giris.Veri);
+                if (entropy.Veri != IntPtr.Zero) Marshal.FreeHGlobal(entropy.Veri);
+                if (cikis.Veri != IntPtr.Zero) LocalFree(cikis.Veri);
+            }
+        }
+
+        /// <summary>
+        /// Kullanıcının kaydettiği rapor sorgusunu çalıştırmadan önce dar bir salt-okunur SQL
+        /// biçimine sınırlar. Yalnızca SELECT veya SELECT içeren CTE kabul edilir; çoklu komutlar
+        /// ve veri değiştirme/şema yönetme anahtar sözcükleri reddedilir. Yorum ve tırnaklı metin
+        /// içindeki sözcükler komut sayılmaz. Bu kontrol, uygulama seviyesinde ek bir korumadır;
+        /// SQL bağlantısının salt-okunur ve en az yetkili olması da sunucu tarafında sağlanmalıdır.
+        /// </summary>
+        private static void DinamikSqlSorgusunuDogrula(string sorgu)
+        {
+            if (string.IsNullOrWhiteSpace(sorgu)) throw new InvalidOperationException("SQL sorgusu boş olamaz.");
+
+            List<string> tokens = new List<string>();
+            for (int i = 0; i < sorgu.Length; i++)
+            {
+                char ch = sorgu[i];
+                if (ch == '-' && i + 1 < sorgu.Length && sorgu[i + 1] == '-')
+                {
+                    i += 2;
+                    while (i < sorgu.Length && sorgu[i] != '\r' && sorgu[i] != '\n') i++;
+                    continue;
+                }
+                if (ch == '/' && i + 1 < sorgu.Length && sorgu[i + 1] == '*')
+                {
+                    int depth = 1;
+                    i += 2;
+                    while (i < sorgu.Length && depth > 0)
+                    {
+                        if (i + 1 < sorgu.Length && sorgu[i] == '/' && sorgu[i + 1] == '*') { depth++; i += 2; }
+                        else if (i + 1 < sorgu.Length && sorgu[i] == '*' && sorgu[i + 1] == '/') { depth--; i += 2; }
+                        else i++;
+                    }
+                    if (depth != 0) throw new InvalidOperationException("SQL sorgusunda kapatılmamış yorum var.");
+                    i--;
+                    continue;
+                }
+                if (ch == '\'' || ch == '"' || ch == '`' || ch == '[')
+                {
+                    char kapanis = ch == '[' ? ']' : ch;
+                    bool kapandi = false;
+                    for (i++; i < sorgu.Length; i++)
+                    {
+                        if (sorgu[i] != kapanis) continue;
+                        if (i + 1 < sorgu.Length && sorgu[i + 1] == kapanis) { i++; continue; }
+                        kapandi = true;
+                        break;
+                    }
+                    if (!kapandi) throw new InvalidOperationException("SQL sorgusunda kapatılmamış metin veya tanımlayıcı var.");
+                    continue;
+                }
+                if (ch == ';')
+                {
+                    tokens.Add(";");
+                    continue;
+                }
+                if (char.IsLetter(ch) || ch == '_' || ch == '@' || ch == '#')
+                {
+                    int baslangic = i;
+                    while (i + 1 < sorgu.Length && (char.IsLetterOrDigit(sorgu[i + 1]) || sorgu[i + 1] == '_' || sorgu[i + 1] == '$' || sorgu[i + 1] == '#')) i++;
+                    tokens.Add(sorgu.Substring(baslangic, i - baslangic + 1).ToUpperInvariant());
+                }
+            }
+
+            if (tokens.Count > 0 && tokens[tokens.Count - 1] == ";") tokens.RemoveAt(tokens.Count - 1);
+            if (tokens.Count == 0 || tokens.Contains(";")) throw new InvalidOperationException("Birden fazla SQL komutu çalıştırılamaz.");
+            if (tokens[0] != "SELECT" && tokens[0] != "WITH") throw new InvalidOperationException("Yalnızca SELECT sorgularına izin verilir.");
+            if (!tokens.Contains("SELECT")) throw new InvalidOperationException("Sorgu bir SELECT sonucu üretmelidir.");
+
+            string[] yasakliKomutlar = { "INSERT", "UPDATE", "DELETE", "MERGE", "CREATE", "ALTER", "DROP", "TRUNCATE", "EXEC", "EXECUTE", "GRANT", "REVOKE", "DENY", "BACKUP", "RESTORE", "DBCC", "SHUTDOWN", "WAITFOR", "OPENROWSET", "OPENDATASOURCE", "BULK", "USE", "SET", "INTO", "GO" };
+            string yasakliKomut = tokens.FirstOrDefault(token => yasakliKomutlar.Contains(token));
+            if (yasakliKomut != null) throw new InvalidOperationException($"Güvenlik nedeniyle '{yasakliKomut}' ifadesine izin verilmiyor.");
+        }
+
         // 🌟 2. STOK SEKME VE ARAYÜZ KURULUMU
         public void StokSisteminiKur()
         {
@@ -12572,6 +13321,12 @@ namespace TamgaApp
         // 🌟 3. DİNAMİK SQL GİRİŞ EKRANI (POPUP)
         private async void BtnStokSqlEkle_Click(object sender, EventArgs e)
         {
+            if (!DinamikSqlYoneticiMi())
+            {
+                MessageBox.Show("SQL raporu eklemek için Sistem Yöneticisi yetkisi gerekir.", "Erişim Engellendi", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             Form frmSql = new Form
             {
                 Text = "⚙️ Canias / SQL Veri Çekme Motoru",
@@ -12605,6 +13360,22 @@ namespace TamgaApp
                     return;
                 }
 
+                if (!StokRaporAdiGecerliMi(txtAd.Text.Trim()))
+                {
+                    MessageBox.Show("Rapor adı 1-80 karakter olmalı ve dosya yolu/özel karakter içermemelidir.", "Geçersiz Rapor Adı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                try
+                {
+                    DinamikSqlSorgusunuDogrula(txtSorgu.Text);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(ex.Message, "Güvenli Olmayan SQL Sorgusu", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 if (tabStokPivotlar.TabPages.Cast<TabPage>().Any(t => t.Text == txtAd.Text.Trim()))
                 {
                     MessageBox.Show("Bu isimde bir rapor sekmesi zaten var!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -12614,26 +13385,32 @@ namespace TamgaApp
                 btnGetir.Enabled = false;
                 btnGetir.Text = "Veriler Çekiliyor, Lütfen Bekleyin...";
 
-                StokRaporAyari ayar = new StokRaporAyari
+                try
                 {
-                    RaporAdi = txtAd.Text.Trim(),
-                    BaglantiDizesi = txtBaglanti.Text.Trim(),
-                    SqlSorgusu = txtSorgu.Text.Trim()
-                };
+                    StokRaporAyari ayar = new StokRaporAyari
+                    {
+                        RaporAdi = txtAd.Text.Trim(),
+                        BaglantiDizesi = txtBaglanti.Text.Trim(),
+                        SqlSorgusu = txtSorgu.Text.Trim()
+                    };
 
-                DataTable dt = await SqlVeriCekAsync(ayar);
-
-                if (dt != null)
-                {
+                    DataTable dt = await SqlVeriCekAsync(ayar);
+                    StokHafizaKaydet(ayar);
                     StokSekmesiYarat(ayar, dt);
-                    StokHafizaKaydet(ayar); // Sadece SQL kodunu ve ayarları JSON olarak diske kaydeder (Veriyi değil!)
                     MessageBox.Show($"'{ayar.RaporAdi}' başarıyla oluşturuldu ve veriler çekildi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     frmSql.Close();
                 }
-                else
+                catch (Exception ex)
                 {
-                    btnGetir.Enabled = true;
-                    btnGetir.Text = "🚀 BAĞLAN, GETİR VE KAYDET";
+                    MessageBox.Show($"SQL raporu oluşturulamadı:\n{ex.Message}", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    if (!frmSql.IsDisposed)
+                    {
+                        btnGetir.Enabled = true;
+                        btnGetir.Text = "🚀 BAĞLAN, GETİR VE KAYDET";
+                    }
                 }
             };
 
@@ -12647,6 +13424,9 @@ namespace TamgaApp
         // 🌟 4. DİNAMİK SEKME VE DATAGRIDVIEW İNŞA MOTORU
         private void StokSekmesiYarat(StokRaporAyari ayar, DataTable dt)
         {
+            if (ayar == null || !StokRaporAdiGecerliMi(ayar.RaporAdi))
+                throw new InvalidOperationException("Rapor adı geçersiz; sekme oluşturulmadı.");
+
             TabPage yeniSekme = new TabPage(ayar.RaporAdi) { BackColor = Color.WhiteSmoke, Tag = ayar };
 
             // O Sekmeye Özel Kontrol Paneli (Eski arama kutusu UÇURULDU, ekran ferahladı)
@@ -12688,6 +13468,12 @@ namespace TamgaApp
             // Sekme Silme İşlemi
             btnSekmeSil.Click += (s, ev) =>
             {
+                if (!DinamikSqlYoneticiMi())
+                {
+                    MessageBox.Show("SQL raporu silmek için Sistem Yöneticisi yetkisi gerekir.", "Erişim Engellendi", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                    return;
+                }
+
                 if (MessageBox.Show($"'{ayar.RaporAdi}' raporunu silmek istediğinize emin misiniz?", "Onay", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
                 {
                     tabStokPivotlar.TabPages.Remove(yeniSekme);
@@ -12701,10 +13487,9 @@ namespace TamgaApp
             {
                 btnYenile.Enabled = false;
                 btnYenile.Text = "⌛ Yenileniyor...";
-
-                DataTable yeniDt = await SqlVeriCekAsync(ayar);
-                if (yeniDt != null)
+                try
                 {
+                    DataTable yeniDt = await SqlVeriCekAsync(ayar);
                     bs.DataSource = yeniDt; // Ekranı anında yeni tabloyla değiştir
 
                     // Veri yenilendikten sonra filtre kutularını da yeni sütunlara göre tekrar üret (Eğer SQL değiştiyse)
@@ -12712,9 +13497,15 @@ namespace TamgaApp
 
                     MessageBox.Show("Veriler SQL veritabanından başarıyla güncellendi!", "Yenilendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-
-                btnYenile.Enabled = true;
-                btnYenile.Text = "🔄 SQL'den Veriyi Yenile";
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"SQL verileri yenilenemedi:\n{ex.Message}", "Veritabanı Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    btnYenile.Enabled = true;
+                    btnYenile.Text = "🔄 SQL'den Veriyi Yenile";
+                }
             };
 
             yeniSekme.Controls.Add(dgv);
@@ -12723,46 +13514,74 @@ namespace TamgaApp
             tabStokPivotlar.SelectedTab = yeniSekme;
         }
 
-        // 🌟 5. ARKA PLAN SQL VERİ ÇEKME MOTORU (Arayüzü Dondurmaz)
+        /// <summary>
+        /// Dinamik stok raporunun ERP verisini arka plan iş parçacığında okur. İşlem tamamlanana
+        /// kadar WinForms arayüzü yanıt vermeye devam eder. Komut süresi ve satır sayısı sınırlıdır;
+        /// sorgu da bağlantı açılmadan önce tekrar doğrulanır. DataTable yalnızca bu iş parçacığında
+        /// doldurulur ve tamamlandıktan sonra çağıran UI koduna döndürülür.
+        /// </summary>
         private Task<DataTable> SqlVeriCekAsync(StokRaporAyari ayar)
         {
             return Task.Run(() =>
             {
-                try
+                if (ayar == null) throw new InvalidOperationException("SQL rapor ayarı bulunamadı.");
+                DinamikSqlSorgusunuDogrula(ayar.SqlSorgusu);
+                if (string.IsNullOrWhiteSpace(ayar.BaglantiDizesi)) throw new InvalidOperationException("SQL bağlantı dizesi boş.");
+
+                DataSet veriKumesi = new DataSet();
+                using (OleDbConnection baglanti = new OleDbConnection(ayar.BaglantiDizesi))
+                using (OleDbCommand komut = new OleDbCommand(ayar.SqlSorgusu, baglanti))
+                using (OleDbDataAdapter adaptor = new OleDbDataAdapter(komut))
                 {
-                    DataTable dt = new DataTable();
-                    using (OleDbConnection baglanti = new OleDbConnection(ayar.BaglantiDizesi))
-                    {
-                        using (OleDbDataAdapter adaptor = new OleDbDataAdapter(ayar.SqlSorgusu, baglanti))
-                        {
-                            adaptor.Fill(dt);
-                        }
-                    }
-                    return dt;
+                    komut.CommandTimeout = DinamikSqlZamanAsimiSaniye;
+                    adaptor.Fill(veriKumesi, 0, DinamikSqlAzamiSatirSayisi + 1, "Sonuc");
                 }
-                catch (Exception ex)
-                {
-                    this.Invoke(new Action(() =>
-                    {
-                        MessageBox.Show($"SQL Sorgusu çalıştırılamadı!\n\nHata Detayı:\n{ex.Message}", "Veritabanı Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }));
-                    return null;
-                }
+
+                if (veriKumesi.Tables.Count == 0) return new DataTable();
+                DataTable dt = veriKumesi.Tables[0];
+                if (dt.Rows.Count > DinamikSqlAzamiSatirSayisi)
+                    throw new InvalidOperationException($"Rapor en fazla {DinamikSqlAzamiSatirSayisi:N0} satır döndürebilir. Sorguyu daraltın.");
+                return dt;
             });
         }
 
         // 🌟 6. KALICI HAFIZA (Sadece Ayarları JSON Kaydeder)
         private void StokHafizaKaydet(StokRaporAyari ayar)
         {
+            if (ayar == null || !StokRaporAdiGecerliMi(ayar.RaporAdi))
+                throw new InvalidOperationException("SQL raporu kaydedilmedi; rapor adı geçersiz.");
+
+            string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "StokRaporlari");
+            Directory.CreateDirectory(klasor);
+
+            // Parola içerebilen bağlantı dizesini DPAPI ile yalnızca geçerli Windows kullanıcısına açılabilir sakla.
+            StokRaporAyari diskeYazilacakAyar = new StokRaporAyari
+            {
+                RaporAdi = ayar.RaporAdi,
+                BaglantiDizesi = BaglantiDizesiniKoru(ayar.BaglantiDizesi),
+                SqlSorgusu = ayar.SqlSorgusu
+            };
+            string json = Newtonsoft.Json.JsonConvert.SerializeObject(diskeYazilacakAyar, Newtonsoft.Json.Formatting.Indented);
+            string dosyaYolu = Path.Combine(klasor, ayar.RaporAdi + ".json");
+            string geciciDosya = dosyaYolu + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            File.WriteAllText(geciciDosya, json, new UTF8Encoding(false));
             try
             {
-                string klasor = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp", "StokRaporlari");
-                if (!Directory.Exists(klasor)) Directory.CreateDirectory(klasor);
-
-                string json = Newtonsoft.Json.JsonConvert.SerializeObject(ayar, Newtonsoft.Json.Formatting.Indented);
-                File.WriteAllText(Path.Combine(klasor, $"{ayar.RaporAdi}.json"), json);
+                if (File.Exists(dosyaYolu)) File.Replace(geciciDosya, dosyaYolu, null);
+                else File.Move(geciciDosya, dosyaYolu);
             }
-            catch { }
+            catch
+            {
+                try
+                {
+                    if (File.Exists(geciciDosya)) File.Delete(geciciDosya);
+                }
+                catch (Exception temizlemeHatasi)
+                {
+                    System.Diagnostics.Trace.TraceError("Geçici SQL rapor ayarı silinemedi ({0}): {1}", geciciDosya, temizlemeHatasi);
+                }
+                throw;
+            }
         }
 
         // Program Açılışında Çalışır
@@ -12778,19 +13597,32 @@ namespace TamgaApp
                     string json = File.ReadAllText(dosya);
                     StokRaporAyari ayar = Newtonsoft.Json.JsonConvert.DeserializeObject<StokRaporAyari>(json);
 
-                    if (ayar != null)
-                    {
-                        // Ayarları okuyup arka planda SQL'e vurur ve güncel veriyle tabloyu kurar
-                        DataTable dt = await SqlVeriCekAsync(ayar);
-                        if (dt != null) StokSekmesiYarat(ayar, dt);
-                    }
+                    if (ayar == null || !StokRaporAdiGecerliMi(ayar.RaporAdi))
+                        throw new InvalidOperationException("Rapor ayarı geçersiz veya rapor adı dosya yoluna uygun değil.");
+
+                    bool baglantiZatenKorumali = !string.IsNullOrWhiteSpace(ayar.BaglantiDizesi) && ayar.BaglantiDizesi.StartsWith(KorumaliBaglantiOnEki, StringComparison.Ordinal);
+                    ayar.BaglantiDizesi = BaglantiDizesiniAc(ayar.BaglantiDizesi);
+                    if (!baglantiZatenKorumali) StokHafizaKaydet(ayar); // Eski açık metin ayarını güvenli biçime yükselt.
+
+                    DataTable dt = await SqlVeriCekAsync(ayar);
+                    StokSekmesiYarat(ayar, dt);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.TraceError("SQL raporu yüklenemedi ({0}): {1}", dosya, ex);
+                    MessageBox.Show($"SQL raporu yüklenemedi:\n{Path.GetFileName(dosya)}\n\n{ex.Message}", "Rapor Yükleme Hatası", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
         }
 
         private void BtnStokTumuSil_Click(object sender, EventArgs e)
         {
+            if (!DinamikSqlYoneticiMi())
+            {
+                MessageBox.Show("SQL raporlarını silmek için Sistem Yöneticisi yetkisi gerekir.", "Erişim Engellendi", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
             if (MessageBox.Show("DİKKAT! Ekli olan TÜM SQL raporları silinecek. Emin misiniz?", "Tümünü Sil", MessageBoxButtons.YesNo, MessageBoxIcon.Error) == DialogResult.Yes)
             {
                 tabStokPivotlar.TabPages.Clear();
@@ -12808,52 +13640,132 @@ namespace TamgaApp
         #region 🛡️ 28. OTOMATİK YEDEKLEME VE FELAKET KURTARMA MOTORU (DISASTER RECOVERY)
 
         private Timer yedeklemeZamanlayici;
+        private readonly System.Threading.SemaphoreSlim yedeklemeKilidi = new System.Threading.SemaphoreSlim(1, 1);
         private string anaVeriKlasoru = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
         private string yedeklerKlasoru = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "TamgaApp_Sistem_Yedekleri");
 
         // 1. ZAMANLAYICIYI BAŞLAT (MainForm_Load içine eklenecek)
         public void YedeklemeMotorunuBaslat()
         {
+            GeriYuklemeKesintisiniKurtar();
             if (!Directory.Exists(anaVeriKlasoru)) Directory.CreateDirectory(anaVeriKlasoru);
             if (!Directory.Exists(yedeklerKlasoru)) Directory.CreateDirectory(yedeklerKlasoru);
 
             // Arka planda her 4 saatte bir sessizce çalışır (4 saat = 14.400.000 milisaniye)
             yedeklemeZamanlayici = new Timer();
             yedeklemeZamanlayici.Interval = 4 * 60 * 60 * 1000;
-            yedeklemeZamanlayici.Tick += (s, e) => SessizYedekAl();
+            yedeklemeZamanlayici.Tick += async (s, e) =>
+            {
+                try
+                {
+                    await YedekAlAsync();
+                }
+                catch (Exception ex)
+                {
+                    YedeklemeHatasiniKaydet(ex);
+                }
+            };
             yedeklemeZamanlayici.Start();
 
             // Yönetim sekmesine Backup (Yedek) butonlarını ekler
             YonetimSekmesineYedeklemeUIEkle();
         }
 
-        // 2. SESSİZ YEDEKLEME MANTIĞI (Hayalet Modu - Arayüzü Asla Dondurmaz)
-        private async void SessizYedekAl()
+        private void GeriYuklemeKesintisiniKurtar()
         {
-            // 🌟 HAYALET ZIRHI: İşlemi ana ekrandan koparıp arka plan işlemcisine (Task) atıyoruz.
-            // Sen barkod okuturken sistem 1 milisaniye bile donmaz veya takılmaz!
-            await Task.Run(() =>
-            {
-                try
-                {
-                    string tarihDamgasi = DateTime.Now.ToString("yyyy-MM-dd_HH-mm");
-                    string buYedekKlasoru = Path.Combine(yedeklerKlasoru, $"Yedek_{tarihDamgasi}");
+            if (Directory.Exists(anaVeriKlasoru)) return;
 
-                    KlasorKopyala(anaVeriKlasoru, buYedekKlasoru);
-                    System.Diagnostics.Debug.WriteLine($"Sistem yedeği alındı: {buYedekKlasoru}");
-                }
-                catch
+            string anaVeriTamYolu = Path.GetFullPath(anaVeriKlasoru);
+            string ustKlasor = Path.GetDirectoryName(anaVeriTamYolu);
+            if (string.IsNullOrEmpty(ustKlasor) || !Directory.Exists(ustKlasor)) return;
+
+            string rollbackOnEki = Path.GetFileName(anaVeriTamYolu) + ".rollback-";
+            string geriDonusKlasoru = Directory.GetDirectories(ustKlasor, rollbackOnEki + "*")
+                .OrderByDescending(Directory.GetLastWriteTimeUtc)
+                .FirstOrDefault();
+            if (geriDonusKlasoru == null) return;
+
+            // Restore sırasında uygulama kapanırsa eski klasör geri getirilir; boş AppData klasörüyle açılmaz.
+            try
+            {
+                Directory.Move(geriDonusKlasoru, anaVeriTamYolu);
+                System.Diagnostics.Trace.TraceWarning("Kesintiye uğramış geri yükleme algılandı; eski veri kurtarıldı: {0}", geriDonusKlasoru);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Önceki veri klasörü geri alınamadı. Veriler bu klasörde korunuyor:\n{geriDonusKlasoru}\n\n{ex.Message}", "Kurtarma Gerekli", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Uygulamanın kullanıcı verisi klasörünü benzersiz isimli geçici bir yedek dizinine kopyalar.
+        /// Tek seferde yalnızca bir yedek veya geri yükleme çalışması için ortak kilidi alır. Her
+        /// dosya kopyalanırken boyut ve SHA-256 özeti kontrol edilir; bütün kopya başarıyla biterse
+        /// geçici dizin tamamlanmış yedek adına çevrilir. Hata oluşursa başarısızlık çağırana taşınır
+        /// ve otomatik yedekleme günlüğüne yazılabilir; boş veya yarım bir kopya başarı sayılmaz.
+        /// </summary>
+        private async Task<string> YedekAlAsync()
+        {
+            AdminTraceYaz("BİLGİ", "Yedekleme", "Yedekleme başladı.");
+            await yedeklemeKilidi.WaitAsync();
+            try
+            {
+                return await Task.Run(() =>
                 {
-                    // 🌟 ÇÖKME ZIRHI: Ne olursa olsun (dosya kilitli vs.) hataları yutar, 
-                    // ekrana ASLA uyarı/hata mesajı çıkartıp senin operasyonunu bölmez!
-                }
-            });
+                    string tarihDamgasi = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + "_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+                    string buYedekKlasoru = Path.Combine(yedeklerKlasoru, $"Yedek_{tarihDamgasi}");
+                    string geciciYedek = buYedekKlasoru + ".incomplete";
+
+                    try
+                    {
+                        long kopyalananDosyaSayisi = KlasorKopyala(anaVeriKlasoru, geciciYedek, "EBWebView");
+                        if (kopyalananDosyaSayisi == 0) throw new IOException("Yedeklenecek dosya bulunamadı; boş yedek başarı olarak işaretlenmedi.");
+                        YedegiVeritabaniAcisindanDogrula(geciciYedek);
+                        Directory.Move(geciciYedek, buYedekKlasoru);
+                        AdminTraceYaz("BİLGİ", "Yedekleme", "Yedek doğrulandı ve tamamlandı.");
+                        return buYedekKlasoru;
+                    }
+                    catch (Exception ex)
+                    {
+                        try
+                        {
+                            if (Directory.Exists(geciciYedek)) Directory.Delete(geciciYedek, true);
+                        }
+                        catch (Exception temizlemeHatasi)
+                        {
+                            throw new AggregateException($"Yedek tamamlanamadı. Eksik geçici kopya: {geciciYedek}", ex, temizlemeHatasi);
+                        }
+                        throw;
+                    }
+                });
+            }
+            finally
+            {
+                yedeklemeKilidi.Release();
+            }
+        }
+
+        private void YedeklemeHatasiniKaydet(Exception ex)
+        {
+            AdminTraceYaz("HATA", "Yedekleme", ex.GetType().Name + ": " + ex.Message);
+            string mesaj = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {ex}{Environment.NewLine}";
+            try
+            {
+                Directory.CreateDirectory(anaVeriKlasoru);
+                File.AppendAllText(Path.Combine(anaVeriKlasoru, "YedeklemeHatalari.log"), mesaj, Encoding.UTF8);
+            }
+            catch (Exception logHatasi)
+            {
+                System.Diagnostics.Trace.TraceError("Yedekleme hatası: {0}; hata günlüğüne yazılamadı: {1}", ex, logHatasi);
+            }
+            System.Diagnostics.Trace.TraceError("Yedekleme hatası: {0}", ex);
         }
 
         // 3. YÖNETİCİ KONTROL PANELİNE (YÖNETİM SEKME) BUTONLARI EKLEME
         private void YonetimSekmesineYedeklemeUIEkle()
         {
-            TabPage sekmeYonetim = tabControl1.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "Yönetim");
+            TabPage sekmeYonetim = tabPrintSettings.TabPages.Cast<TabPage>().FirstOrDefault(t => t.Text == "Yönetim");
             if (sekmeYonetim == null) return;
 
             Panel pnlYedek = new Panel { Dock = DockStyle.Bottom, Height = 80, BackColor = Color.FromArgb(45, 52, 54) };
@@ -12865,10 +13777,23 @@ namespace TamgaApp
             Button btnKlasoruAc = new Button { Text = "📂 YEDEK KLASÖRÜNÜ AÇ", Location = new Point(410, 35), Size = new Size(180, 35), BackColor = Color.Teal, ForeColor = Color.White, Font = new Font("Segoe UI", 9, FontStyle.Bold), FlatStyle = FlatStyle.Flat, Cursor = Cursors.Hand };
 
             // Olaylar (Events)
-            btnManuelYedek.Click += (s, e) =>
+            btnManuelYedek.Click += async (s, e) =>
             {
-                SessizYedekAl();
-                MessageBox.Show("Tüm sistem verileri başarıyla yedeklendi!\n\nMasaüstündeki 'TamgaApp_Sistem_Yedekleri' klasöründen ulaşabilirsiniz.", "Yedekleme Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                btnManuelYedek.Enabled = false;
+                try
+                {
+                    string yedekKlasoru = await YedekAlAsync();
+                    MessageBox.Show($"Yedek doğrulandı ve tamamlandı:\n\n{yedekKlasoru}", "Yedekleme Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    YedeklemeHatasiniKaydet(ex);
+                    MessageBox.Show("Yedekleme tamamlanamadı. Mevcut yedek değişmedi.\n\n" + ex.Message, "Yedekleme Hatası", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    btnManuelYedek.Enabled = true;
+                }
             };
 
             btnKlasoruAc.Click += (s, e) =>
@@ -12887,10 +13812,10 @@ namespace TamgaApp
         }
 
         // 4. GERİ YÜKLEME (RESTORE) MOTORU (SADECE YÖNETİCİ KULLANABİLİR)
-        private void BtnYedektenDon_Click(object sender, EventArgs e)
+        private async void BtnYedektenDon_Click(object sender, EventArgs e)
         {
             // 🌟 YÖNETİCİ ZIRHI: Sadece tam yetkili kişiler bu butonu çalıştırabilir!
-            if (AktifYetkiler != "Sınırsız" && AktifKullaniciAdi.ToLower() != "yönetici")
+            if (!DinamikSqlYoneticiMi())
             {
                 MessageBox.Show("Bu işlem Sistem Yöneticisi yetkisi gerektirir! Geri yükleme yapamazsınız.", "Erişim Engellendi", MessageBoxButtons.OK, MessageBoxIcon.Stop);
                 return;
@@ -12906,18 +13831,20 @@ namespace TamgaApp
                     string secilenYedek = fbd.SelectedPath;
 
                     DialogResult onay = MessageBox.Show(
-                        "DİKKAT: Mevcut sistemdeki tüm ayarlar silinecek ve seçtiğiniz tarihteki yedeğe geri dönülecektir. Bu işlem geri alınamaz!\n\nDevam etmek istiyor musunuz?",
+                        "Seçilen yedek önce ayrı bir alana kopyalanıp doğrulanacak. Ardından mevcut veri klasörü geri dönüş için korunacak ve doğrulanmış yedek devreye alınacak.\n\nGeri yüklemeyi başlatmak istiyor musunuz?",
                         "Kritik Uyarı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
 
                     if (onay == DialogResult.Yes)
                     {
+                        this.Enabled = false;
                         try
                         {
-                            // Önce mevcut bozuk/eski sistemi sil, sonra yedeği kopyala
-                            if (Directory.Exists(anaVeriKlasoru)) Directory.Delete(anaVeriKlasoru, true);
-                            KlasorKopyala(secilenYedek, anaVeriKlasoru);
+                            string geriDonusKlasoru = await GeriYuklemeyiGuvenliUygulaAsync(secilenYedek);
 
-                            MessageBox.Show("Sistem başarıyla yedekten kurtarıldı! Değişikliklerin uygulanması için program şimdi yeniden başlatılacak.", "Kurtarma Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            string geriDonusBilgisi = string.IsNullOrEmpty(geriDonusKlasoru)
+                                ? ""
+                                : $"\n\nÖnceki veri klasörü geri dönüş için korundu:\n{geriDonusKlasoru}";
+                            MessageBox.Show("Yedek doğrulandı ve güvenli biçimde geri yüklendi. Değişikliklerin uygulanması için program şimdi yeniden başlatılacak." + geriDonusBilgisi, "Kurtarma Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                             // Ayarların uygulanması için programı zorla yeniden başlat
                             Application.Restart();
@@ -12925,38 +13852,226 @@ namespace TamgaApp
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show("Geri yükleme sırasında bir dosya kilitli olduğu için hata oluştu:\n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("Geri yükleme tamamlanamadı. Eski veri korunmuş olmalıdır; hata ayrıntısı:\n\n" + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                        finally
+                        {
+                            this.Enabled = true;
                         }
                     }
                 }
             }
         }
 
-        // 5. KLASÖR VE İÇERİK KOPYALAYICI (Yardımcı Metot)
-        private void KlasorKopyala(string kaynakKlasor, string hedefKlasor)
+        // 5. DOĞRULAMALI KLASÖR KOPYALAMA VE GÜVENLİ GERİ YÜKLEME
+        private async Task<string> GeriYuklemeyiGuvenliUygulaAsync(string kaynakYedek)
         {
-            Directory.CreateDirectory(hedefKlasor);
-
-            // Klasördeki dosyaları kopyala
-            foreach (string dosya in Directory.GetFiles(kaynakKlasor))
+            await yedeklemeKilidi.WaitAsync();
+            try
             {
+                return await Task.Run(() => GeriYuklemeyiGuvenliUygula(kaynakYedek));
+            }
+            finally
+            {
+                yedeklemeKilidi.Release();
+            }
+        }
+
+        /// <summary>
+        /// Seçilen yedeği önce aktif veri klasöründen ayrı bir staging alanına kopyalar ve dosya
+        /// bazında doğrular. Doğrulama tamamlanmadan mevcut veri klasörüne dokunulmaz. Ardından
+        /// eski klasör rollback adıyla korunur ve staging klasörü aktif konuma taşınır. Taşıma
+        /// başarısız olursa eski klasör geri alınır; başarılı geri yüklemeden sonra da rollback
+        /// klasörü kullanıcı adına otomatik silinmez. Dönen yol, korunmuş önceki veriyi gösterir.
+        /// </summary>
+        private string GeriYuklemeyiGuvenliUygula(string kaynakYedek)
+        {
+            string kaynak = Path.GetFullPath(kaynakYedek);
+            string hedef = Path.GetFullPath(anaVeriKlasoru);
+            if (!Directory.Exists(kaynak)) throw new DirectoryNotFoundException("Seçilen yedek klasörü bulunamadı.");
+            if (Path.GetFileName(kaynak).EndsWith(".incomplete", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("İşareti tamamlanmamış yedek geri yüklenemez.");
+            string tamSistemAppData = Path.Combine(kaynak, "Sistem_Ayarlari_AppData");
+            if (Directory.Exists(tamSistemAppData)) kaynak = tamSistemAppData;
+            if (YollarKesisiyor(kaynak, hedef)) throw new InvalidOperationException("Yedek kaynağı uygulamanın aktif veri klasörüyle çakışamaz.");
+
+            string ustKlasor = Path.GetDirectoryName(hedef);
+            Directory.CreateDirectory(ustKlasor);
+            string kimlik = DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            string staging = Path.Combine(ustKlasor, Path.GetFileName(hedef) + ".restore-staging-" + kimlik);
+            string rollback = Path.Combine(ustKlasor, Path.GetFileName(hedef) + ".rollback-" + kimlik);
+            bool eskiVeriTasinmis = false;
+
+            try
+            {
+                long kopyalananDosyaSayisi = KlasorKopyala(kaynak, staging);
+                if (kopyalananDosyaSayisi == 0) throw new InvalidDataException("Seçilen yedek boş; geri yükleme başlatılmadı.");
+
+                // Dosyaların kopya özetleri tutsa bile yedek SQLite veritabanı açılabilir olmayabilir.
+                // Bu nedenle DB bütünlük kontrolü aktif klasörü taşımadan önce staging alanında yapılır.
+                YedegiVeritabaniAcisindanDogrula(staging);
+
+                if (Directory.Exists(hedef))
+                {
+                    Directory.Move(hedef, rollback);
+                    eskiVeriTasinmis = true;
+                }
+                else if (File.Exists(hedef))
+                {
+                    throw new IOException("Aktif veri klasörünün bulunduğu yerde aynı isimli bir dosya var; mevcut içerik değiştirilmedi.");
+                }
+
                 try
                 {
-                    string hedefDosya = Path.Combine(hedefKlasor, Path.GetFileName(dosya));
-                    File.Copy(dosya, hedefDosya, true);
+                    Directory.Move(staging, hedef);
                 }
-                catch { /* Webview kilitli dosyalarını atla (çökmeyi önler) */ }
-            }
+                catch (Exception degistirmeHatasi)
+                {
+                    if (eskiVeriTasinmis)
+                    {
+                        try
+                        {
+                            Directory.Move(rollback, hedef);
+                            eskiVeriTasinmis = false;
+                        }
+                        catch (Exception geriAlmaHatasi)
+                        {
+                            throw new AggregateException($"Yeni yedek devreye alınamadı ve otomatik geri alma da başarısız oldu. Eski veri şu klasörde korunuyor: {rollback}", degistirmeHatasi, geriAlmaHatasi);
+                        }
+                    }
+                    throw;
+                }
 
-            // Alt klasörleri de matruşka gibi kopyala (Recursive)
-            foreach (string altKlasor in Directory.GetDirectories(kaynakKlasor))
+                // Eski veri klasörü ayrı bir rollback kopyası olarak tutulur; başarılı restore sonrası silinmez.
+                return eskiVeriTasinmis ? rollback : null;
+            }
+            catch (Exception geriYuklemeHatasi)
             {
-                // Edge Webview'in geçici kilitli klasörünü yedeğe dahil etme
-                if (altKlasor.Contains("EBWebView")) continue;
-
-                string hedefAltKlasor = Path.Combine(hedefKlasor, Path.GetFileName(altKlasor));
-                KlasorKopyala(altKlasor, hedefAltKlasor);
+                if (Directory.Exists(staging))
+                {
+                    try { Directory.Delete(staging, true); }
+                    catch (Exception temizlemeHatasi)
+                    {
+                        throw new AggregateException($"Geri yükleme başarısız. Geçici doğrulama klasörü temizlenemedi: {staging}", geriYuklemeHatasi, temizlemeHatasi);
+                    }
+                }
+                throw;
             }
+        }
+
+        /// <summary>
+        /// Bir dizin ağacını alt klasörleriyle birlikte kopyalar. Kaynak-hedef yollarının çakışması,
+        /// junction/symbolic link içeren girdiler ve mevcut hedef reddedilir. Her dosya kopyası
+        /// kaynak uzunluğu ve SHA-256 özetiyle karşılaştırılır. Bir dosya okunamaz, yazılamaz veya
+        /// özeti eşleşmezse sessizce atlanmaz; hata çağırana taşınarak yedeğin başarı gibi görünmesi
+        /// önlenir. Atlanacak klasör adları yalnızca bilinen geçici uygulama klasörleri için verilir.
+        /// </summary>
+        private long KlasorKopyala(string kaynakKlasor, string hedefKlasor, params string[] atlanacakKlasorler)
+        {
+            string kaynak = Path.GetFullPath(kaynakKlasor);
+            string hedef = Path.GetFullPath(hedefKlasor);
+            if (!Directory.Exists(kaynak)) throw new DirectoryNotFoundException("Kopyalanacak klasör bulunamadı: " + kaynak);
+            if (YollarKesisiyor(kaynak, hedef)) throw new InvalidOperationException("Kaynak ve hedef klasörler iç içe olamaz.");
+            if ((File.GetAttributes(kaynak) & FileAttributes.ReparsePoint) != 0)
+                throw new IOException("Bağlantı/junction içeren klasör kopyalanmadı: " + kaynak);
+            if (Directory.Exists(hedef) || File.Exists(hedef)) throw new IOException("Hedef klasör zaten mevcut: " + hedef);
+
+            Directory.CreateDirectory(hedef);
+            long kopyalananDosyaSayisi = 0;
+
+            foreach (string dosya in Directory.GetFiles(kaynak))
+            {
+                if ((File.GetAttributes(dosya) & FileAttributes.ReparsePoint) != 0)
+                    throw new IOException("Bağlantı dosyası yedeklenmedi: " + dosya);
+
+                string hedefDosya = Path.Combine(hedef, Path.GetFileName(dosya));
+                File.Copy(dosya, hedefDosya);
+                FileInfo kaynakBilgisi = new FileInfo(dosya);
+                FileInfo hedefBilgisi = new FileInfo(hedefDosya);
+                if (kaynakBilgisi.Length != hedefBilgisi.Length || !DosyaOzetleriEslesiyor(dosya, hedefDosya))
+                    throw new IOException("Kopyalanan dosya doğrulanamadı: " + dosya);
+                kopyalananDosyaSayisi++;
+            }
+
+            foreach (string altKlasor in Directory.GetDirectories(kaynak))
+            {
+                string klasorAdi = Path.GetFileName(altKlasor);
+                if (atlanacakKlasorler != null && atlanacakKlasorler.Any(ad => string.Equals(ad, klasorAdi, StringComparison.OrdinalIgnoreCase))) continue;
+
+                string hedefAltKlasor = Path.Combine(hedef, klasorAdi);
+                kopyalananDosyaSayisi += KlasorKopyala(altKlasor, hedefAltKlasor, atlanacakKlasorler);
+            }
+            return kopyalananDosyaSayisi;
+        }
+
+        private static bool DosyaOzetleriEslesiyor(string kaynakDosya, string hedefDosya)
+        {
+            byte[] kaynakOzeti;
+            byte[] hedefOzeti;
+            using (SHA256 sha256 = SHA256.Create())
+            using (FileStream akim = new FileStream(kaynakDosya, FileMode.Open, FileAccess.Read, FileShare.Read))
+                kaynakOzeti = sha256.ComputeHash(akim);
+            using (SHA256 sha256 = SHA256.Create())
+            using (FileStream akim = new FileStream(hedefDosya, FileMode.Open, FileAccess.Read, FileShare.Read))
+                hedefOzeti = sha256.ComputeHash(akim);
+            return kaynakOzeti.SequenceEqual(hedefOzeti);
+        }
+
+        /// <summary>
+        /// Yedek içindeki uygulama veritabanının beklenen konumda bulunduğunu ve SQLite motoru
+        /// tarafından salt-okunur şekilde açılıp bütünlük denetiminden geçtiğini doğrular. Bu kontrol
+        /// yedek alınırken tamamlanmamış bir kopyanın başarı olarak gösterilmesini ve geri yüklemede
+        /// içinde yalnızca rastgele dosyalar bulunan bir klasörün canlı veri klasörünün yerine
+        /// geçirilmesini önler. Doğrulama hiçbir şemayı değiştirmez; başarısızlık çağırana aktarılır.
+        /// </summary>
+        private static void YedegiVeritabaniAcisindanDogrula(string veriKlasoru)
+        {
+            string dbDosyasi = Path.Combine(veriKlasoru, "Veritabani", "TamgaApp_Data.db");
+            if (!File.Exists(dbDosyasi))
+                throw new InvalidDataException("Yedekte beklenen SQLite veritabanı bulunamadı: " + dbDosyasi);
+
+            var baglantiDizesi = new SqliteConnectionStringBuilder
+            {
+                DataSource = dbDosyasi,
+                Mode = SqliteOpenMode.ReadOnly
+            };
+
+            using (var baglanti = new SqliteConnection(baglantiDizesi.ToString()))
+            {
+                baglanti.Open();
+                using (var komut = baglanti.CreateCommand())
+                {
+                    komut.CommandText = "PRAGMA quick_check;";
+                    string sonuc = Convert.ToString(komut.ExecuteScalar());
+                    if (!string.Equals(sonuc, "ok", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Yedekteki SQLite veritabanı bütünlük denetimini geçemedi: " + (sonuc ?? "sonuç alınamadı"));
+                }
+            }
+        }
+
+        private static bool YollarKesisiyor(string ilkYol, string ikinciYol)
+        {
+            return AyniVeyaAltinda(ilkYol, ikinciYol) || AyniVeyaAltinda(ikinciYol, ilkYol);
+        }
+
+        private static bool AyniVeyaAltinda(string olasiAltYol, string ustYol)
+        {
+            string alt = TamYolAyiraclariniTemizle(olasiAltYol);
+            string ust = TamYolAyiraclariniTemizle(ustYol);
+            if (string.Equals(alt, ust, StringComparison.OrdinalIgnoreCase)) return true;
+            string kokAyiracli = ust.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? ust
+                : ust + Path.DirectorySeparatorChar;
+            return alt.StartsWith(kokAyiracli, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string TamYolAyiraclariniTemizle(string yol)
+        {
+            string tamYol = Path.GetFullPath(yol);
+            string kok = Path.GetPathRoot(tamYol);
+            while (tamYol.Length > kok.Length && (tamYol.EndsWith("\\", StringComparison.Ordinal) || tamYol.EndsWith("/", StringComparison.Ordinal)))
+                tamYol = tamYol.Substring(0, tamYol.Length - 1);
+            return tamYol;
         }
 
         #endregion
@@ -12975,8 +14090,9 @@ namespace TamgaApp
                 if (fbd.ShowDialog() == DialogResult.OK)
                 {
                     string hedefAnaKlasor = fbd.SelectedPath;
-                    string tarihDamgasi = DateTime.Now.ToString("yyyy-MM-dd_HH-mm");
+                    string tarihDamgasi = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + "_" + Guid.NewGuid().ToString("N").Substring(0, 8);
                     string yedekKlasoru = Path.Combine(hedefAnaKlasor, $"TamgaApp_TamYedek_{tarihDamgasi}");
+                    string geciciYedekKlasoru = yedekKlasoru + ".incomplete";
 
                     // 1. ZIRH: Kullanıcı başka bir şeye tıklamasın diye ANA EKRANI KİLİTLE
                     this.Enabled = false;
@@ -13035,43 +14151,69 @@ namespace TamgaApp
                     try
                     {
                         // 3. AĞIR İŞİ ARKA PLANA (TASK) AT Kİ EKRAN DONMASIN!
-                        await Task.Run(() =>
+                        await yedeklemeKilidi.WaitAsync();
+                        try
                         {
-                            Directory.CreateDirectory(yedekKlasoru);
-
-                            // YEDEK 1: APPDATA (Tüm Ayarlar, SQL Bağlantıları, Hafıza ve Şablon Klasörleri)
-                            string appDataYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
-                            if (Directory.Exists(appDataYol))
+                            await Task.Run(() =>
                             {
-                                KlasorKopyala_V2(appDataYol, Path.Combine(yedekKlasoru, "Sistem_Ayarlari_AppData"));
-                            }
-
-                            // YEDEK 2: MASAÜSTÜ KLASÖRLERİ (Geçmiş Raporlar, Arşivler, Yarım Kalanlar vs.)
-                            string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-
-                            string[] yedeklenecekMasaustuKlasorleri = new string[]
-                            {
-                                "TamgaApp Tamamlanan Sevkiyatlar",
-                                "TamgaApp Yarım Sevkiyatlar",
-                                "TamgaApp Sayım Raporları",
-                                "TamgaApp Sevkiyat Raporları",
-                                "Günlük Üretim Takip"
-                            };
-
-                            foreach (string kAd in yedeklenecekMasaustuKlasorleri)
-                            {
-                                string kYol = Path.Combine(masaustu, kAd);
-                                if (Directory.Exists(kYol))
+                                try
                                 {
-                                    KlasorKopyala_V2(kYol, Path.Combine(yedekKlasoru, kAd));
+                                    Directory.CreateDirectory(geciciYedekKlasoru);
+                                    long kopyalananDosyaSayisi = 0;
+
+                                    // YEDEK 1: APPDATA (Tüm Ayarlar, SQL Bağlantıları, Hafıza ve Şablon Klasörleri)
+                                    string appDataYol = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
+                                    if (Directory.Exists(appDataYol))
+                                    {
+                                        kopyalananDosyaSayisi += KlasorKopyala_V2(appDataYol, Path.Combine(geciciYedekKlasoru, "Sistem_Ayarlari_AppData"));
+                                        YedegiVeritabaniAcisindanDogrula(Path.Combine(geciciYedekKlasoru, "Sistem_Ayarlari_AppData"));
+                                    }
+
+                                    // YEDEK 2: MASAÜSTÜ KLASÖRLERİ (Geçmiş Raporlar, Arşivler, Yarım Kalanlar vs.)
+                                    string masaustu = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                    string[] yedeklenecekMasaustuKlasorleri = new string[]
+                                    {
+                                        "TamgaApp Tamamlanan Sevkiyatlar",
+                                        "TamgaApp Yarım Sevkiyatlar",
+                                        "TamgaApp Sayım Raporları",
+                                        "TamgaApp Sevkiyat Raporları",
+                                        "Günlük Üretim Takip"
+                                    };
+
+                                    foreach (string kAd in yedeklenecekMasaustuKlasorleri)
+                                    {
+                                        string kYol = Path.Combine(masaustu, kAd);
+                                        if (Directory.Exists(kYol))
+                                            kopyalananDosyaSayisi += KlasorKopyala_V2(kYol, Path.Combine(geciciYedekKlasoru, kAd));
+                                    }
+
+                                    if (kopyalananDosyaSayisi == 0) throw new IOException("Yedeklenecek dosya bulunamadı; boş yedek başarı olarak işaretlenmedi.");
+                                    Directory.Move(geciciYedekKlasoru, yedekKlasoru);
                                 }
-                            }
-                        });
+                                catch (Exception ex)
+                                {
+                                    try
+                                    {
+                                        if (Directory.Exists(geciciYedekKlasoru)) Directory.Delete(geciciYedekKlasoru, true);
+                                    }
+                                    catch (Exception temizlemeHatasi)
+                                    {
+                                        throw new AggregateException($"Tam sistem yedeği tamamlanamadı. Eksik geçici kopya: {geciciYedekKlasoru}", ex, temizlemeHatasi);
+                                    }
+                                    throw;
+                                }
+                            });
+                        }
+                        finally
+                        {
+                            yedeklemeKilidi.Release();
+                        }
 
                         MessageBox.Show($"Tüm sistem başarıyla yedeklendi!\n\nYedek Yeri:\n{yedekKlasoru}", "Yedekleme Tamamlandı", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
+                        YedeklemeHatasiniKaydet(ex);
                         MessageBox.Show("Yedekleme sırasında bir hata oluştu:\n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                     finally
@@ -13085,35 +14227,546 @@ namespace TamgaApp
             }
         }
 
-        // 🌟 ZIRHLI KLASÖR KOPYALAMA MOTORU (Açık ve Kilitli Dosyaları Atlar, Çökmeyi Önler)
-        private void KlasorKopyala_V2(string kaynakKlasor, string hedefKlasor)
+        // Tam sistem yedeğinde sadece bilinen geçici çalışma klasörleri atlanır; diğer kopyalama hataları yukarı taşınır.
+        private long KlasorKopyala_V2(string kaynakKlasor, string hedefKlasor)
         {
-            if (!Directory.Exists(hedefKlasor)) Directory.CreateDirectory(hedefKlasor);
-
-            foreach (string dosya in Directory.GetFiles(kaynakKlasor))
-            {
-                try
-                {
-                    string hedefDosya = Path.Combine(hedefKlasor, Path.GetFileName(dosya));
-                    File.Copy(dosya, hedefDosya, true);
-                }
-                catch { /* Kilitli WebView veya açık Excel dosyası varsa atlar, sistemi çökertmez! */ }
-            }
-
-            foreach (string altKlasor in Directory.GetDirectories(kaynakKlasor))
-            {
-                // Edge Webview'in geçici kilitli klasörünü yedeğe dahil etme
-                if (altKlasor.Contains("EBWebView") || altKlasor.Contains("EtiketPrintAktif")) continue;
-
-                string hedefAltKlasor = Path.Combine(hedefKlasor, Path.GetFileName(altKlasor));
-                KlasorKopyala_V2(altKlasor, hedefAltKlasor);
-            }
+            return KlasorKopyala(kaynakKlasor, hedefKlasor, "EBWebView", "EtiketPrintAktif");
         }
 
         #endregion
 
         // =========================================================================================
 
+        #region 🧪 30. YÖNETİCİ PROGRAM TESTİ VE CANLI TRACE
+
+        private readonly object adminTraceKilidi = new object();
+        private readonly Queue<string> adminTraceKayitlari = new Queue<string>();
+        private TabPage adminTraceSekmesi;
+        private RichTextBox adminTraceEkrani;
+        private bool adminTraceDuraklatildi;
+
+        /// <summary>
+        /// Yönetici araçlarının her açılışta ve kullanım anında yetkisini doğrular.
+        /// Bu kontrol, uygulamadaki mevcut ortak yönetici yetkisi metodunu kullanır.
+        /// </summary>
+        private bool TaniYoneticiMi()
+        {
+            return AktifOturumTamYetkiliMi();
+        }
+
+        /// <summary>
+        /// Tam yetkili oturumda Program Testi düğmesini ve canlı Trace alt sekmesini ekler.
+        /// Bu metot MainForm_Load içinden, kullanıcı sekme izinleri düzenlendikten sonra çağrılır.
+        /// </summary>
+        private void YoneticiTaniAraclariniHazirla()
+        {
+            if (!TaniYoneticiMi())
+                return;
+
+            if (tabPage9.Controls["btnProgramTest"] == null)
+            {
+                var btnProgramTest = new Button
+                {
+                    Name = "btnProgramTest",
+                    Text = "Program Testi ve Hata Analizi",
+                    Location = new Point(35, 500),
+                    Size = new Size(603, 42),
+                    BackColor = Color.FromArgb(25, 105, 85),
+                    ForeColor = Color.White,
+                    Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                    FlatStyle = FlatStyle.Flat,
+                    Cursor = Cursors.Hand
+                };
+
+                btnProgramTest.Click += ProgramTest_Click;
+                tabPage9.Controls.Add(btnProgramTest);
+                btnProgramTest.BringToFront();
+            }
+
+            adminTraceSekmesi = tabPrintSettings.TabPages
+                .Cast<TabPage>()
+                .FirstOrDefault(t => t.Name == "tabAdminTrace");
+
+            if (adminTraceSekmesi == null)
+            {
+                adminTraceSekmesi = new TabPage("Trace")
+                {
+                    Name = "tabAdminTrace",
+                    Padding = new Padding(4)
+                };
+
+                var aracCubugu = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Top,
+                    Height = 40,
+                    Padding = new Padding(4),
+                    WrapContents = false
+                };
+
+                var btnDuraklat = new Button
+                {
+                    Text = "Duraklat",
+                    Width = 100,
+                    Height = 27
+                };
+
+                var btnTemizle = new Button
+                {
+                    Text = "Ekranı Temizle",
+                    Width = 120,
+                    Height = 27
+                };
+
+                var btnGunlukKlasoru = new Button
+                {
+                    Text = "Günlük Klasörünü Aç",
+                    Width = 160,
+                    Height = 27
+                };
+
+                adminTraceEkrani = new RichTextBox
+                {
+                    Name = "txtAdminTrace",
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    BackColor = Color.FromArgb(20, 25, 28),
+                    ForeColor = Color.LightGreen,
+                    Font = new Font("Consolas", 9),
+                    WordWrap = false,
+                    BorderStyle = BorderStyle.FixedSingle
+                };
+
+                btnDuraklat.Click += (s, e) =>
+                {
+                    if (!TaniYoneticiMi())
+                        return;
+
+                    adminTraceDuraklatildi = !adminTraceDuraklatildi;
+                    btnDuraklat.Text = adminTraceDuraklatildi ? "Devam Et" : "Duraklat";
+
+                    if (!adminTraceDuraklatildi)
+                        AdminTraceEkraniniYenile();
+                };
+
+                btnTemizle.Click += (s, e) =>
+                {
+                    if (!TaniYoneticiMi())
+                        return;
+
+                    adminTraceEkrani.Clear();
+
+                    lock (adminTraceKilidi)
+                        adminTraceKayitlari.Clear();
+                };
+
+                btnGunlukKlasoru.Click += (s, e) =>
+                {
+                    if (!TaniYoneticiMi())
+                        return;
+
+                    try
+                    {
+                        string klasor = AdminTraceGunlukKlasoru();
+                        Directory.CreateDirectory(klasor);
+                        System.Diagnostics.Process.Start(
+                            "explorer.exe",
+                            "\"" + klasor + "\"");
+                    }
+                    catch
+                    {
+                        MessageBox.Show(
+                            "Trace günlük klasörü açılamadı.",
+                            "Trace",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                };
+
+                aracCubugu.Controls.Add(btnDuraklat);
+                aracCubugu.Controls.Add(btnTemizle);
+                aracCubugu.Controls.Add(btnGunlukKlasoru);
+
+                adminTraceSekmesi.Controls.Add(adminTraceEkrani);
+                adminTraceSekmesi.Controls.Add(aracCubugu);
+                tabPrintSettings.TabPages.Add(adminTraceSekmesi);
+            }
+
+            AdminTraceYaz("BİLGİ", "Uygulama", "Yönetici araçları hazır.");
+        }
+
+        /// <summary>
+        /// Trace kaydını yönetici oturumunda ekrana ve günlük dosyasına yazar.
+        /// Parola veya bağlantı dizesi gibi gizli bilgileri kaydetmez.
+        /// </summary>
+        private void AdminTraceYaz(string seviye, string kaynak, string mesaj)
+        {
+            if (!TaniYoneticiMi())
+                return;
+
+            string guvenliMesaj = TraceBilgisiniMaskele(mesaj ?? string.Empty);
+            guvenliMesaj = guvenliMesaj.Replace('\r', ' ').Replace('\n', ' ');
+
+            string satir = string.Format(
+                "{0:yyyy-MM-dd HH:mm:ss.fff} [{1}] [{2}] {3}",
+                DateTime.Now,
+                seviye,
+                kaynak,
+                guvenliMesaj);
+
+            lock (adminTraceKilidi)
+            {
+                adminTraceKayitlari.Enqueue(satir);
+
+                while (adminTraceKayitlari.Count > 1000)
+                    adminTraceKayitlari.Dequeue();
+
+                try
+                {
+                    string klasor = AdminTraceGunlukKlasoru();
+                    Directory.CreateDirectory(klasor);
+
+                    string dosya = Path.Combine(
+                        klasor,
+                        "Trace-" + DateTime.Now.ToString("yyyy-MM-dd") + ".log");
+
+                    File.AppendAllText(
+                        dosya,
+                        satir + Environment.NewLine,
+                        Encoding.UTF8);
+                }
+                catch
+                {
+                    // Günlük dosyasına erişilemiyorsa uygulama çalışmaya devam eder.
+                }
+            }
+
+            if (adminTraceDuraklatildi
+                || adminTraceEkrani == null
+                || adminTraceEkrani.IsDisposed)
+                return;
+
+            try
+            {
+                if (IsHandleCreated && InvokeRequired)
+                    BeginInvoke(new Action(() => AdminTraceSatiriEkle(satir)));
+                else
+                    AdminTraceSatiriEkle(satir);
+            }
+            catch
+            {
+                // Form kapanırken sıraya girmiş UI güncellemesi atlanabilir.
+            }
+        }
+
+        private string AdminTraceGunlukKlasoru()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "TamgaApp",
+                "Logs");
+        }
+
+        private static string TraceBilgisiniMaskele(string metin)
+        {
+            return System.Text.RegularExpressions.Regex.Replace(
+                metin,
+                @"(?i)\b(password|pwd|sifre|şifre|user\s*id|uid|data\s*source|server|initial\s*catalog|database)\s*=\s*[^;,\r\n]+",
+                "$1=<gizlendi>");
+        }
+
+        private void AdminTraceSatiriEkle(string satir)
+        {
+            if (!TaniYoneticiMi()
+                || adminTraceEkrani == null
+                || adminTraceEkrani.IsDisposed)
+                return;
+
+            adminTraceEkrani.AppendText(satir + Environment.NewLine);
+
+            if (adminTraceEkrani.Lines.Length > 1000)
+            {
+                adminTraceEkrani.Lines = adminTraceEkrani.Lines
+                    .Skip(adminTraceEkrani.Lines.Length - 700)
+                    .ToArray();
+            }
+
+            adminTraceEkrani.SelectionStart = adminTraceEkrani.TextLength;
+            adminTraceEkrani.ScrollToCaret();
+        }
+
+        private void AdminTraceEkraniniYenile()
+        {
+            if (!TaniYoneticiMi()
+                || adminTraceEkrani == null
+                || adminTraceEkrani.IsDisposed)
+                return;
+
+            string[] satirlar;
+
+            lock (adminTraceKilidi)
+                satirlar = adminTraceKayitlari.ToArray();
+
+            adminTraceEkrani.Clear();
+
+            foreach (string satir in satirlar)
+                AdminTraceSatiriEkle(satir);
+        }
+
+        /// <summary>
+        /// Programın dosya erişimini, SQLite veritabanını, WebView2 Runtime'ı,
+        /// yazıcı/port durumunu ve yapılandırılmış ERP bağlantısını kontrol eder.
+        /// Veri tablolarına yazmaz; ERP tarafında yalnızca SELECT 1 çalıştırır.
+        /// </summary>
+        private async void ProgramTest_Click(object sender, EventArgs e)
+        {
+            if (!TaniYoneticiMi())
+            {
+                MessageBox.Show(
+                    "Program Testi yalnızca yönetici oturumunda kullanılabilir.",
+                    "Erişim Engellendi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Stop);
+                return;
+            }
+
+            Button dugme = sender as Button;
+
+            if (dugme != null)
+                dugme.Enabled = false;
+
+            AdminTraceYaz("BİLGİ", "Program Testi", "Kontroller başladı.");
+
+            try
+            {
+                List<string> sonuclar = await Task.Run(ProgramTestKontrolleriniCalistir);
+
+                int hataSayisi = sonuclar.Count(s => s.StartsWith("[HATA]"));
+                int uyariSayisi = sonuclar.Count(s => s.StartsWith("[UYARI]"));
+
+                AdminTraceYaz(
+                    "BİLGİ",
+                    "Program Testi",
+                    "Kontroller tamamlandı. Hata: " + hataSayisi
+                        + ", uyarı: " + uyariSayisi);
+
+                string rapor = string.Join(Environment.NewLine, sonuclar)
+                    + Environment.NewLine
+                    + Environment.NewLine
+                    + "Bu kontrol uçtan uca sevkiyat/yazdırma testi yapmaz.";
+
+                MessageBox.Show(
+                    rapor,
+                    "Program Testi ve Hata Analizi",
+                    MessageBoxButtons.OK,
+                    hataSayisi > 0 ? MessageBoxIcon.Error : MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                AdminTraceYaz(
+                    "HATA",
+                    "Program Testi",
+                    ex.GetType().Name + ": " + ex.Message);
+
+                MessageBox.Show(
+                    "Test raporu oluşturulamadı: " + ex.GetType().Name,
+                    "Program Testi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+            finally
+            {
+                if (dugme != null && !dugme.IsDisposed)
+                    dugme.Enabled = true;
+            }
+        }
+
+        private List<string> ProgramTestKontrolleriniCalistir()
+        {
+            var sonuclar = new List<string>();
+
+            KontrolEkle(sonuclar, "Uygulama klasörü", () =>
+            {
+                if (!Directory.Exists(AppDomain.CurrentDomain.BaseDirectory))
+                    throw new DirectoryNotFoundException("Uygulama klasörü bulunamadı.");
+
+                return "Uygulama klasörüne erişilebiliyor.";
+            });
+
+            KontrolEkle(sonuclar, "Kullanıcı verisi klasörü", () =>
+                KlasorYazmaKontrolu(anaVeriKlasoru));
+
+            KontrolEkle(sonuclar, "Yedek klasörü", () =>
+                KlasorYazmaKontrolu(yedeklerKlasoru));
+
+            KontrolEkle(sonuclar, "SQLite veritabanı", () =>
+            {
+                string dbYolu = DbHelper.DbPath;
+
+                if (!File.Exists(dbYolu))
+                    throw new FileNotFoundException("SQLite veritabanı bulunamadı.");
+
+                var ayar = new SqliteConnectionStringBuilder
+                {
+                    DataSource = dbYolu,
+                    Mode = SqliteOpenMode.ReadOnly,
+                    Pooling = false
+                };
+
+                using (var baglanti = new SqliteConnection(ayar.ToString()))
+                {
+                    baglanti.Open();
+
+                    using (var komut = baglanti.CreateCommand())
+                    {
+                        komut.CommandText = "PRAGMA quick_check;";
+                        string sonuc = Convert.ToString(komut.ExecuteScalar());
+
+                        if (!string.Equals(sonuc, "ok", StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidDataException("SQLite bütünlük kontrolü başarısız.");
+                    }
+
+                    string[] gerekliTablolar = { "Firmalar", "Urunler", "Kullanicilar" };
+
+                    foreach (string tablo in gerekliTablolar)
+                    {
+                        using (var komut = baglanti.CreateCommand())
+                        {
+                            komut.CommandText =
+                                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=$ad;";
+                            komut.Parameters.AddWithValue("$ad", tablo);
+
+                            if (Convert.ToInt32(komut.ExecuteScalar()) == 0)
+                                throw new InvalidDataException("Gerekli tablo eksik: " + tablo);
+                        }
+                    }
+                }
+
+                return "Bütünlük kontrolü başarılı; veritabanı salt okunur açıldı.";
+            });
+
+            KontrolEkle(sonuclar, "WebView2 yazdırma bileşeni", () =>
+            {
+                string surum =
+                    Microsoft.Web.WebView2.Core.CoreWebView2Environment
+                        .GetAvailableBrowserVersionString(null);
+
+                if (string.IsNullOrWhiteSpace(surum))
+                    throw new InvalidOperationException("WebView2 Runtime bulunamadı.");
+
+                return "WebView2 Runtime mevcut: " + surum;
+            });
+
+            KontrolEkle(sonuclar, "Yazıcılar", () =>
+            {
+                int sayi = PrinterSettings.InstalledPrinters.Count;
+
+                if (sayi == 0)
+                    return "[UYARI] Windows'ta yüklü yazıcı bulunamadı.";
+
+                return sayi + " yazıcı tanımlı.";
+            });
+
+            KontrolEkle(sonuclar, "Barkod okuyucu portları", () =>
+            {
+                string[] portlar = SerialPort.GetPortNames();
+
+                if (portlar.Length == 0)
+                    return "[BİLGİ] Seri port bulunamadı.";
+
+                return "Bulunan portlar: " + string.Join(", ", portlar);
+            });
+
+            KontrolEkle(sonuclar, "ERP bağlantısı", () =>
+            {
+                if (EvModuAktif)
+                    return "[BİLGİ] Ev Modu açık; ERP bağlantısı atlandı.";
+
+                if (string.IsNullOrWhiteSpace(Properties.Settings.Default.SqlSunucu)
+                    || string.IsNullOrWhiteSpace(Properties.Settings.Default.SqlVeritabani))
+                    return "[UYARI] ERP bağlantı ayarları eksik.";
+
+                var ayar = new OleDbConnectionStringBuilder(SqlBaglantiDizesiGetir());
+                ayar["Connect Timeout"] = 5;
+
+                using (var baglanti = new OleDbConnection(ayar.ConnectionString))
+                {
+                    baglanti.Open();
+
+                    using (var komut = baglanti.CreateCommand())
+                    {
+                        komut.CommandText = "SELECT 1";
+                        komut.CommandTimeout = 5;
+
+                        if (Convert.ToInt32(komut.ExecuteScalar()) != 1)
+                            throw new InvalidOperationException("ERP kontrol sorgusu başarısız.");
+                    }
+                }
+
+                return "ERP bağlantısı ve salt okunur SELECT 1 sorgusu başarılı.";
+            });
+
+            return sonuclar;
+        }
+
+        private void KontrolEkle(
+            List<string> liste,
+            string kontrolAdi,
+            Func<string> kontrol)
+        {
+            try
+            {
+                string aciklama = kontrol();
+                string durum = "OK";
+
+                if (aciklama.StartsWith("[UYARI]"))
+                {
+                    durum = "UYARI";
+                    aciklama = aciklama.Substring(7).Trim();
+                }
+                else if (aciklama.StartsWith("[BİLGİ]"))
+                {
+                    durum = "BİLGİ";
+                    aciklama = aciklama.Substring(7).Trim();
+                }
+
+                liste.Add("[" + durum + "] " + kontrolAdi + ": " + aciklama);
+            }
+            catch (Exception ex)
+            {
+                string guvenliHata = TraceBilgisiniMaskele(ex.Message);
+                liste.Add("[HATA] " + kontrolAdi + ": "
+                    + ex.GetType().Name + " — " + guvenliHata);
+
+                AdminTraceYaz(
+                    "HATA",
+                    kontrolAdi,
+                    ex.GetType().Name + ": " + ex.Message);
+            }
+        }
+
+        private static string KlasorYazmaKontrolu(string klasor)
+        {
+            Directory.CreateDirectory(klasor);
+
+            string denemeDosyasi = Path.Combine(
+                klasor,
+                ".tamgaapp-test-" + Guid.NewGuid().ToString("N") + ".tmp");
+
+            try
+            {
+                File.WriteAllText(denemeDosyasi, "test", Encoding.UTF8);
+                File.Delete(denemeDosyasi);
+                return "Klasöre yazılabildi; geçici test dosyası silindi.";
+            }
+            finally
+            {
+                if (File.Exists(denemeDosyasi))
+                    File.Delete(denemeDosyasi);
+            }
+        }
+
         #endregion
+
+        #endregion  
     }
 }
