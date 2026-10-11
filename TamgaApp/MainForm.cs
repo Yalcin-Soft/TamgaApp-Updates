@@ -166,8 +166,7 @@ namespace TamgaApp
         // tek bir döküman (Document) içinde sayfalandırma yaparak RAM'den kazanç sağlıyoruz.
         // ------------------------------------------------------------------------
         private List<Firma> batchFirms;
-        private int batchIndex;                                            // İşlenen sayfanın o anki sırasını tutar (HasMorePages mantığı için)
-
+        private int batchIndex;
         // ------------------------------------------------------------------------
         // YAZICI EŞLEŞTİRME (PRINTER MAPPING) DEPOSU
         // NEDEN SÖZLÜK (DICTIONARY)? "Etiket" için Zebra'yı, "A4 Rapor" için HP'yi hatırlaması
@@ -175,7 +174,6 @@ namespace TamgaApp
         // ------------------------------------------------------------------------
         private Dictionary<string, string> printerMappings = new Dictionary<string, string>();
         private const string PrinterSettingsFile = "printer_settings.json";
-        private PrintDocument pdUretim;                                    // Depo Kabul A4 baskı motoru
         #endregion
 
         #region 📦 01.5 SEVKİYAT VE KALICI HAFIZA (GHOST MODE CACHE)
@@ -672,8 +670,6 @@ namespace TamgaApp
             if (btnLoadTemplate != null) btnLoadTemplate.Click += BtnLoadTemplate_Click;
             if (btnPreview != null) btnPreview.Click += BtnPreview_Click;
             if (btnPrint != null) btnPrint.Click += BtnPrint_Click;
-            if (btnManuelOnizle != null) btnManuelOnizle.Click += (s, e) => RunManualPrint(true);
-            if (btnManuelYazdir != null) btnManuelYazdir.Click += (s, e) => RunManualPrint(false);
             if (btnTemizleTasarm != null) btnTemizleTasarm.Click += BtnTemizleTasarm_Click;
             if (btnDisSablonYukle != null) btnDisSablonYukle.Click += btnDisSablonYukle_Click;
 
@@ -3249,26 +3245,29 @@ namespace TamgaApp
 
         #region 🚀 09. MANUEL ETİKET VE ÖZEL YAZDIRMA
 
-        #region 🖨️ 09.1 MANUEL YAZDIRMA MOTORU (MANUAL PRINT)
-        // Veritabanına bağlı kalmadan, kullanıcının ekrandaki kutucuklara elle girdiği bilgileri
-        // (Firma, Adres vb.) anında bir şablonla birleştirip yazdırmaya veya önizlemeye yarar.
-        private void RunManualPrint(bool isPreview)
+        #region 🖨️ 09.1 MANUEL YAZDIRMA MOTORU (EDGE WEBVIEW2)
+
+        // 🌟 İŞTE O SİLİNEN MANUEL YAZDIRMA BUTONU TETİKLEYİCİSİ BURADA EFENDİM!
+        private void btnManuelYazdir_Click(object sender, EventArgs e)
         {
-            // Şablon seçilmemişse işlemi durdur
+            RunManualPrint();
+        }
+
+        // Veritabanına bağlı kalmadan, kullanıcının ekrandaki kutucuklara elle girdiği bilgileri
+        // anında Edge motoruyla HTML'e çevirip cam gibi net yazdırır.
+        private async void RunManualPrint()
+        {
             if (cmbManualTemplate.SelectedItem == null)
             {
                 MessageBox.Show("Lütfen önce bir şablon seçin!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            // Seçilen şablonun dosya yolunu bul ve varlığını doğrula
             string path = Path.Combine(GetTemplatesDirectory(), cmbManualTemplate.SelectedItem.ToString());
             if (!File.Exists(path)) return;
 
-            // JSON dosyasından şablon tasarımını RAM'e yükle
             var loadedTemplate = JsonConvert.DeserializeObject<TemplateFile>(File.ReadAllText(path));
 
-            // Ekrandaki TextBox'lardan geçici (sanal) bir firma oluştur
             Firma manualFirma = new Firma
             {
                 FirmaAdi = txtManFirma.Text.Trim(),
@@ -3278,60 +3277,48 @@ namespace TamgaApp
                 Telefon2 = txtManTel2.Text.Trim()
             };
 
-            // Çoklu yazdırma listesini sadece bu geçici firmayla doldur (Tek sayfa basılacak)
-            batchFirms = new List<Firma> { manualFirma };
-            batchIndex = 0;
+            string wMm = loadedTemplate.PageWidthMm.ToString();
+            string hMm = loadedTemplate.PageHeightMm.ToString();
 
-            // Yazıcı motorunu sıfırla ve yeniden oluştur
-            if (printDocument1 != null) printDocument1.Dispose();
-            printDocument1 = new PrintDocument();
+            string htmlIcerik = TasarimiHtmlCevir(loadedTemplate.DesignItems, manualFirma, wMm, hMm);
 
-            // Manuel yazdırma sekmesindeki ComboBox'tan yazıcı seçildiyse onu kullan,
-            // yoksa genel ayarlardan (JSON) varsayılanı çek.
-            if (cmbManuelPrinter != null && cmbManuelPrinter.SelectedItem != null)
+            Form modernOnizleme = new Form();
+            modernOnizleme.Text = "Manuel Etiket Yazdırma (Edge Motoru)";
+            modernOnizleme.ShowIcon = false;
+            modernOnizleme.Width = 1000;
+            modernOnizleme.Height = 600;
+            modernOnizleme.StartPosition = FormStartPosition.CenterScreen;
+
+            Microsoft.Web.WebView2.WinForms.WebView2 webCizici = new Microsoft.Web.WebView2.WinForms.WebView2();
+            webCizici.Dock = DockStyle.Fill;
+            modernOnizleme.Controls.Add(webCizici);
+
+            modernOnizleme.FormClosed += (s, ev) => { webCizici.Dispose(); };
+            modernOnizleme.Show();
+
+            string appDataYolu = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string zarfHafizaYolu = Path.Combine(appDataYolu, "TamgaApp", "Profil_ManuelEtiketEdge");
+
+            try
             {
-                printDocument1.PrinterSettings.PrinterName = cmbManuelPrinter.SelectedItem.ToString();
+                var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, zarfHafizaYolu);
+                await webCizici.EnsureCoreWebView2Async(ozelHafiza);
             }
-            else
+            catch (Exception)
             {
-                ApplyPrinterMapping(printDocument1, "Tekli Zarf Yazdırma");
-            }
-
-            // Şablonun milimetrik kağıt boyutlarını inç yüzdesine çevir
-            int printW = (int)(loadedTemplate.PageWidthMm * 100f / 25.4f);
-            int printH = (int)(loadedTemplate.PageHeightMm * 100f / 25.4f);
-            bool isLandscape = (loadedTemplate.Orientation == "Landscape");
-
-            // Kağıt yatay/dikey ayarlarını yazıcıya bildir
-            if (isLandscape)
-            {
-                printDocument1.DefaultPageSettings.PaperSize = new PaperSize("Ozel", Math.Min(printW, printH), Math.Max(printW, printH));
-                printDocument1.DefaultPageSettings.Landscape = true;
-            }
-            else
-            {
-                printDocument1.DefaultPageSettings.PaperSize = new PaperSize("Ozel", printW, printH);
-                printDocument1.DefaultPageSettings.Landscape = false;
+                MessageBox.Show("DİKKAT: Bilgisayarınızda yazdırma motoru (WebView2 Runtime) eksik!\n\nLütfen Microsoft'un sitesinden kurun.", "Bileşen Eksik", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                modernOnizleme.Close();
+                return;
             }
 
-            // Şablondaki çizilecek nesneleri (DesignItems) motorun kullanması için değişkenlere aktar
-            designItems = loadedTemplate.DesignItems ?? new List<DesignItem>();
+            webCizici.NavigateToString(htmlIcerik);
 
-            // Yazdırma görevlerini arka plandaki spooler olaylarına bağla
-            printDocument1.PrintPage += PrintDocument1_PrintPage;
-            printDocument1.BeginPrint += PrintDocument1_BeginPrint;
-
-            // Parametreye göre Önizleme penceresini aç veya doğrudan yazıcıya gönder
-            if (isPreview)
+            webCizici.NavigationCompleted += (s, args) =>
             {
-                printPreviewDialog1.Document = printDocument1;
-                try { printPreviewDialog1.ShowDialog(); } catch { }
-            }
-            else
-            {
-                printDocument1.Print();
-            }
+                webCizici.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+            };
         }
+
         #endregion
 
         #region 🧹 09.2 TASARIM TEMİZLİĞİ (CLEAR DESIGN)
@@ -3434,7 +3421,7 @@ namespace TamgaApp
         }
         #endregion
 
-        #region 💾 10.2 ÜRETİM RAPORUNU KAYDETME VE YAZDIRMA
+        #region 💾 10.2 ÜRETİM RAPORUNU KAYDETME VE YAZDIRMA (EDGE WEBVIEW2 DESTEKLİ)
         // Ekrandaki üretilmiş/okutulmuş ürün listesini bir CSV (Excel destekli) dosyasına kaydeder
         private void btnUretimKaydet_Click(object sender, EventArgs e)
         {
@@ -3466,104 +3453,120 @@ namespace TamgaApp
                 }
             }
 
-            if (chkYazdir != null && chkYazdir.Checked) UretimListesiYazdir(secilenTarih);
+            // 🌟 YAZDIRMA TİKİ İŞARETLİYSE YENİ NESİL EDGE MOTORUNU TETİKLE
+            if (chkYazdir != null && chkYazdir.Checked)
+            {
+                UretimListesiEdgeIleYazdir(secilenTarih);
+            }
 
             MessageBox.Show($"Üretim verileri başarıyla kaydedildi!\nDosya: {dosyaAdi}", "Kayıt Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
             dgvUretim.Rows.Clear();
         }
 
-        // Üretim raporunu (A4 boyutunda standart yazıcıdan) kağıda döken Spooler Motoru
-        private void UretimListesiYazdir(DateTime secilenTarih)
+        // 🌟 YENİ NESİL A4 ÜRETİM RAPORU MOTORU (Taşmaları önler, kusursuz tablo çizer)
+        private async void UretimListesiEdgeIleYazdir(DateTime secilenTarih)
         {
-            pdUretim = new System.Drawing.Printing.PrintDocument();
+            if (dgvUretim.Rows.Count == 0) return;
 
-            // Üretim sayfasındaki özel listeden seçilen yazıcıyı kullan
-            if (cmbUretimYazici != null && cmbUretimYazici.SelectedItem != null)
-            {
-                pdUretim.PrinterSettings.PrinterName = cmbUretimYazici.SelectedItem.ToString();
-            }
+            System.Text.StringBuilder html = new System.Text.StringBuilder();
+            html.AppendLine("<!DOCTYPE html><html><head><meta charset='utf-8'><style>");
 
-            pdUretim.PrintPage += PdUretim_PrintPage;
+            // A4 Dikey Kağıt Ayarı ve Kenar Boşlukları
+            html.AppendLine("@page { size: A4 portrait; margin: 15mm; }");
+            html.AppendLine("body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 13px; color: #333; margin: 0; padding: 0; }");
+            html.AppendLine(".baslik-kutu { text-align: center; border-bottom: 3px solid #0f4c3a; padding-bottom: 10px; margin-bottom: 20px; }");
+            html.AppendLine("h2 { color: #0f4c3a; margin: 0; font-size: 22px; text-transform: uppercase; }");
+            html.AppendLine("h4 { color: #666; margin: 5px 0 0 0; font-size: 14px; }");
 
-            // 🌟 DİREKT YAZDIRMA İPTAL EDİLDİ: Artık ekrana diğerleri gibi yazdırma penceresi (Önizleme) çıkacak
-            PrintPreviewDialog onizleme = new PrintPreviewDialog
-            {
-                Document = pdUretim,
-                Width = 900,
-                Height = 700,
-                ShowIcon = false,
-                StartPosition = FormStartPosition.CenterScreen,
-                Text = "Depo Kabul Raporu Yazdırma Penceresi"
-            };
+            // Tablo Tasarımı (Elit ve Şık)
+            html.AppendLine("table { width: 100%; border-collapse: collapse; }");
+            html.AppendLine("th, td { border: 1px solid #bdc3c7; padding: 8px 10px; text-align: left; vertical-align: middle; }");
+            html.AppendLine("th { background-color: #0f4c3a; color: white; font-weight: bold; font-size: 14px; text-align: center; }");
 
-            // Yakınlaştırma ayarını %100 (Birebir boyut) yap ki ekranda tam net görünsün
-            onizleme.PrintPreviewControl.Zoom = 1.0;
+            // Satır Renklendirmesi (Çizgili Pijama Efekti)
+            html.AppendLine("tr:nth-child(even) { background-color: #f8f9fa; }");
 
-            try
-            {
-                onizleme.ShowDialog();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Önizleme penceresi açılırken hata oluştu: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+            html.AppendLine(".center { text-align: center; }");
+            html.AppendLine(".adet { font-weight: bold; font-size: 15px; color: #d35400; text-align: center; }");
+            html.AppendLine(".barkod { font-family: 'Courier New', monospace; font-weight: bold; text-align: center; }");
+            html.AppendLine("</style></head><body>");
 
-        // Yazıcının kağıda atacağı siyah mürekkepleri ve koordinatlarını çizen metot
-        private void PdUretim_PrintPage(object sender, System.Drawing.Printing.PrintPageEventArgs e)
-        {
-            Graphics g = e.Graphics;
-            Font baslikFont = new Font("Arial", 16, FontStyle.Bold);
-            Font icerikFont = new Font("Arial", 10);
-            Font barkodFont = new Font("Arial", 12, FontStyle.Bold);
+            // Başlık Kısmı
+            html.AppendLine("<div class='baslik-kutu'>");
+            html.AppendLine($"<h2>MAMUL DEPO KABUL LİSTESİ</h2>");
+            html.AppendLine($"<h4>Kabul Tarihi: {secilenTarih.ToString("dd.MM.yyyy")}</h4>");
+            html.AppendLine("</div>");
 
-            int y = 50; // Kağıdın en üstünden 50px boşluk bırak
-            string baslik = $"{dtpUretimTarihi.Value.ToString("dd.MM.yyyy")} Mamul Depo Kabul Listesi";
+            // Tablo Başlıkları
+            html.AppendLine("<table>");
+            html.AppendLine("<tr>");
+            html.AppendLine("<th style='width: 15%;'>ÜRÜN KODU</th>");
+            html.AppendLine("<th style='width: 45%; text-align: left;'>AÇIKLAMA</th>");
+            html.AppendLine("<th style='width: 15%;'>ADET</th>");
+            html.AppendLine("<th style='width: 25%;'>BARKOD</th>");
+            html.AppendLine("</tr>");
 
-            g.DrawString(baslik, baslikFont, Brushes.Black, 50, y);
-            y += 40;
-
-            // Sütun Başlıkları
-            g.DrawString("KOD", icerikFont, Brushes.Black, 50, y);
-            g.DrawString("AÇIKLAMA", icerikFont, Brushes.Black, 150, y);
-            g.DrawString("ADET", icerikFont, Brushes.Black, 450, y);
-            g.DrawString("BARKOD", icerikFont, Brushes.Black, 520, y);
-            y += 20;
-
-            // Başlığın altına yatay ayırıcı bir çizgi çek
-            g.DrawLine(Pens.Black, 50, y, 750, y);
-            y += 10;
-
-            // Listeyi döngüye al ve her satırı kağıda yazdır
+            // Tablo İçeriği (Döngü)
+            int toplamAdet = 0;
             foreach (DataGridViewRow row in dgvUretim.Rows)
             {
                 if (row.IsNewRow) continue;
 
                 string kod = row.Cells[0].Value?.ToString() ?? "";
                 string aciklama = row.Cells[1].Value?.ToString() ?? "";
-                string adet = row.Cells[2].Value?.ToString() ?? "";
+                string adetStr = row.Cells[2].Value?.ToString() ?? "0";
                 string barkod = row.Cells[3].Value?.ToString() ?? "";
 
-                // Açıklama çok uzunsa ve diğer sütunlara taşacaksa sonunu "..." yaparak kes
-                if (aciklama.Length > 35) aciklama = aciklama.Substring(0, 35) + "...";
+                if (int.TryParse(adetStr, out int adet)) toplamAdet += adet;
 
-                g.DrawString(kod, icerikFont, Brushes.Black, 50, y);
-                g.DrawString(aciklama, icerikFont, Brushes.Black, 150, y);
-                g.DrawString(adet, icerikFont, Brushes.Black, 450, y);
-                g.DrawString(barkod, barkodFont, Brushes.Black, 520, y);
-
-                y += 30; // Bir sonraki satır için 30px aşağı kay
-
-                // Kağıdın en altına (MarginBounds) gelindiyse, yeni bir kağıt (sayfa) talep et
-                if (y > e.MarginBounds.Bottom)
-                {
-                    e.HasMorePages = true;
-                    return;
-                }
+                html.AppendLine("<tr>");
+                html.AppendLine($"<td class='center'>{kod}</td>");
+                html.AppendLine($"<td>{aciklama}</td>");
+                html.AppendLine($"<td class='adet'>{adetStr}</td>");
+                html.AppendLine($"<td class='barkod'>{barkod}</td>");
+                html.AppendLine("</tr>");
             }
 
-            // Tüm satırlar bittiyse işlemi kapat
-            e.HasMorePages = false;
+            // Toplam Alt Satırı
+            html.AppendLine("<tr>");
+            html.AppendLine("<td colspan='2' style='text-align: right; font-weight: bold; font-size: 15px;'>GENEL TOPLAM:</td>");
+            html.AppendLine($"<td class='adet' style='background-color: #f1c40f; color: black;'>{toplamAdet}</td>");
+            html.AppendLine("<td></td>");
+            html.AppendLine("</tr>");
+
+            html.AppendLine("</table></body></html>");
+
+            // 🌟 EKRANA GETİRME VE YAZDIRMA (EDGE MOTORU)
+            Form frmYazdir = new Form { Text = "Üretim Raporu Yazdırılıyor...", Width = 900, Height = 750, StartPosition = FormStartPosition.CenterScreen, ShowIcon = false };
+            Microsoft.Web.WebView2.WinForms.WebView2 web = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
+            frmYazdir.Controls.Add(web);
+            frmYazdir.FormClosed += (s, ev) => { web.Dispose(); };
+
+            frmYazdir.Shown += async (s, ev) =>
+            {
+                // Çökmeyi engelleyen bağımsız profil klasörü
+                string tempFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TamgaApp", "UretimPrintEdge");
+                try
+                {
+                    var ozelHafiza = await Microsoft.Web.WebView2.Core.CoreWebView2Environment.CreateAsync(null, tempFolder);
+                    await web.EnsureCoreWebView2Async(ozelHafiza);
+                }
+                catch
+                {
+                    MessageBox.Show("WebView2 motoru yüklenemedi. Lütfen Edge WebView2 Runtime kurulu olduğundan emin olun.", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    frmYazdir.Close();
+                    return;
+                }
+
+                web.NavigationCompleted += (ws, we) =>
+                {
+                    web.CoreWebView2.ShowPrintUI(Microsoft.Web.WebView2.Core.CoreWebView2PrintDialogKind.Browser);
+                };
+
+                web.NavigateToString(html.ToString());
+            };
+
+            frmYazdir.ShowDialog();
         }
         #endregion
 
@@ -6797,6 +6800,7 @@ namespace TamgaApp
         }
 
         // 🌟 BÜYÜK TEMİZLİK (RESTART) MOTORU: Ekrandaki her şeyi sıfırlar
+        // 🌟 BÜYÜK TEMİZLİK (RESTART) MOTORU: Ekrandaki her şeyi sıfırlar ve kilidi açar
         private void btnSevkTemizle_Click(object sender, EventArgs e)
         {
             // 🛡️ ZIRH EKLENDİ: MessageBoxDefaultButton.Button2
@@ -6805,7 +6809,7 @@ namespace TamgaApp
                 "Tüm Ekranı Sıfırla",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning,
-                MessageBoxDefaultButton.Button2); // <-- SİHİRLİ KALKAN BURADA
+                MessageBoxDefaultButton.Button2);
 
             if (cevap == DialogResult.Yes)
             {
@@ -6822,7 +6826,11 @@ namespace TamgaApp
                 cmbAktifPalet.Items.Clear();
                 cmbSevkPaletSayisi.SelectedIndex = -1;
 
-                MessageBox.Show("Ekran başarıyla sıfırlandı. Müşteri seçerek en baştan başlayabilirsiniz.", "Temizlendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // 🌟 İŞTE EKSİK OLAN SİHİRLİ DOKUNUŞ BURADA EFENDİM! 🌟
+                // Ekran temizlendiğine göre, sistemi kilitli tutan zırhı da tamamen kaldırıyoruz.
+                KarantinayaAl(false);
+
+                MessageBox.Show("Ekran başarıyla sıfırlandı ve sistem kilitleri açıldı. Yeni bir işleme başlayabilirsiniz.", "Temizlendi", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -6855,10 +6863,9 @@ namespace TamgaApp
 
         #region 📝 13.6 TAM VE KISMİ SEVKİYAT İŞLEMLERİ
 
-        // 🌟 TAM SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
+        // 🌟 TAM SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli ve ONAY ZIRHLI)
         private void btnTamSevk_Click(object sender, EventArgs e)
         {
-
             // 🌟 ZIRH 1: Havada Kalan Verileri Tabloya Yazdır
             dgvPaletler.EndEdit();
             dgvPaletMatrisi.EndEdit();
@@ -6907,7 +6914,7 @@ namespace TamgaApp
             Button basilanButon = sender as Button;
             if (basilanButon != null) basilanButon.Enabled = false;
 
-            // 🌟 HAYALET YÜKLEYİCİ: Ekran boşsa ama listede seçili bir iş varsa devreye girer
+            // 🌟 HAYALET YÜKLEYİCİ VE BOŞ EKRAN ZIRHI
             if (dgvMalzemeler.Rows.Count == 0)
             {
                 if (dgvYarimSevkler.SelectedRows.Count > 0)
@@ -6917,12 +6924,40 @@ namespace TamgaApp
 
                     if (otoOnay == DialogResult.Yes)
                     {
-                        btnYarimAc_Click(null, null); // Ekrana saniyesinde yükle
-                        if (dgvMalzemeler.Rows.Count == 0) return; // Yükleme hatası varsa devam etme
+                        btnYarimAc_Click(null, null);
+                        if (dgvMalzemeler.Rows.Count == 0)
+                        {
+                            if (basilanButon != null) basilanButon.Enabled = true;
+                            return;
+                        }
                     }
-                    else return;
+                    else
+                    {
+                        if (basilanButon != null) basilanButon.Enabled = true;
+                        return;
+                    }
                 }
-                else return;
+                else
+                {
+                    // 🚨 İŞTE SENİN İSTEDİĞİN SİHİRLİ UYARI BURASI 🚨
+                    HataSesCal();
+                    MessageBox.Show("Ekranda sevk edilecek hiçbir ürün bulunamadı!\n\nLütfen önce müşterinin belgelerini seçip 'Tüm Belgeleri Seç' veya 'Sevk Ara' butonuna basarak ürünleri listeye getirin.", "Ürün Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (basilanButon != null) basilanButon.Enabled = true;
+                    return;
+                }
+            }
+
+            // 🌟 ZIRH 4: MÜŞTERİNİN BÜTÜN BELGELERİ SEÇİLMEDİYSE UYAR!
+            if (clbBelgeNo.Items.Count > 0 && clbBelgeNo.CheckedItems.Count < clbBelgeNo.Items.Count)
+            {
+                HataSesCal();
+                DialogResult belgeOnay = MessageBox.Show($"DİKKAT: Bu müşteriye ait toplam {clbBelgeNo.Items.Count} adet açık belge var, ancak siz sadece {clbBelgeNo.CheckedItems.Count} tanesini seçtiniz!\n\nDiğer belgeleri geride bırakıp SADECE EKRANDAKİ ÜRÜNLER İÇİN 'Tam Sevk' yapmak istediğinize emin misiniz?", "Eksik Belge Uyarısı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+
+                if (belgeOnay == DialogResult.No)
+                {
+                    if (basilanButon != null) basilanButon.Enabled = true;
+                    return;
+                }
             }
 
             bool eksikVarMi = false;
@@ -6936,13 +6971,26 @@ namespace TamgaApp
                 }
             }
 
-            if (eksikVarMi) MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!\nLütfen eksikleri tamamlayın veya 'Kısmi Sevk' yapın.", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            if (eksikVarMi)
+            {
+                HataSesCal();
+                MessageBox.Show("DUR! Eksik okutulmuş ürünler var, Tam Sevk yapılamaz!\nLütfen eksikleri tamamlayın veya 'Kısmi Sevk' yapın.", "Eksik Ürün", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                if (basilanButon != null) basilanButon.Enabled = true;
+            }
             else
             {
+                DialogResult sonOnay = MessageBox.Show("Tüm ürünler eksiksiz okutuldu.\n\nBu sevkiyatı kapatıp (Tam Sevk) arşive göndermek istediğinize emin misiniz?", "Tam Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2);
+
+                if (sonOnay == DialogResult.No)
+                {
+                    if (basilanButon != null) basilanButon.Enabled = true;
+                    return;
+                }
+
                 // Raporu çıkar
                 btnSevkRaporla_Click(null, null);
 
-                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("HARİKA! Tüm ürünler eksiksiz. Tam Sevk onaylandı ve arşivlendi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 HashSet<string> bitenBelgeler = new HashSet<string>();
                 foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
@@ -6990,20 +7038,20 @@ namespace TamgaApp
                                                     .OrderBy(m => m)
                                                     .ToArray();
                 cmbMusteri.Items.AddRange(kalanMusteriler);
+
+                // 🌟 ZIRH AÇILDI: İşlem başarıyla bitse dahi butonu tekrar aktif et ki diğer sevkiyatlar yapılabilsin!
+                if (basilanButon != null) basilanButon.Enabled = true;
             }
 
             KarantinayaAl(false);
-
         }
 
-        // 🌟 KISMİ SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli)
+        // 🌟 KISMİ SEVKİYAT MOTORU (Otomatik Hayalet Yükleme Özellikli ve ONAY ZIRHLI)
         private void btnKismiSevk_Click(object sender, EventArgs e)
         {
-            // 🌟 ZIRH 1: Havada Kalan Verileri Tabloya Yazdır
             dgvPaletler.EndEdit();
             dgvPaletMatrisi.EndEdit();
 
-            // 🌟 ZIRH 2: Barkodsuz ve Boş Palet Dedektörü
             System.Collections.Generic.List<string> hataliPaletler = new System.Collections.Generic.List<string>();
 
             foreach (DataGridViewRow row in dgvPaletler.Rows)
@@ -7019,14 +7067,8 @@ namespace TamgaApp
                     int.TryParse(row.Cells["Miktar"].Value.ToString(), out miktar);
                 }
 
-                if (string.IsNullOrWhiteSpace(barkod))
-                {
-                    hataliPaletler.Add($"{paletNo} (Barkodu Yok veya Yazdırılmamış)");
-                }
-                else if (miktar == 0)
-                {
-                    hataliPaletler.Add($"{paletNo} (İçi Boş, Ürün Eklenmemiş)");
-                }
+                if (string.IsNullOrWhiteSpace(barkod)) hataliPaletler.Add($"{paletNo} (Barkodu Yok veya Yazdırılmamış)");
+                else if (miktar == 0) hataliPaletler.Add($"{paletNo} (İçi Boş, Ürün Eklenmemiş)");
             }
 
             if (hataliPaletler.Count > 0)
@@ -7039,11 +7081,9 @@ namespace TamgaApp
                 return;
             }
 
-            // 🌟 ZIRH 3: Çift Tıklama Koruması
             Button basilanButon = sender as Button;
             if (basilanButon != null) basilanButon.Enabled = false;
 
-            // 🌟 HAYALET YÜKLEYİCİ: Ekran boşsa ama listede seçili bir iş varsa devreye girer
             if (dgvMalzemeler.Rows.Count == 0)
             {
                 if (dgvYarimSevkler.SelectedRows.Count > 0)
@@ -7054,11 +7094,26 @@ namespace TamgaApp
                     if (otoOnay == DialogResult.Yes)
                     {
                         btnYarimAc_Click(null, null);
-                        if (dgvMalzemeler.Rows.Count == 0) return;
+                        if (dgvMalzemeler.Rows.Count == 0)
+                        {
+                            if (basilanButon != null) basilanButon.Enabled = true;
+                            return;
+                        }
                     }
-                    else return;
+                    else
+                    {
+                        if (basilanButon != null) basilanButon.Enabled = true;
+                        return;
+                    }
                 }
-                else return;
+                else
+                {
+                    // 🚨 İŞTE SENİN İSTEDİĞİN SİHİRLİ UYARI BURASI 🚨
+                    HataSesCal();
+                    MessageBox.Show("Ekranda kısmi sevk edilecek hiçbir ürün bulunamadı!\n\nLütfen önce 'Tüm Belgeleri Seç' veya 'Sevk Ara' butonuna basarak ürünleri listeye getirin.", "Ürün Seçilmedi", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (basilanButon != null) basilanButon.Enabled = true;
+                    return;
+                }
             }
 
             System.Collections.Generic.List<string> eksikListesi = new System.Collections.Generic.List<string>();
@@ -7078,18 +7133,14 @@ namespace TamgaApp
 
             if (eksikListesi.Count > 0)
             {
-                if (MessageBox.Show("Eksik ürünler var. Yine de Kısmi Sevk yapılsın mı?\n\nEksikler:\n" + string.Join("\n", eksikListesi), "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) == DialogResult.Yes)
+                if (MessageBox.Show("Eksik ürünler var. Yine de Kısmi Sevk yapılsın mı?\n\nEksikler:\n" + string.Join("\n", eksikListesi), "Kısmi Sevk Onayı", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
                 {
-                    // Raporu çıkar
                     btnSevkRaporla_Click(null, null);
+                    MessageBox.Show("Kısmi Sevk onaylandı ve arşivlendi!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
-                    MessageBox.Show("Kısmi Sevk onaylandı!", "Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    // 🌟 İŞTE ZEKİ FİLTRE (KAPANAN BELGE ZIRHI) BURADA BAŞLIYOR 🌟
                     System.Collections.Generic.List<string> islemGorenBelgeler = new System.Collections.Generic.List<string>();
                     System.Collections.Generic.List<string> tamBitenBelgeler = new System.Collections.Generic.List<string>();
 
-                    // 1. Masadaki tüm belgeleri (eksik/tam fark etmez) topla
                     foreach (DataGridViewRow satir in dgvMalzemeler.Rows)
                     {
                         if (!satir.IsNewRow && satir.Cells["Belge No"].Value != null)
@@ -7099,7 +7150,6 @@ namespace TamgaApp
                         }
                     }
 
-                    // 2. Her bir belge için %100 bitti mi kontrolü yap
                     foreach (string aktifBelge in islemGorenBelgeler)
                     {
                         bool belgeTamamenBittiMi = true;
@@ -7111,7 +7161,6 @@ namespace TamgaApp
                                 if (row.Cells["Sipariş Adedi"].Value != null) int.TryParse(row.Cells["Sipariş Adedi"].Value.ToString(), out siparisAdedi);
                                 if (row.Cells["Okutulan"].Value != null) int.TryParse(row.Cells["Okutulan"].Value.ToString(), out okutulanAdet);
 
-                                // 1 tane bile eksik okutulan varsa, o belge KAPANAMAZ!
                                 if (okutulanAdet < siparisAdedi)
                                 {
                                     belgeTamamenBittiMi = false;
@@ -7122,12 +7171,10 @@ namespace TamgaApp
                         if (belgeTamamenBittiMi) tamBitenBelgeler.Add(aktifBelge);
                     }
 
-                    // Arşivi kaydederken masadaki eksik veya tam fark etmez TİKLİ tüm belgelerin ismini kullan
                     string birlesikBelgeIsmi = string.Join("_", islemGorenBelgeler);
                     string secilenPalet = cmbSevkPaletSayisi.SelectedItem != null ? cmbSevkPaletSayisi.SelectedItem.ToString() : "0";
                     SevkiyatArsivle(birlesikBelgeIsmi, txtMusteriAdi.Text, txtSevkMusteri.Text, "KISMI_SEVK", secilenPalet);
 
-                    // 🚀 SADECE %100 BİTENLERİ KARA LİSTEYE AL VE TABLODAN SİL (Kısmiler açıkta kalır!)
                     if (tamBitenBelgeler.Count > 0)
                     {
                         KaliciKaraListeyeTopluEkle(tamBitenBelgeler);
@@ -7144,7 +7191,6 @@ namespace TamgaApp
                         }
                         dtTumSiparisler.AcceptChanges();
                     }
-                    // 🌟 ZEKİ FİLTRE BURADA BİTTİ 🌟
 
                     // Ekranı temizle
                     txtMusteriAdi.Clear();
@@ -7159,7 +7205,6 @@ namespace TamgaApp
                     dgvPaletMatrisi.Rows.Clear();
                     cmbAktifPalet.Items.Clear();
 
-                    // 🌟 CS0411 (LINQ KOPYALAMA) HATASINI ÖNLEYEN KLASİK MÜŞTERİ YENİLEME
                     cmbMusteri.Items.Clear();
                     System.Collections.Generic.List<string> kalanMusteriler = new System.Collections.Generic.List<string>();
                     foreach (DataRow r in dtTumSiparisler.Rows)
@@ -7175,11 +7220,19 @@ namespace TamgaApp
                     }
                     kalanMusteriler.Sort();
                     cmbMusteri.Items.AddRange(kalanMusteriler.ToArray());
+
+                    // 🌟 ZIRH AÇILDI: İşlem başarıyla bitse dahi butonu tekrar aktif et ki diğer sevkiyatlar yapılabilsin!
+                    if (basilanButon != null) basilanButon.Enabled = true;
+                }
+                else
+                {
+                    if (basilanButon != null) basilanButon.Enabled = true;
                 }
             }
             else
             {
                 MessageBox.Show("Hiçbir ürün eksik değil! Lütfen siparişi bitirmek için 'Tam Sevket' butonunu kullanın.", "Bilgi", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (basilanButon != null) basilanButon.Enabled = true;
             }
 
             KarantinayaAl(false);
@@ -14767,6 +14820,7 @@ namespace TamgaApp
 
         #endregion
 
-        #endregion  
+        #endregion
+
     }
 }

@@ -121,7 +121,6 @@ namespace TamgaApp
             this.txtSeriBaslangic = new System.Windows.Forms.TextBox();
             this.txtSeriKacarli = new System.Windows.Forms.TextBox();
             this.txtSeriToplamPalet = new System.Windows.Forms.TextBox();
-            this.btnSeriOnizle = new System.Windows.Forms.Button();
             this.btnSeriYazdir = new System.Windows.Forms.Button();
             this.label14 = new System.Windows.Forms.Label();
             this.label34 = new System.Windows.Forms.Label();
@@ -137,7 +136,6 @@ namespace TamgaApp
             this.label16 = new System.Windows.Forms.Label();
             this.txtManTel2 = new System.Windows.Forms.TextBox();
             this.label15 = new System.Windows.Forms.Label();
-            this.btnManuelOnizle = new System.Windows.Forms.Button();
             this.btnManuelYazdir = new System.Windows.Forms.Button();
             this.TabPage = new System.Windows.Forms.TabPage();
             this.tabPrintSettings = new System.Windows.Forms.TabControl();
@@ -325,6 +323,7 @@ namespace TamgaApp
             this.btnCikisYap = new System.Windows.Forms.Button();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPage14 = new System.Windows.Forms.TabPage();
+            this.btnSayimKiosk = new System.Windows.Forms.Button();
             this.tabPage2 = new System.Windows.Forms.TabPage();
             this.pnlAmbar = new System.Windows.Forms.Panel();
             this.splitContainer2 = new System.Windows.Forms.SplitContainer();
@@ -347,7 +346,6 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
-            this.btnSayimKiosk = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
             this.splitContainer5.Panel1.SuspendLayout();
@@ -1262,7 +1260,6 @@ namespace TamgaApp
             this.panel12.Controls.Add(this.txtSeriBaslangic);
             this.panel12.Controls.Add(this.txtSeriKacarli);
             this.panel12.Controls.Add(this.txtSeriToplamPalet);
-            this.panel12.Controls.Add(this.btnSeriOnizle);
             this.panel12.Controls.Add(this.btnSeriYazdir);
             this.panel12.Controls.Add(this.label14);
             this.panel12.Controls.Add(this.label34);
@@ -1278,7 +1275,6 @@ namespace TamgaApp
             this.panel12.Controls.Add(this.label16);
             this.panel12.Controls.Add(this.txtManTel2);
             this.panel12.Controls.Add(this.label15);
-            this.panel12.Controls.Add(this.btnManuelOnizle);
             this.panel12.Controls.Add(this.btnManuelYazdir);
             this.panel12.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel12.Location = new System.Drawing.Point(3, 3);
@@ -1408,23 +1404,12 @@ namespace TamgaApp
             this.txtSeriToplamPalet.Size = new System.Drawing.Size(201, 20);
             this.txtSeriToplamPalet.TabIndex = 21;
             // 
-            // btnSeriOnizle
-            // 
-            this.btnSeriOnizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSeriOnizle.Location = new System.Drawing.Point(687, 348);
-            this.btnSeriOnizle.Name = "btnSeriOnizle";
-            this.btnSeriOnizle.Size = new System.Drawing.Size(148, 79);
-            this.btnSeriOnizle.TabIndex = 24;
-            this.btnSeriOnizle.Text = "Önizle";
-            this.btnSeriOnizle.UseVisualStyleBackColor = true;
-            this.btnSeriOnizle.Click += new System.EventHandler(this.btnSeriOnizle_Click);
-            // 
             // btnSeriYazdir
             // 
             this.btnSeriYazdir.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSeriYazdir.Location = new System.Drawing.Point(849, 348);
+            this.btnSeriYazdir.Location = new System.Drawing.Point(687, 348);
             this.btnSeriYazdir.Name = "btnSeriYazdir";
-            this.btnSeriYazdir.Size = new System.Drawing.Size(168, 79);
+            this.btnSeriYazdir.Size = new System.Drawing.Size(330, 79);
             this.btnSeriYazdir.TabIndex = 26;
             this.btnSeriYazdir.Text = "Yazdır";
             this.btnSeriYazdir.UseVisualStyleBackColor = true;
@@ -1548,25 +1533,16 @@ namespace TamgaApp
             this.label15.TabIndex = 9;
             this.label15.Text = "Firma Adı (Örn: Uğur Software):";
             // 
-            // btnManuelOnizle
-            // 
-            this.btnManuelOnizle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelOnizle.Location = new System.Drawing.Point(100, 348);
-            this.btnManuelOnizle.Name = "btnManuelOnizle";
-            this.btnManuelOnizle.Size = new System.Drawing.Size(171, 79);
-            this.btnManuelOnizle.TabIndex = 8;
-            this.btnManuelOnizle.Text = "Önizle";
-            this.btnManuelOnizle.UseVisualStyleBackColor = true;
-            // 
             // btnManuelYazdir
             // 
             this.btnManuelYazdir.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnManuelYazdir.Location = new System.Drawing.Point(285, 348);
+            this.btnManuelYazdir.Location = new System.Drawing.Point(100, 348);
             this.btnManuelYazdir.Name = "btnManuelYazdir";
-            this.btnManuelYazdir.Size = new System.Drawing.Size(168, 79);
+            this.btnManuelYazdir.Size = new System.Drawing.Size(353, 79);
             this.btnManuelYazdir.TabIndex = 9;
             this.btnManuelYazdir.Text = "Yazdır";
             this.btnManuelYazdir.UseVisualStyleBackColor = true;
+            this.btnManuelYazdir.Click += new System.EventHandler(this.btnManuelYazdir_Click);
             // 
             // TabPage
             // 
@@ -3634,6 +3610,18 @@ namespace TamgaApp
             this.tabPage14.Text = "Depo Sayım";
             this.tabPage14.UseVisualStyleBackColor = true;
             // 
+            // btnSayimKiosk
+            // 
+            this.btnSayimKiosk.BackColor = System.Drawing.Color.Lime;
+            this.btnSayimKiosk.Font = new System.Drawing.Font("Times New Roman", 15.75F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSayimKiosk.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.btnSayimKiosk.Location = new System.Drawing.Point(534, 44);
+            this.btnSayimKiosk.Name = "btnSayimKiosk";
+            this.btnSayimKiosk.Size = new System.Drawing.Size(451, 183);
+            this.btnSayimKiosk.TabIndex = 0;
+            this.btnSayimKiosk.Text = "🚀 SAYIM KİOSK MODUNU BAŞLAT";
+            this.btnSayimKiosk.UseVisualStyleBackColor = false;
+            // 
             // tabPage2
             // 
             this.tabPage2.Controls.Add(this.pnlAmbar);
@@ -3867,18 +3855,6 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
-            // btnSayimKiosk
-            // 
-            this.btnSayimKiosk.BackColor = System.Drawing.Color.Lime;
-            this.btnSayimKiosk.Font = new System.Drawing.Font("Times New Roman", 15.75F, ((System.Drawing.FontStyle)((System.Drawing.FontStyle.Bold | System.Drawing.FontStyle.Italic))), System.Drawing.GraphicsUnit.Point, ((byte)(162)));
-            this.btnSayimKiosk.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.btnSayimKiosk.Location = new System.Drawing.Point(534, 44);
-            this.btnSayimKiosk.Name = "btnSayimKiosk";
-            this.btnSayimKiosk.Size = new System.Drawing.Size(451, 183);
-            this.btnSayimKiosk.TabIndex = 0;
-            this.btnSayimKiosk.Text = "🚀 SAYIM KİOSK MODUNU BAŞLAT";
-            this.btnSayimKiosk.UseVisualStyleBackColor = false;
-            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -4007,7 +3983,6 @@ namespace TamgaApp
         private Label label15;
         private Label label14;
         private Button btnManuelYazdir;
-        private Button btnManuelOnizle;
         private TextBox txtManTel2;
         private TextBox txtManTel1;
         private TextBox txtManIl;
@@ -4238,7 +4213,6 @@ namespace TamgaApp
         private TextBox txtSeriBaslangic;
         private TextBox txtSeriKacarli;
         private TextBox txtSeriToplamPalet;
-        private Button btnSeriOnizle;
         private Button btnSeriYazdir;
         private Label label68;
         private Label label67;
