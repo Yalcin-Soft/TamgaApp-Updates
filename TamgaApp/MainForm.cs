@@ -7866,20 +7866,32 @@ namespace TamgaApp
                 if (seciliStokYeri != "TÜMÜ" && rowStokYeri != seciliStokYeri) continue;
 
                 string mKodu = "";
-                if (dgvStok.Columns.Contains("MalzemeKodu")) mKodu = row.Cells["MalzemeKodu"].Value?.ToString();
-                else if (dgvStok.Columns.Contains("Malzeme")) mKodu = row.Cells["Malzeme"].Value?.ToString();
+                if (dgvStok.Columns.Contains("MalzemeKodu")) mKodu = row.Cells["MalzemeKodu"].Value?.ToString()?.Trim();
+                else if (dgvStok.Columns.Contains("Malzeme")) mKodu = row.Cells["Malzeme"].Value?.ToString()?.Trim();
+
+                if (string.IsNullOrEmpty(mKodu)) continue;
 
                 int miktar = 0;
                 if (dgvStok.Columns.Contains("ToplamStok")) int.TryParse(row.Cells["ToplamStok"].Value?.ToString(), out miktar);
                 else if (dgvStok.Columns.Contains("Miktar")) int.TryParse(row.Cells["Miktar"].Value?.ToString(), out miktar);
 
-                // 🌟 SİHİRLİ DOKUNUŞ: Veriyi şansa bırakma, doğrudan SQL'den canlı çek!
-                int siparis = SqlDenCanliSiparisCek(mKodu);
+                // 🌟 SİHİRLİ DOKUNUŞ: Veriyi SQL'i yormadan, patronun ışık hızındaki RAM havuzundan çek!
+                int siparis = 0;
+                if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
+                {
+                    foreach (DataRow siparisSatiri in dtTumSiparisler.Rows)
+                    {
+                        if (siparisSatiri["Malzeme"] != DBNull.Value && siparisSatiri["Malzeme"].ToString().Trim() == mKodu)
+                        {
+                            if (siparisSatiri["Bakiye"] != DBNull.Value)
+                            {
+                                siparis += Convert.ToInt32(Convert.ToDecimal(siparisSatiri["Bakiye"]));
+                            }
+                        }
+                    }
+                }
 
-
-                if (string.IsNullOrEmpty(mKodu)) continue;
-
-                var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu == mKodu);
+                var urun = yerelUrunler.FirstOrDefault(u => u.UrunKodu != null && u.UrunKodu.Trim() == mKodu);
                 string barkod = urun != null && !string.IsNullOrWhiteSpace(urun.Barkod) ? urun.Barkod : mKodu;
                 string mAdi = urun != null ? urun.Aciklama : (dgvStok.Columns.Contains("Aciklama") ? row.Cells["Aciklama"].Value?.ToString() : "Bilinmiyor");
                 string renk = urun != null ? urun.Renk : "";
@@ -7888,7 +7900,7 @@ namespace TamgaApp
                 if (mevcutSatir != null)
                 {
                     mevcutSatir["SistemStogu"] = Convert.ToInt32(mevcutSatir["SistemStogu"]) + miktar;
-                    mevcutSatir["SiparisAdedi"] = Convert.ToInt32(mevcutSatir["SiparisAdedi"]) + siparis;
+                    // Sipariş adedini toplama, zaten havuzdan tüm bakiyeyi tek seferde çektik.
                 }
                 else
                 {
@@ -8252,6 +8264,14 @@ namespace TamgaApp
                         dtSayimHavuzu.Columns.Add("SistemStogu", typeof(int));
                         dtSayimHavuzu.Columns.Add("SiparisAdedi", typeof(int)); // 🌟 GERİ YÜKLE
                         dtSayimHavuzu.Columns.Add("SayimAdedi", typeof(int));
+
+                        // 🌟 PATRON ZIRHI: Eğer havuz boşsa kullanıcıyı SQL'den veri çekmesi için uyar!
+                        if (dtTumSiparisler == null || dtTumSiparisler.Rows.Count == 0)
+                        {
+                            DialogResult cevap = MessageBox.Show("Sipariş Havuzu şu an boş!\n\nSayım listesindeki 'Sipariş Adedi' sütunlarının 0 gelmemesi için, lütfen önce 'Sevkiyat Plan' sekmesine gidip açık siparişleri SQL'den YENİLE (Çek) işlemini yapın.\n\nYine de sipariş adetleri olmadan sadece stokları görerek devam etmek istiyor musunuz?", "Eksik Sipariş Verisi", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                            if (cevap == DialogResult.No) return; // Kullanıcı veriyi çekmeye gider
+                        }
 
                         // 🌟 KALEMLERİ YÜKLERKEN SİPARİŞİ DE AL
                         foreach (var k in hafiza.Kalemler) dtSayimHavuzu.Rows.Add(k.Barkod, k.MalzemeKodu, k.MalzemeAdi, k.Aciklama, k.Renk, k.SistemStogu, k.SiparisAdedi, k.SayimAdedi);
