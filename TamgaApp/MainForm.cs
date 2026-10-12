@@ -7770,7 +7770,7 @@ namespace TamgaApp
             cmbSayimRaporSec.SelectedIndexChanged += (s, e) => SayimIcinDepolariDoldur();
             btnVeriGetir.Click += (s, e) => SayimVerileriniTabloyaBas();
             cmbSayimModelFiltre.SelectedIndexChanged += (s, e) => SayimTablosunuFiltrele(); // 🌟 YENİ BAĞLANTI
-            btnSayimBasla.Click += (s, e) => SayimKilidiniAcKapat(true, pnlUstFiltre, btnSayimBasla);
+            btnSayimBasla.Click += (s, e) => SayimKilidiniAcKapat(!sayimKilitliMi, pnlUstFiltre, btnSayimBasla);
             txtSayimBarkod.KeyDown += TxtSayimBarkodV2_KeyDown;
             btnSayimBeklet.Click += BtnSayimBeklet_Click;
             btnSayimBitir.Click += BtnSayimBitirV2_Click;
@@ -7873,20 +7873,9 @@ namespace TamgaApp
                 if (dgvStok.Columns.Contains("ToplamStok")) int.TryParse(row.Cells["ToplamStok"].Value?.ToString(), out miktar);
                 else if (dgvStok.Columns.Contains("Miktar")) int.TryParse(row.Cells["Miktar"].Value?.ToString(), out miktar);
 
-                // 🌟 SİPARİŞ ADEDİNİ BULMA ZIRHI (Canlı Entegrasyon)
-                int siparis = 0;
-                if (dgvStok.Columns.Contains("SiparisAdedi")) int.TryParse(row.Cells["SiparisAdedi"].Value?.ToString(), out siparis);
-                else if (dgvStok.Columns.Contains("Siparis")) int.TryParse(row.Cells["Siparis"].Value?.ToString(), out siparis);
-                else if (dgvStok.Columns.Contains("SiparisMiktari")) int.TryParse(row.Cells["SiparisMiktari"].Value?.ToString(), out siparis);
-                else if (dtTumSiparisler != null && dtTumSiparisler.Rows.Count > 0)
-                {
-                    // 🌟 EĞER SQL RAPORUNDA YOKSA: Arkadaki 'Açık Siparişler' havuzundan (dtTumSiparisler) çekip topla!
-                    DataRow[] bekleyenler = dtTumSiparisler.Select($"Malzeme = '{mKodu}'");
-                    foreach (DataRow bRow in bekleyenler)
-                    {
-                        if (bRow["Bakiye"] != DBNull.Value) siparis += Convert.ToInt32(Convert.ToDecimal(bRow["Bakiye"]));
-                    }
-                }
+                // 🌟 SİHİRLİ DOKUNUŞ: Veriyi şansa bırakma, doğrudan SQL'den canlı çek!
+                int siparis = SqlDenCanliSiparisCek(mKodu);
+
 
                 if (string.IsNullOrEmpty(mKodu)) continue;
 
@@ -8007,6 +7996,47 @@ namespace TamgaApp
                     btnBasla.BackColor = Color.DarkOrange;
                 }
             }
+        }
+
+        // 🌟 DOĞRUDAN SQL'E BAĞLANIP CANLI SİPARİŞ ADEDİNİ GETİREN SAFKAN MOTOR (Eklentisiz)
+        private int SqlDenCanliSiparisCek(string malzemeKodu)
+        {
+            if (string.IsNullOrWhiteSpace(malzemeKodu)) return 0;
+
+            int toplamSiparis = 0;
+
+            try
+            {
+                // PATRONUM DİKKAT: Kendi SQL bağlantı cümlenizi ve gerçek Tablo/Sütun isimlerinizi buraya giriniz.
+                string connectionString = "Server=SUNUCU_ADINIZ;Database=VERITABANINIZ;User Id=KULLANICI;Password=SIFRE;";
+
+                // Kural: Bu malzemeye ait, durumu kapanmamış (açık) siparişlerin toplam miktarını (bakiye) getir.
+                string query = "SELECT ISNULL(SUM(Bakiye), 0) FROM SiparisTablonuz WHERE MalzemeKodu = @Kodu AND Durum = 'Açık'";
+
+                using (System.Data.SqlClient.SqlConnection db = new System.Data.SqlClient.SqlConnection(connectionString))
+                {
+                    using (System.Data.SqlClient.SqlCommand cmd = new System.Data.SqlClient.SqlCommand(query, db))
+                    {
+                        // Sizin emrettiğiniz o güvenlik zırhı: SQL Injection saldırılarına karşı parametreli gönderim!
+                        cmd.Parameters.AddWithValue("@Kodu", malzemeKodu);
+
+                        db.Open();
+                        object sonuc = cmd.ExecuteScalar(); // Tek bir hücre (toplam sayı) döneceği için en hızlı komut
+
+                        if (sonuc != null && sonuc != DBNull.Value)
+                        {
+                            toplamSiparis = Convert.ToInt32(sonuc);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Sistem çökmesin diye hata yutulur, arka planda loglanır.
+                System.Diagnostics.Debug.WriteLine("SQL Canlı Sipariş Çekme Hatası: " + ex.Message);
+            }
+
+            return toplamSiparis;
         }
 
         // KENDİ MODERN INPUTBOX MOTORUMUZ (VisualBasic Bağımlılığını Yok Eder)
