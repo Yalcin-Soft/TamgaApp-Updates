@@ -4434,6 +4434,55 @@ namespace TamgaApp
                 MessageBox.Show("Kayıt hatası! Bu isimde bir kullanıcı zaten olabilir.\n\nSistem Mesajı: " + ex.Message, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        private void btnKapananBelgeleriSifirla_Click(object sender, EventArgs e)
+        {
+            // 🌟 1. YÖNETİCİ ZIRHI: Bu çok kritik bir işlem olduğu için sadece tam yetkililer yapabilsin
+            if (!AktifOturumTamYetkiliMi())
+            {
+                MessageBox.Show("Bu işlemi yapmak için Sistem Yöneticisi yetkisine sahip olmalısınız!", "Erişim Engellendi", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return;
+            }
+
+            // 🌟 2. ÇİFT ONAY ZIRHI: Yanlışlıkla basılmalara karşı koruma
+            DialogResult onay = MessageBox.Show(
+                "DİKKAT: Tamamlanmış (kapatılmış) olan tüm sevkiyat geçmişi kayıtları SIFIRLANACAKTIR!\n\nBu işlemi yaparsanız, daha önce sevk edilmiş ve gizlenmiş olan (Hayalet Mod) tüm siparişler 'Sevkiyat Plan' ekranında TEKRAR GÖRÜNÜR hale gelecektir.\n\nEmin misiniz?",
+                "Kapanan Belgeleri Sıfırla",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning,
+                MessageBoxDefaultButton.Button2); // Varsayılan olarak Hayır seçili gelir
+
+            if (onay == DialogResult.Yes)
+            {
+                try
+                {
+                    // 🌟 3. RAM TEMİZLİĞİ: O anki açık olan programın hafızasını sıfırla
+                    TamamlananBelgeNolar.Clear();
+
+                    // 🌟 4. DİSK TEMİZLİĞİ: Harddiskteki (AppData) o meşhur kalıcı txt dosyasını bul ve imha et
+                    string dosyaYolu = KaraListeDosyaYolu();
+                    if (System.IO.File.Exists(dosyaYolu))
+                    {
+                        System.IO.File.Delete(dosyaYolu);
+                    }
+
+                    // 🌟 5. ARAYÜZ (UI) TEMİZLİĞİ: Eski veriler kafa karıştırmasın diye ekranı ve havuzu komple temizle
+                    if (dtTumSiparisler != null) dtTumSiparisler.Clear();
+                    clbBelgeNo.Items.Clear();
+                    cmbMusteri.Items.Clear();
+                    txtMusteriAdi.Clear();
+                    txtSevkMusteri.Clear();
+                    dgvMalzemeler.DataSource = null;
+
+                    BasariliSesCal();
+                    MessageBox.Show("Kapanan belgeler arşivi (Hayalet Mod Kara Listesi) başarıyla sıfırlandı!\n\nLütfen 'Sevkiyat Plan' sekmesine gidip 'Yenile' butonuna basarak siparişleri SQL'den tekrar çekin.", "Sıfırlama Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    HataSesCal();
+                    MessageBox.Show("Sıfırlama sırasında bir hata oluştu:\n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
         #endregion
 
         #region 📋 11.2 KULLANICI LİSTELEME VE SİLME
@@ -5477,6 +5526,191 @@ namespace TamgaApp
             finally
             {
                 if (yenileButonu != null && !yenileButonu.IsDisposed) yenileButonu.Enabled = true;
+            }
+        }
+        private async void btnSiparisEkle_Click(object sender, EventArgs e)
+        {
+            if (cmbMusteri.SelectedItem == null)
+            {
+                MessageBox.Show("Lütfen önce işlem yapılan müşterinin seçili olduğundan emin olun!", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string seciliMusteri = cmbMusteri.SelectedItem.ToString().Trim();
+
+            // Kullanıcı üst üste basıp sistemi yormasın diye butonu kilitliyoruz
+            btnSiparisEkle.Enabled = false;
+            string orjinalText = btnSiparisEkle.Text;
+            btnSiparisEkle.Text = "⌛ Aranıyor...";
+
+            try
+            {
+                // 🌟 1. ADIM: MEVCUT İŞARETLİ (TİKLİ) BELGELERİ HAFIZAYA AL (KAYBOLMASIN)
+                List<string> oncedenTikliBelgeler = new List<string>();
+                foreach (var item in clbBelgeNo.CheckedItems)
+                {
+                    oncedenTikliBelgeler.Add(item.ToString());
+                }
+
+                // 🌟 2. ADIM: SQL'DEN SESSİZCE EN TAZE VERİYİ ÇEK (Tablolara dokunmadan)
+                DataTable yeniSiparisler = new DataTable();
+                if (EvModuAktif)
+                {
+                    EvModuSahteVerileriniYukle();
+                    yeniSiparisler = dtTumSiparisler.Copy();
+                }
+                else
+                {
+                    string baglantiDizesi = SqlBaglantiDizesiGetir();
+
+                    // Sizin o kusursuz ve devasa ERP sorgunuz
+                    string sorgu = @"
+            SELECT  
+                A.DOCTYPE AS BelgeTipi,
+                A.STFDOCNUM AS SirkuNo,
+                A.DOCNUM AS BelgeNo,
+                A.NAME1 AS MusteriAdi,
+                A.GRCNAME1 AS SevkMusteri,
+                B.MATERIAL AS Malzeme,
+                B.MTEXT AS MalzemeAdi,
+                B.LTEXT AS SecenekAciklamasi,
+                B.AVAILQTY AS Bakiye
+            FROM IASSALHEAD A 
+            LEFT OUTER JOIN IASBAS007X R ON R.CLIENT = A.CLIENT 
+                AND R.COMPANY = A.COMPANY 
+                AND R.SALDEPT = A.SALDEPT 
+                AND R.LANGU = 'T' , IASBAS010 , IASSALITEM B 
+            LEFT OUTER JOIN IASSALITEM S ON S.COMPANY = B.COMPANY 
+                AND S.DOCTYPE = B.DOCTYPE 
+                AND S.DOCNUM = B.DOCNUM 
+                AND S.ITEMNUM = B.ITEMNUM 
+                AND S.SETITEMNUM = 0 
+                AND S.ISSET = 1 , IASMATBASIC C 
+            LEFT OUTER JOIN ECESAL016 P ON P.CLIENT = C.CLIENT 
+                AND P.COMPANY = C.COMPANY 
+                AND P.SEGMENT = C.SEGMENT , IASMATFMS D 
+            LEFT OUTER JOIN IASBAS008X Q ON Q.CLIENT = D.CLIENT 
+                AND Q.COMPANY = D.COMPANY 
+                AND Q.HIERARCHY = D.HIERARCHY 
+                AND Q.LANGU = 'T' , IASCUSTOMER CUS 
+            LEFT OUTER JOIN ECESAL017 E ON E.CLIENT = CUS.CLIENT 
+                AND E.COMPANY = CUS.COMPANY 
+                AND E.BRANCHTYPE = CUS.BRANCHTYPE 
+            WHERE A.CLIENT = '00' 
+                AND A.COMPANY = '09' 
+                AND A.DOCTYPE IN  ('SE','O1') 
+                AND A.VALIDFROM >= '2023-01-01' 
+                AND A.VALIDFROM <= '2030-01-01' 
+                AND A.ISORDCHAR = 1 
+                AND B.ORDSTAT < 2 
+                AND B.ISSTOP = '0' 
+                AND A.ISDELETE = 0 
+                AND B.CLIENT = A.CLIENT 
+                AND B.COMPANY = A.COMPANY 
+                AND B.DOCTYPE = A.DOCTYPE 
+                AND B.DOCNUM = A.DOCNUM 
+                AND CUS.COMPANY = A.COMPANY 
+                AND CUS.BUSAREA = A.BUSAREA 
+                AND CUS.CUSTOMER = A.CUSTOMER 
+                AND (B.ISSET = 0 OR B.SETITEMNUM <> 0) 
+                AND B.BUSAREA = '*' 
+                AND B.UPTDATE >= '1975-01-01' 
+                AND B.UPTDATE <= '2030-01-01' 
+                AND C.CLIENT = B.CLIENT 
+                AND C.COMPANY = B.COMPANY 
+                AND C.MATERIAL = B.MATERIAL 
+                AND C.VALIDFROM <= GETDATE() 
+                AND C.VALIDUNTIL >= GETDATE() 
+                AND D.CLIENT = B.CLIENT 
+                AND D.COMPANY = B.COMPANY 
+                AND D.PLANT = B.PLANT 
+                AND D.MATERIAL = B.MATERIAL 
+                AND D.VALIDFROM <= GETDATE() 
+                AND D.VALIDUNTIL >= GETDATE() 
+                AND IASBAS010.CLIENT = B.CLIENT 
+                AND IASBAS010.COMPANY = B.COMPANY 
+                AND IASBAS010.PRICELIST = B.PRICELIST 
+            ORDER BY A.COMPANY, A.CUSTOMER, A.DOCTYPE, A.DOCNUM, B.ITEMNUM;";
+
+                    await Task.Run(() =>
+                    {
+                        using (System.Data.OleDb.OleDbConnection baglanti = new System.Data.OleDb.OleDbConnection(baglantiDizesi))
+                        using (System.Data.OleDb.OleDbDataAdapter adaptor = new System.Data.OleDb.OleDbDataAdapter(sorgu, baglanti))
+                        {
+                            adaptor.Fill(yeniSiparisler);
+                        }
+                    });
+                }
+
+                // 🌟 3. ADIM: TAMAMLANMIŞ BELGELERİ (HAYALET MOD) LİSTEDEN SİL
+                for (int i = yeniSiparisler.Rows.Count - 1; i >= 0; i--)
+                {
+                    string dbBelge = yeniSiparisler.Rows[i]["BelgeNo"].ToString().Trim();
+                    if (TamamlananBelgeNolar.Contains(dbBelge))
+                    {
+                        yeniSiparisler.Rows.RemoveAt(i);
+                    }
+                }
+                yeniSiparisler.AcceptChanges();
+
+                // 🌟 4. ADIM: ARKA PLANDAKİ ANA HAVUZU GÜNCELLE
+                dtTumSiparisler.Clear();
+                dtTumSiparisler.Merge(yeniSiparisler);
+
+                // 🌟 5. ADIM: CHECKLIST KUTUSUNU YENİLE VE ESKİ TİKLERİ GERİ KOY
+                clbBelgeNo.Items.Clear();
+                List<string> guncelBelgeler = new List<string>();
+                int yeniBelgeSayisi = 0;
+
+                foreach (DataRow row in dtTumSiparisler.Rows)
+                {
+                    if (row["MusteriAdi"] != DBNull.Value)
+                    {
+                        string tabloMusteri = row["MusteriAdi"].ToString().Trim();
+                        if (tabloMusteri.Equals(seciliMusteri, StringComparison.OrdinalIgnoreCase))
+                        {
+                            string belge = row["BelgeNo"] != DBNull.Value ? row["BelgeNo"].ToString().Trim() : "";
+                            if (!string.IsNullOrEmpty(belge) && !guncelBelgeler.Contains(belge))
+                            {
+                                guncelBelgeler.Add(belge);
+                            }
+                        }
+                    }
+                }
+
+                // Kutuyu yeniden doldur
+                foreach (string b in guncelBelgeler)
+                {
+                    clbBelgeNo.Items.Add(b);
+
+                    // Eğer bu belge önceden tikliyse tikini şak diye geri koy
+                    if (oncedenTikliBelgeler.Contains(b))
+                    {
+                        clbBelgeNo.SetItemChecked(clbBelgeNo.Items.Count - 1, true);
+                    }
+                    else
+                    {
+                        yeniBelgeSayisi++; // Tiksiz olanlar yenidir
+                    }
+                }
+
+                if (yeniBelgeSayisi > 0)
+                {
+                    MessageBox.Show($"Operasyon devam ederken SQL'den yeni veriler çekildi.\nBu müşteriye ait {yeniBelgeSayisi} adet YENİ SİPARİŞ listeye eklendi.\n\nYeni siparişleri sol taraftaki listeden işaretleyip 'Ara' butonuna basarak mevcut tabloya dahil edebilirsiniz. Ekrandaki okutmalarınız ve renkleriniz korunacaktır.", "Yeni Siparişler Bulundu", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("SQL kontrol edildi ancak bu müşteri için yeni (farklı) bir sipariş kaydı bulunamadı.", "Yeni Kayıt Yok", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Yeni siparişler çekilirken hata oluştu: \n" + ex.Message, "Kritik Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnSiparisEkle.Enabled = true;
+                btnSiparisEkle.Text = orjinalText;
             }
         }
         #endregion
@@ -14871,6 +15105,5 @@ namespace TamgaApp
         #endregion
 
         #endregion
-
     }
 }

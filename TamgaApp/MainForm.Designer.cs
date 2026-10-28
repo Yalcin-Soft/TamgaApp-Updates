@@ -59,6 +59,7 @@ namespace TamgaApp
             this.btnAmbarGetir = new System.Windows.Forms.Button();
             this.btnAmbarKaydet = new System.Windows.Forms.Button();
             this.panel7 = new System.Windows.Forms.Panel();
+            this.btnSiparisEkle = new System.Windows.Forms.Button();
             this.btnSonrakiPalet = new System.Windows.Forms.Button();
             this.btnOncekiPalet = new System.Windows.Forms.Button();
             this.btnBarkodKilidi = new System.Windows.Forms.Button();
@@ -346,6 +347,7 @@ namespace TamgaApp
             this.label43 = new System.Windows.Forms.Label();
             this.cmbPaletSayisi = new System.Windows.Forms.ComboBox();
             this.timerSaat = new System.Windows.Forms.Timer(this.components);
+            this.btnKapananBelgeleriSifirla = new System.Windows.Forms.Button();
             this.tabPage13.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer5)).BeginInit();
             this.splitContainer5.Panel1.SuspendLayout();
@@ -690,6 +692,7 @@ namespace TamgaApp
             // 
             // panel7
             // 
+            this.panel7.Controls.Add(this.btnSiparisEkle);
             this.panel7.Controls.Add(this.btnSonrakiPalet);
             this.panel7.Controls.Add(this.btnOncekiPalet);
             this.panel7.Controls.Add(this.btnBarkodKilidi);
@@ -719,6 +722,17 @@ namespace TamgaApp
             this.panel7.Name = "panel7";
             this.panel7.Size = new System.Drawing.Size(401, 438);
             this.panel7.TabIndex = 54;
+            // 
+            // btnSiparisEkle
+            // 
+            this.btnSiparisEkle.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnSiparisEkle.Location = new System.Drawing.Point(276, 82);
+            this.btnSiparisEkle.Name = "btnSiparisEkle";
+            this.btnSiparisEkle.Size = new System.Drawing.Size(121, 32);
+            this.btnSiparisEkle.TabIndex = 56;
+            this.btnSiparisEkle.Text = "Sipariş Ekle";
+            this.btnSiparisEkle.UseVisualStyleBackColor = true;
+            this.btnSiparisEkle.Click += new System.EventHandler(this.btnSiparisEkle_Click);
             // 
             // btnSonrakiPalet
             // 
@@ -985,7 +999,7 @@ namespace TamgaApp
             this.btnSiparisYenile.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
             this.btnSiparisYenile.Location = new System.Drawing.Point(153, 82);
             this.btnSiparisYenile.Name = "btnSiparisYenile";
-            this.btnSiparisYenile.Size = new System.Drawing.Size(244, 32);
+            this.btnSiparisYenile.Size = new System.Drawing.Size(117, 32);
             this.btnSiparisYenile.TabIndex = 1;
             this.btnSiparisYenile.Text = "Yenile";
             this.btnSiparisYenile.UseVisualStyleBackColor = true;
@@ -2322,6 +2336,7 @@ namespace TamgaApp
             // 
             // tabPage9
             // 
+            this.tabPage9.Controls.Add(this.btnKapananBelgeleriSifirla);
             this.tabPage9.Controls.Add(this.btnTumVerileriTemizle);
             this.tabPage9.Controls.Add(this.btnSifreYenileAdmin);
             this.tabPage9.Controls.Add(this.btnKullaniciSil);
@@ -3855,6 +3870,20 @@ namespace TamgaApp
             this.cmbPaletSayisi.Size = new System.Drawing.Size(186, 21);
             this.cmbPaletSayisi.TabIndex = 4;
             // 
+            // btnKapananBelgeleriSifirla
+            // 
+            this.btnKapananBelgeleriSifirla.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnKapananBelgeleriSifirla.BackColor = System.Drawing.Color.Red;
+            this.btnKapananBelgeleriSifirla.Font = new System.Drawing.Font("Times New Roman", 14.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(162)));
+            this.btnKapananBelgeleriSifirla.Location = new System.Drawing.Point(35, 701);
+            this.btnKapananBelgeleriSifirla.Name = "btnKapananBelgeleriSifirla";
+            this.btnKapananBelgeleriSifirla.Size = new System.Drawing.Size(535, 37);
+            this.btnKapananBelgeleriSifirla.TabIndex = 27;
+            this.btnKapananBelgeleriSifirla.Text = "Kapanan Belgeleri Sıfırla (Reset)";
+            this.btnKapananBelgeleriSifirla.UseVisualStyleBackColor = false;
+            this.btnKapananBelgeleriSifirla.Click += new System.EventHandler(this.btnKapananBelgeleriSifirla_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -4279,6 +4308,8 @@ namespace TamgaApp
         private ComboBox cmbAktifPalet;
         private Button btnNormalManuelYazdir;
         private Button btnSayimKiosk;
+        private Button btnSiparisEkle;
+        private Button btnKapananBelgeleriSifirla;
     }
 }
 
