@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-	<version>2.0.2.0</version>
-	<url>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases/download/v2.0.2.0/TamgaApp_Guncelleme_v2.0.2.0.zip</url>
-	<changelog>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases</changelog>
-	<mandatory>true</mandatory>
+  <version>2.0.3.0</version>
+  <url>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases/download/v2.0.3.0/TamgaApp_Guncelleme_v2.0.3.0.zip</url>
+  <changelog>https://github.com/Yalcin-Soft/TamgaApp-Updates/releases/tag/v2.0.3.0</changelog>
+  <mandatory>true</mandatory>
+  <checksum algorithm="SHA256">8164EABF2E17B5C99DECBE6AC4061F82615A215510E5F0DA58D2B8E2EDECA8A8</checksum>
 </item>
