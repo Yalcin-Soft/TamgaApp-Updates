@@ -40,7 +40,24 @@ namespace TamgaApp
         /// Program ilk çalıştığında veritabanı dosyasının ve gerekli tabloların var olup olmadığını kontrol eder. 
         /// Yoksa kurulum klasöründen kopyalar veya sıfırdan oluşturur, eksik sütunları (Örn: Renk) otomatik ekler.
         /// </summary>
+        private static readonly object kurulumKilidi = new object();
+        private static bool kurulumTamam;
+
         public static void EnsureDatabase()
+        {
+            // Şema kontrolü uygulama ömründe bir kez yapılır. (Eskiden her sorguda CREATE + 4 ALTER
+            // çalışıyor ve her ALTER istisna fırlatıyordu; barkod döngülerinde ciddi yavaşlık yaratıyordu.)
+            // Dosya silinirse/geri yükleme yapılırsa kontrol yeniden çalışır.
+            if (kurulumTamam && File.Exists(DbPath)) return;
+            lock (kurulumKilidi)
+            {
+                if (kurulumTamam && File.Exists(DbPath)) return;
+                SemayiKur();
+                kurulumTamam = true;
+            }
+        }
+
+        private static void SemayiKur()
         {
             // 🛡️ ADIM 1: GÜVENLİ BÖLGEYE (APPDATA) TAŞIMA ZIRHI
             // Eğer AppData'da veritabanı yoksa, programın Data klasöründeki orijinal, dolu veritabanını kopyala
@@ -83,20 +100,46 @@ namespace TamgaApp
                             KullaniciAdi TEXT UNIQUE NOT NULL,
                             SifreHash TEXT NOT NULL,
                             Yetkiler TEXT
-                        );";
+                        );
+
+                        CREATE TABLE IF NOT EXISTS IslemGunlugu (
+                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Tarih TEXT NOT NULL,
+                            Kullanici TEXT,
+                            Bilgisayar TEXT,
+                            Modul TEXT,
+                            Islem TEXT,
+                            Detay TEXT
+                        );
+                        CREATE INDEX IF NOT EXISTS IX_IslemGunlugu_Tarih ON IslemGunlugu (Tarih);
+                        CREATE INDEX IF NOT EXISTS IX_Urunler_Barkod ON Urunler (Barkod);";
 
                     cmd.ExecuteNonQuery();
 
-                    // 🔄 GÜNCELLEME MOTORU: Eski tablolara yeni eklenen sütunları zorla ekliyoruz. (RENK DAHİL)
-                    try { cmd.CommandText = "ALTER TABLE Kullanicilar ADD COLUMN BitisTarihi DATETIME;"; cmd.ExecuteNonQuery(); } catch { }
-                    try { cmd.CommandText = "ALTER TABLE Kullanicilar ADD COLUMN SonSifreDegistirme DATETIME;"; cmd.ExecuteNonQuery(); } catch { }
-                    try { cmd.CommandText = "ALTER TABLE Kullanicilar ADD COLUMN SifreGecerlilikAyi INTEGER DEFAULT 0;"; cmd.ExecuteNonQuery(); } catch { }
-
-                    // 🌟 5. VİTES (RENK) GÜNCELLEMESİ: Eski Urunler tablosunda Renk yoksa otomatik ekle!
-                    try { cmd.CommandText = "ALTER TABLE Urunler ADD COLUMN Renk TEXT DEFAULT '';"; cmd.ExecuteNonQuery(); } catch { }
+                    // 🔄 GÜNCELLEME MOTORU: Eski tablolara yeni eklenen sütunlar yalnızca eksikse eklenir.
+                    SutunYoksaEkle(conn, "Kullanicilar", "BitisTarihi", "DATETIME");
+                    SutunYoksaEkle(conn, "Kullanicilar", "SonSifreDegistirme", "DATETIME");
+                    SutunYoksaEkle(conn, "Kullanicilar", "SifreGecerlilikAyi", "INTEGER DEFAULT 0");
+                    SutunYoksaEkle(conn, "Urunler", "Renk", "TEXT DEFAULT ''");
                 }
             }
         }
+
+        private static void SutunYoksaEkle(SqliteConnection conn, string tablo, string sutun, string tanim)
+        {
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = $"PRAGMA table_info({tablo});";
+                using (var r = cmd.ExecuteReader())
+                    while (r.Read())
+                        if (string.Equals(r.GetString(1), sutun, StringComparison.OrdinalIgnoreCase)) return;
+                cmd.CommandText = $"ALTER TABLE {tablo} ADD COLUMN {sutun} {tanim};";
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>Geri yükleme gibi veritabanı dosyasının değiştiği durumlarda şema kontrolünü yeniden tetikler.</summary>
+        public static void SemaKontrolunuSifirla() { kurulumTamam = false; }
 
         #endregion
 

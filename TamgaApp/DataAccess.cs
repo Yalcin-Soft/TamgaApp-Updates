@@ -303,22 +303,14 @@ namespace TamgaApp
         }
 
         /// <summary>
-        /// Kullanıcı şifrelerini veritabanına kaydederken kırılamaz (SHA256) formata dönüştüren güvenlik kalkanı.
+        /// Kullanıcı şifrelerini veritabanına kaydederken tuzlu PBKDF2-SHA256 özetine dönüştürür.
+        /// (Eski tuzsuz SHA-256 özetleri girişte tanınır ve otomatik olarak yükseltilir.)
         /// </summary>
         public static class SecurityHelper
         {
             public static string HashPassword(string password)
             {
-                using (System.Security.Cryptography.SHA256 sha256Hash = System.Security.Cryptography.SHA256.Create())
-                {
-                    byte[] bytes = sha256Hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                    System.Text.StringBuilder builder = new System.Text.StringBuilder();
-                    for (int i = 0; i < bytes.Length; i++)
-                    {
-                        builder.Append(bytes[i].ToString("x2"));
-                    }
-                    return builder.ToString();
-                }
+                return Guvenlik.OzetUret(password);
             }
         }
 
@@ -352,21 +344,20 @@ namespace TamgaApp
         /// <summary>Kullanıcı adı ve şifresiyle sisteme giriş izni arar.</summary>
         public static Kullanici GetKullaniciGiris(string kullaniciAdi, string sifre)
         {
-            string kriptoluSifre = SecurityHelper.HashPassword(sifre);
+            Kullanici bulunan = null;
             using (var conn = DbHelper.GetConnection())
             {
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "SELECT Id, KullaniciAdi, SifreHash, Yetkiler, BitisTarihi, SonSifreDegistirme, SifreGecerlilikAyi FROM Kullanicilar WHERE KullaniciAdi=@kAdi AND SifreHash=@hash;";
-                    cmd.Parameters.AddWithValue("@kAdi", kullaniciAdi);
-                    cmd.Parameters.AddWithValue("@hash", kriptoluSifre);
+                    cmd.CommandText = "SELECT Id, KullaniciAdi, SifreHash, Yetkiler, BitisTarihi, SonSifreDegistirme, SifreGecerlilikAyi FROM Kullanicilar WHERE KullaniciAdi=@kAdi;";
+                    cmd.Parameters.AddWithValue("@kAdi", kullaniciAdi ?? "");
 
                     using (var reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
                         {
-                            return new Kullanici
+                            bulunan = new Kullanici
                             {
                                 Id = reader.GetInt32(0),
                                 KullaniciAdi = reader.GetString(1),
@@ -379,8 +370,23 @@ namespace TamgaApp
                         }
                     }
                 }
+
+                if (bulunan == null) return null;
+                if (!Guvenlik.Dogrula(sifre, bulunan.SifreHash, out bool yenilenmeli)) return null;
+
+                // Eski (tuzsuz SHA-256) özet: kullanıcı fark etmeden yeni biçime yükselt.
+                if (yenilenmeli)
+                {
+                    using (var cmd = conn.CreateCommand())
+                    {
+                        cmd.CommandText = "UPDATE Kullanicilar SET SifreHash=@h WHERE Id=@id;";
+                        cmd.Parameters.AddWithValue("@h", Guvenlik.OzetUret(sifre));
+                        cmd.Parameters.AddWithValue("@id", bulunan.Id);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
             }
-            return null;
+            return bulunan;
         }
 
         /// <summary>Admin tarafından süresi dolan kullanıcının süresini uzatır.</summary>

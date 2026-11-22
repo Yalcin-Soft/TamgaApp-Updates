@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -124,10 +124,18 @@ namespace TamgaApp
         /// </summary>
         public static bool AktifOturumTamYetkiliMi()
         {
-            return string.Equals(AktifKullaniciAdi, "TamgaApp", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(AktifKullaniciAdi, "Kurucu (TamgaApp)", StringComparison.OrdinalIgnoreCase)
+            // Not: Yetki artık kullanıcı ADINA bakılarak verilmez (veritabanında "TamgaApp" adlı bir hesap
+            // açılarak tam yetki kazanılabiliyordu). Sistem hesabı bayrağı yalnızca LoginForm'daki
+            // özet doğrulamasından sonra set edilir.
+            return SistemHesabiOturumu != Guvenlik.SistemHesabi.Yok
                 || string.Equals(AktifYetkiler, "Sınırsız", StringComparison.Ordinal);
         }
+
+        /// <summary>Kurucu/Yönetici sistem hesabıyla mı giriş yapıldı? (LoginForm doğrulamasından sonra set edilir)</summary>
+        public static Guvenlik.SistemHesabi SistemHesabiOturumu = Guvenlik.SistemHesabi.Yok;
+
+        /// <summary>Yalnızca kurucu hesabına açık işlemler (ör. kurucu şifre özeti üretme) için.</summary>
+        public static bool KurucuOturumuMu() { return SistemHesabiOturumu == Guvenlik.SistemHesabi.Kurucu; }
         #endregion
 
         #region 📐 01.3 GÖRSEL TASARIM MOTORU (DRAG & DROP ENGINE)
@@ -189,7 +197,8 @@ namespace TamgaApp
         // bir kara liste (Blacklist) tutulur. Bu listeye giren belge SQL'de açık görünse bile
         // ekrandan gizlenir (Hayalet olur).
         // ------------------------------------------------------------------------
-        public static List<string> TamamlananBelgeNolar = new List<string>();
+        // HashSet: Her yenilemede binlerce satır bu listede aranıyor; List.Contains liste büyüdükçe yavaşlıyordu.
+        public static HashSet<string> TamamlananBelgeNolar = new HashSet<string>(StringComparer.Ordinal);
         #endregion
 
         #region 🧩 01.6 VERİ MODELLERİ VE SERİLEŞTİRME (DATA MODELS & SERIALIZATION)
@@ -510,7 +519,7 @@ namespace TamgaApp
             pnlDesignSurface.MouseDown += PnlDesignSurface_MouseDown;
 
             // Üretim Takip Raporları Kayıt Yeri Hatırlatıcısı
-            string ayarDosyasi = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KayitYeri.txt");
+            string ayarDosyasi = KayitYeriAyarDosyasi();
             if (System.IO.File.Exists(ayarDosyasi))
             {
                 if (txtKayitYeri != null) txtKayitYeri.Text = System.IO.File.ReadAllText(ayarDosyasi);
@@ -542,9 +551,8 @@ namespace TamgaApp
             // Dinamik Ekran Boyutlandırma Tetikleyicisi
             tabControl1.SelectedIndexChanged += tabControl1_SelectedIndexChanged;
 
-            // Program Açılış Boyutu ve Konumu
-            this.Size = new Size(950, 600);
-            this.CenterToScreen();
+            // Program Açılış Boyutu ve Konumu: Modern arayüz tam ekran çalışacak şekilde tasarlandı.
+            this.WindowState = FormWindowState.Maximized;
 
             // 🌟 KİLİT ZIRHI: Askıda işlem varken başka sekmeye geçişi iptal et
             tabControl1.Selecting += (s, tabEvent) =>
@@ -557,6 +565,8 @@ namespace TamgaApp
                 }
             };
 
+            // 🎨 MODERN ARAYÜZ: Sol menü, üst çubuk, Ana Panel ve tema (yetki filtrelerinden SONRA kurulmalı)
+            ModernArayuzuKur();
         }
 
         // 🌟 SAĞ ÜSTTEKİ ÇARPI (X) TUŞUYLA KAPATILIRSA DEVREYE GİREN ZIRH
@@ -605,21 +615,15 @@ namespace TamgaApp
         #endregion
 
         #region 🖥️ 02.2 DİNAMİK EKRAN YÖNETİMİ
-        // Kullanıcının geçtiği sekmeye göre pencere boyutunu dinamik olarak genişletip daraltır.
+        // Sekme değişiminde sayfaya özel hazırlıkları yapar. (Modern arayüz tam ekran çalıştığı için
+        // pencere boyutu artık sekmeye göre değiştirilmez; aksi halde içerik her geçişte zıplıyordu.)
         private void tabControl1_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (tabControl1.SelectedTab == null) return;
             string seciliSekme = tabControl1.SelectedTab.Text;
 
-            if (seciliSekme == "Ana Panel")
+            if (seciliSekme == "Üretim Takip")
             {
-                this.Size = new Size(950, 600);
-                this.CenterToScreen();
-            }
-            else if (seciliSekme == "Üretim Takip")
-            {
-                this.Size = new Size(1400, 850);
-                this.CenterToScreen();
-
                 cmbUretimYazici.Items.Clear();
                 foreach (string printer in System.Drawing.Printing.PrinterSettings.InstalledPrinters)
                 {
@@ -628,16 +632,6 @@ namespace TamgaApp
                 if (cmbUretimYazici.Items.Count > 0) cmbUretimYazici.SelectedIndex = 0;
 
                 txtBarkodOkut.Focus();
-            }
-            else if (seciliSekme == "Çoklu Zarf Yazdırma" || seciliSekme == "Sevkiyat")
-            {
-                this.Size = new Size(1400, 850);
-                this.CenterToScreen();
-            }
-            else
-            {
-                this.Size = new Size(1100, 700);
-                this.CenterToScreen();
             }
         }
         #endregion
@@ -1858,6 +1852,9 @@ namespace TamgaApp
         // Form üzerindeki klavye basımlarını yakalayıp özel komutları çalıştırır
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            // Genel kısayollar: Ctrl+K komut paleti, Ctrl+1..9 sayfa geçişi, F1 yardım, F5 güncelleme denetimi
+            if (GenelKisayoluIsle(keyData)) return true;
+
             // Sadece Yazdırma Ayarları sekmesindeysek ve bir nesne seçiliyse klavye komutlarını aktif et
             if (tabPrintSettings != null && tabPrintSettings.SelectedTab == tabPage11 && selectedControls.Count > 0)
             {
@@ -2128,7 +2125,7 @@ namespace TamgaApp
                     else { icerik = item.Text; }
 
                     if (icerik == null) icerik = "";
-                    icerik = icerik.Replace("\n", "<br>");
+                    icerik = System.Net.WebUtility.HtmlEncode(icerik).Replace("\n", "<br>"); // Firma adındaki < > & karakterleri çıktıyı bozmasın
 
                     string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm; " +
                                   $"font-family: '{item.FontName ?? "Arial"}'; font-size: {pSize}pt; color: {item.ColorName};";
@@ -2283,7 +2280,7 @@ namespace TamgaApp
                         else { icerik = item.Text; }
 
                         if (icerik == null) icerik = "";
-                        icerik = icerik.Replace("\n", "<br>");
+                        icerik = System.Net.WebUtility.HtmlEncode(icerik).Replace("\n", "<br>"); // Firma adındaki < > & karakterleri çıktıyı bozmasın
 
                         string stil = $"left: {x}mm; top: {y}mm; width: {w}mm; height: {h}mm; " +
                                       $"font-family: '{item.FontName ?? "Arial"}'; font-size: {pSize}pt; color: {item.ColorName};";
@@ -3520,10 +3517,10 @@ namespace TamgaApp
                 if (int.TryParse(adetStr, out int adet)) toplamAdet += adet;
 
                 html.AppendLine("<tr>");
-                html.AppendLine($"<td class='center'>{kod}</td>");
-                html.AppendLine($"<td>{aciklama}</td>");
+                html.AppendLine($"<td class='center'>{Html(kod)}</td>");
+                html.AppendLine($"<td>{Html(aciklama)}</td>");
                 html.AppendLine($"<td class='adet'>{adetStr}</td>");
-                html.AppendLine($"<td class='barkod'>{barkod}</td>");
+                html.AppendLine($"<td class='barkod'>{Html(barkod)}</td>");
                 html.AppendLine("</tr>");
             }
 
@@ -3701,7 +3698,7 @@ namespace TamgaApp
                 {
                     txtKayitYeri.Text = fbd.SelectedPath;
 
-                    string ayarDosyasi = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "KayitYeri.txt");
+                    string ayarDosyasi = KayitYeriAyarDosyasi();
                     System.IO.File.WriteAllText(ayarDosyasi, fbd.SelectedPath);
 
                     MessageBox.Show("Rapor kayıt yeri başarıyla güncellendi!", "Ayarlar Kaydedildi", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -4159,7 +4156,7 @@ namespace TamgaApp
                         if (dgvDetay.Columns[cell.ColumnIndex].HeaderText == "Malzeme Adı") sinif = "class='sol-hizala'";
                         else if (dgvDetay.Columns[cell.ColumnIndex].HeaderText == "TOPLAM ADET" || dgvDetay.Columns[cell.ColumnIndex].HeaderText == "Belge No") sinif = "class='kalin'";
 
-                        html.AppendLine($"<td {sinif}>{cell.Value}</td>");
+                        html.AppendLine($"<td {sinif}>{Html(cell.Value)}</td>");
                     }
                     html.AppendLine("</tr>");
                 }
@@ -4392,6 +4389,19 @@ namespace TamgaApp
                 return;
             }
 
+            // 🛡️ Sistem hesaplarıyla karışabilecek isimler yasak (isimden yetki kazanılmasını önler)
+            if (Guvenlik.AyrilmisKullaniciAdiMi(kAdi))
+            {
+                MessageBox.Show($"'{kAdi}' sistem tarafından ayrılmış bir isimdir. Lütfen başka bir kullanıcı adı seçin.", "Geçersiz Kullanıcı Adı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            string kuralHatasi = Guvenlik.SifreKuraliHatasi(sifre);
+            if (kuralHatasi != null)
+            {
+                MessageBox.Show(kuralHatasi, "Zayıf Şifre", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             // Kullanıcının listbox'ta işaretlediği yetkileri (sekmeleri) topla ve aralarına virgül koyarak tek bir metne dönüştür
             System.Collections.Generic.List<string> seciliYetkiler = new System.Collections.Generic.List<string>();
             foreach (var item in clbYetkiler.CheckedItems) seciliYetkiler.Add(item.ToString());
@@ -4423,6 +4433,7 @@ namespace TamgaApp
             try
             {
                 DataAccess.InsertKullanici(yeniKullanici);
+                Gunluk.Yaz("Kullanıcı Yönetimi", "Kullanıcı eklendi", $"{kAdi} — Yetkiler: {yetkiString}");
                 MessageBox.Show($"'{kAdi}' sisteme eklendi!\nYetkileri: {yetkiString}", "İşlem Başarılı", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 // İşlem bitince kutuları temizle
@@ -4456,6 +4467,7 @@ namespace TamgaApp
                 try
                 {
                     // 🌟 3. RAM TEMİZLİĞİ: O anki açık olan programın hafızasını sıfırla
+                    Gunluk.Yaz("Sevkiyat", "Kapanan belgeler listesi sıfırlandı", TamamlananBelgeNolar.Count + " belge yeniden görünür yapıldı");
                     TamamlananBelgeNolar.Clear();
 
                     // 🌟 4. DİSK TEMİZLİĞİ: Harddiskteki (AppData) o meşhur kalıcı txt dosyasını bul ve imha et
@@ -4522,6 +4534,7 @@ namespace TamgaApp
             if (cevap == DialogResult.Yes)
             {
                 DataAccess.DeleteKullanici(seciliKullanici);
+                Gunluk.Yaz("Kullanıcı Yönetimi", "Kullanıcı silindi", seciliKullanici);
                 MessageBox.Show("Kullanıcı başarıyla silindi!", "İşlem Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
                 // Listeyi yenilemek için listele butonuna sanal olarak tıkla
@@ -4545,6 +4558,7 @@ namespace TamgaApp
             // Özel şifre sıfırlama formunu/metodunu çağır
             if (LoginForm.KullaniciKendiSifresiniDegistir(seciliKullanici))
             {
+                Gunluk.Yaz("Kullanıcı Yönetimi", "Şifre sıfırlandı (yönetici)", seciliKullanici);
                 MessageBox.Show($"'{seciliKullanici}' isimli kullanıcının şifresi başarıyla yenilendi!", "İşlem Tamam", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -5337,7 +5351,19 @@ namespace TamgaApp
             string kullanici = Properties.Settings.Default.SqlKullanici;
             string gercekSifre = Kripto.Coz(Properties.Settings.Default.SqlSifre); // Kullanmadan önce şifreyi çöz
 
-            return $"Provider=SQLOLEDB.1;Password={gercekSifre};Persist Security Info=True;User ID={kullanici};Initial Catalog={vt};Data Source={sunucu};Use Procedure for Prepare=1;Auto Translate=True;Packet Size=4096;Use Encryption for Data=False;Tag with column collation when possible=False";
+            // Builder kullanılır: şifrede ';' veya '=' gibi karakterler olsa bile bağlantı dizesi bozulmaz
+            // ve araya başka parametre sokulamaz.
+            var b = new OleDbConnectionStringBuilder { Provider = "SQLOLEDB.1" };
+            b["Data Source"] = sunucu ?? "";
+            b["Initial Catalog"] = vt ?? "";
+            b["User ID"] = kullanici ?? "";
+            b["Password"] = gercekSifre ?? "";
+            b["Persist Security Info"] = "False";
+            b["Use Procedure for Prepare"] = "1";
+            b["Auto Translate"] = "True";
+            b["Packet Size"] = "4096";
+            b["Tag with column collation when possible"] = "False";
+            return b.ConnectionString;
         }
         #endregion
 
@@ -5442,7 +5468,6 @@ namespace TamgaApp
             AND A.COMPANY = '09' 
             AND A.DOCTYPE IN  ('SE','O1') 
             AND A.VALIDFROM >= '2023-01-01' 
-            AND A.VALIDFROM <= '2030-01-01' 
             AND A.ISORDCHAR = 1 
             AND B.ORDSTAT < 2 
             AND B.ISSTOP = '0' 
@@ -5457,7 +5482,6 @@ namespace TamgaApp
             AND (B.ISSET = 0 OR B.SETITEMNUM <> 0) 
             AND B.BUSAREA = '*' 
             AND B.UPTDATE >= '1975-01-01' 
-            AND B.UPTDATE <= '2030-01-01' 
             AND C.CLIENT = B.CLIENT 
             AND C.COMPANY = B.COMPANY 
             AND C.MATERIAL = B.MATERIAL 
@@ -5600,7 +5624,6 @@ namespace TamgaApp
                 AND A.COMPANY = '09' 
                 AND A.DOCTYPE IN  ('SE','O1') 
                 AND A.VALIDFROM >= '2023-01-01' 
-                AND A.VALIDFROM <= '2030-01-01' 
                 AND A.ISORDCHAR = 1 
                 AND B.ORDSTAT < 2 
                 AND B.ISSTOP = '0' 
@@ -5615,7 +5638,6 @@ namespace TamgaApp
                 AND (B.ISSET = 0 OR B.SETITEMNUM <> 0) 
                 AND B.BUSAREA = '*' 
                 AND B.UPTDATE >= '1975-01-01' 
-                AND B.UPTDATE <= '2030-01-01' 
                 AND C.CLIENT = B.CLIENT 
                 AND C.COMPANY = B.COMPANY 
                 AND C.MATERIAL = B.MATERIAL 
@@ -7493,6 +7515,7 @@ namespace TamgaApp
             if (eklenecekler.Count > 0)
             {
                 File.AppendAllLines(KaraListeDosyaYolu(), eklenecekler);
+                Gunluk.Yaz("Sevkiyat", "Belge(ler) sevk edilip kapatıldı", string.Join(", ", eklenecekler));
             }
         }
 
@@ -7512,10 +7535,10 @@ namespace TamgaApp
             if (File.Exists(yol))
             {
                 // Dosyadaki tüm bitmiş belge numaralarını RAM'e aktar, boşlukları temizle
-                TamamlananBelgeNolar = File.ReadAllLines(yol)
+                TamamlananBelgeNolar = new HashSet<string>(File.ReadAllLines(yol)
                                            .Where(x => !string.IsNullOrWhiteSpace(x))
-                                           .Select(x => x.Trim()) // ZIRH: Text dosyasında da boşluk olursa uçur
-                                           .ToList();
+                                           .Select(x => x.Trim()), // ZIRH: Text dosyasında da boşluk olursa uçur
+                                           StringComparer.Ordinal);
             }
         }
 
@@ -7528,6 +7551,7 @@ namespace TamgaApp
                 TamamlananBelgeNolar.Add(belgeNo);
                 // Belgeyi dosyanın en sonuna kalıcı olarak yaz (Alt alta)
                 File.AppendAllText(KaraListeDosyaYolu(), belgeNo + Environment.NewLine);
+                Gunluk.Yaz("Sevkiyat", "Belge sevk edilip kapatıldı", belgeNo);
             }
         }
         #endregion
@@ -7617,16 +7641,20 @@ namespace TamgaApp
         // 4. ARKA PLAN DİNLEYİCİSİ VE "TRAFİK POLİSİ" YÖNLENDİRMESİ
         private void BarkodPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
-            string gelenVeri = barkodPort.ReadExisting();
+            string gelenVeri;
+            try { gelenVeri = barkodPort.ReadExisting(); } catch { return; }
             portBuffer += gelenVeri;
 
-            // Okuyucu "Enter" gönderdiğinde barkod tamamlanmıştır
-            if (portBuffer.Contains("\r") || portBuffer.Contains("\n"))
+            // Okuyucu her barkodun sonunda "Enter" (CR/LF) gönderir. Tek pakette birden fazla barkod
+            // gelebilir ("ABC\rDEF\r"): her biri ayrı işlenir, yarım kalan son parça havuzda bekler.
+            // (Eskiden satır sonları silinip barkodlar "ABCDEF" diye birleştiriliyordu.)
+            int ayrac;
+            while ((ayrac = portBuffer.IndexOfAny(new[] { '\r', '\n' })) >= 0)
             {
-                string islenecekHamVeri = portBuffer.Replace("\r", "").Replace("\n", "").Trim();
-                portBuffer = ""; // Havuzu sıfırla
-
-                if (string.IsNullOrEmpty(islenecekHamVeri)) return;
+                string islenecekHamVeri = portBuffer.Substring(0, ayrac).Trim();
+                portBuffer = portBuffer.Substring(ayrac + 1);
+                if (string.IsNullOrEmpty(islenecekHamVeri)) continue;
+                if (portBuffer.Length > 4096) portBuffer = ""; // bozuk cihaz verisine karşı koruma
 
                 // UI Thread'e (Arayüze) geçiş yap
                 this.BeginInvoke(new Action(() =>
@@ -7649,7 +7677,14 @@ namespace TamgaApp
                     }
                     else if (aktifSekme == "Depo Sayım")
                     {
-                        // Sayım için eklenecek kodlar
+                        // COM okuyucudan gelen barkod, sayım ekranındaki okutma kutusuna aynen klavyeden
+                        // okutulmuş gibi aktarılır (kilit kontrolü dahil aynı kurallar geçerli).
+                        if (txtSayimBarkod != null && !txtSayimBarkod.IsDisposed)
+                        {
+                            txtSayimBarkod.Text = islenecekHamVeri;
+                            TxtSayimBarkodV2_KeyDown(txtSayimBarkod, new KeyEventArgs(Keys.Enter));
+                        }
+                        else HataSesCal();
                     }
                     else
                     {
@@ -7666,11 +7701,13 @@ namespace TamgaApp
             // 🌟 AKILLI BÖLÜCÜ: Peş peşe çok hızlı okunan (Örn: 26 hane) barkodları 13'erli parçala ve kaybetme
             List<string> islenecekBarkodlar = new List<string>();
 
-            if (hamVeri.Length > 13 && hamVeri.Length % 13 == 0)
+            // Yalnızca tamamen rakamdan oluşan ve 13'ün katı uzunluktaki veri birleşik EAN-13 kabul edilir.
+            // Diğer uzunluklar (GTIN-14, Code128 vb.) olduğu gibi işlenir. (Eskiden 13 haneden uzun her
+            // barkod sessizce kesiliyordu; kesilen kod başka bir ürünle eşleşip yanlış sevkiyata yol açabilirdi.)
+            if (hamVeri.Length > 13 && hamVeri.Length % 13 == 0 && hamVeri.All(char.IsDigit))
             {
                 for (int i = 0; i < hamVeri.Length; i += 13) islenecekBarkodlar.Add(hamVeri.Substring(i, 13));
             }
-            else if (hamVeri.Length > 13) islenecekBarkodlar.Add(hamVeri.Substring(0, 13));
             else islenecekBarkodlar.Add(hamVeri);
 
             // Her bir parçalanmış barkodu sırayla palete işle
@@ -7737,13 +7774,15 @@ namespace TamgaApp
                         {
                             string hucreMetni = paletSatiri.Cells[aktifPaletSutunIndex].Value.ToString();
 
-                            // 🌟 YENİ ZIRH: Artık birleştirme yaparken Rengin de aynı olup olmadığına bakıyor!
-                            if (hucreMetni.Contains(malzemeKodu) && hucreMetni.Contains(aitOlduguBelge) && (string.IsNullOrWhiteSpace(aciklama) || hucreMetni.Contains(aciklama)))
+                            // 🌟 KESİN EŞLEŞME: Hücre biçimi "KOD - Ad [Renk] (BELGE) | Adet: N".
+                            // Eskiden Contains kullanılıyordu; "123" kodu "1234"ü, "SE-1" belgesi "SE-12"yi eşliyordu.
+                            if (hucreMetni.StartsWith(malzemeKodu + " - ", StringComparison.Ordinal)
+                                && hucreMetni.Contains("(" + aitOlduguBelge + ") | Adet: ")
+                                && (string.IsNullOrWhiteSpace(aciklama) || hucreMetni.Contains("[" + aciklama + "]")))
                             {
                                 string[] parcalar = hucreMetni.Split(new string[] { "| Adet: " }, StringSplitOptions.None);
-                                if (parcalar.Length == 2)
+                                if (parcalar.Length == 2 && int.TryParse(parcalar[1].Trim(), out int mevcutPaletAdeti))
                                 {
-                                    int mevcutPaletAdeti = int.Parse(parcalar[1]);
                                     paletSatiri.Cells[aktifPaletSutunIndex].Value = $"{parcalar[0]}| Adet: {mevcutPaletAdeti + 1}";
                                 }
                                 paletSutunundaVarMi = true; break;
@@ -13174,9 +13213,9 @@ namespace TamgaApp
                         if (r.IsNewRow) continue;
                         html.AppendLine("<tr>");
                         html.AppendLine($"<td><b>{r.Cells["Firma"].Value}</b></td>");
-                        html.AppendLine($"<td class='adres-hucresi'>{r.Cells["Adres"].Value}</td>");
+                        html.AppendLine($"<td class='adres-hucresi'>{Html(r.Cells["Adres"].Value)}</td>");
 
-                        for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
+                        for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{Html(r.Cells[$"Palet{i}"].Value)}</td>");
 
                         html.AppendLine($"<td class='sari-bg'>{r.Cells["Adet"].Value}</td>");
                         html.AppendLine("</tr>");
@@ -13260,10 +13299,10 @@ namespace TamgaApp
                     {
                         if (r.IsNewRow) continue;
                         html.AppendLine("<tr>");
-                        html.AppendLine($"<td class='sol-hizala'>{r.Cells["Firma"].Value}</td>");
+                        html.AppendLine($"<td class='sol-hizala'>{Html(r.Cells["Firma"].Value)}</td>");
                         html.AppendLine($"<td>{r.Cells["Adet"].Value}</td>");
 
-                        for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{r.Cells[$"Palet{i}"].Value}</td>");
+                        for (int i = 1; i <= maxPalet; i++) html.AppendLine($"<td>{Html(r.Cells[$"Palet{i}"].Value)}</td>");
 
                         html.AppendLine("</tr>");
                     }
@@ -13435,8 +13474,7 @@ namespace TamgaApp
         /// </summary>
         private bool DinamikSqlYoneticiMi()
         {
-            return AktifOturumTamYetkiliMi()
-                || string.Equals(AktifKullaniciAdi, "yönetici", StringComparison.OrdinalIgnoreCase);
+            return AktifOturumTamYetkiliMi();
         }
 
         private static bool StokRaporAdiGecerliMi(string raporAdi)
@@ -14061,6 +14099,9 @@ namespace TamgaApp
                         YedegiVeritabaniAcisindanDogrula(geciciYedek);
                         Directory.Move(geciciYedek, buYedekKlasoru);
                         AdminTraceYaz("BİLGİ", "Yedekleme", "Yedek doğrulandı ve tamamlandı.");
+                        sonYedekZamani = DateTime.Now;
+                        Gunluk.Yaz("Yedekleme", "Yedek alındı", buYedekKlasoru);
+                        EskiYedekleriTemizle(30);
                         return buYedekKlasoru;
                     }
                     catch (Exception ex)
@@ -14177,6 +14218,8 @@ namespace TamgaApp
                         try
                         {
                             string geriDonusKlasoru = await GeriYuklemeyiGuvenliUygulaAsync(secilenYedek);
+                            DbHelper.SemaKontrolunuSifirla();
+                            Gunluk.Yaz("Yedekleme", "Yedekten geri yüklendi", secilenYedek);
 
                             string geriDonusBilgisi = string.IsNullOrEmpty(geriDonusKlasoru)
                                 ? ""

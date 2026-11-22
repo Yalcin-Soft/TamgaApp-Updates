@@ -13,6 +13,9 @@ namespace TamgaApp
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            // 🎨 Modern tema: açılan her pencereyi (sonradan kodla oluşturulanlar dahil) otomatik temalar
+            Tema.OtomatikTemayiBaslat();
+
             // 🌟 1. UI (Arayüz) İçi Hataları Yakalayan Küresel Zırh
             Application.ThreadException += new ThreadExceptionEventHandler(GlobalThreadException);
 
@@ -23,6 +26,7 @@ namespace TamgaApp
             try
             {
                 DbHelper.EnsureDatabase();
+                Kripto.EskiAyarlariYukselt(); // Eski sabit anahtarlı şifreleri Windows DPAPI korumasına taşı
             }
             catch (Exception ex)
             {
@@ -85,6 +89,16 @@ namespace TamgaApp
         {
             string hataMesaji = ex != null ? ex.Message : "Bilinmeyen bir hata oluştu.";
             string hataDetayi = ex != null ? ex.StackTrace : "Stacktrace bilgisi bulunamadı.";
+
+            // Destek için kalıcı hata kaydı (kullanıcı ekran görüntüsü almayı unutsa bile)
+            try
+            {
+                string klasor = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TamgaApp");
+                System.IO.Directory.CreateDirectory(klasor);
+                System.IO.File.AppendAllText(System.IO.Path.Combine(klasor, "HataKayitlari.log"),
+                    $"===== {DateTime.Now:yyyy-MM-dd HH:mm:ss} | {hataTuru} | Kullanıcı: {MainForm.AktifKullaniciAdi} | Sürüm: {Application.ProductVersion}{Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}");
+            }
+            catch { }
 
             Form frmHata = new Form
             {

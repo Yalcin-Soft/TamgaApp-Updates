@@ -1,27 +1,18 @@
-﻿using AutoUpdaterDotNET;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+﻿using System;
 using System.Drawing;
-using System.Drawing.Drawing2D; // Arka plan renk geçişi (Gradient) için gerekli
-using System.Linq;
-using System.Runtime.InteropServices; // Yuvarlak köşe ve sürükleme API'leri için gerekli
-using System.Text;
-using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static TamgaApp.DataAccess;
 
 namespace TamgaApp
 {
     /// <summary>
-    /// Sistemin ilk açılışında kimlik doğrulamasını, God Mode girişlerini, süre/şifre kontrollerini ve görsel şöleni sunan ana giriş formudur.
+    /// Giriş ekranı: kimlik doğrulama, sistem hesapları (kurucu / yönetici acil erişimi), hesap süresi ve
+    /// şifre eskime kontrolleri, deneme sınırlama ve "Beni hatırla". Görsel kısım LoginForm.Tasarim.cs'de.
     /// </summary>
     public partial class LoginForm : Form
     {
-        // =========================================================================================
-
-        #region 📐 01. GÖRSEL MOTOR VE API TANIMLAMALARI (DLL IMPORTS)
+        #region 📐 01. API TANIMLAMALARI
 
         [DllImport("user32.dll")]
         public static extern bool ReleaseCapture();
@@ -37,315 +28,260 @@ namespace TamgaApp
 
         #endregion
 
-        // =========================================================================================
-
-        #region ⚙️ 02. BAŞLANGIÇ AYARLARI VE YÜKLEME (INIT & LOAD)
+        #region ⚙️ 02. BAŞLANGIÇ
 
         public LoginForm()
         {
             InitializeComponent();
-
-            // Çift arabellekleme (Ekranda yırtılma ve titremeyi önler, gradient akıcı olur)
             this.DoubleBuffered = true;
-
-            // Formun köşelerini hafifçe yuvarlatıyoruz (Elit görünüm için)
-            this.Region = System.Drawing.Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, 30, 30));
+            ModernTasarimiKur();
+            this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width + 1, this.Height + 1, 28, 28));
         }
 
         private void LoginForm_Load(object sender, EventArgs e)
         {
-            // 1. Ekrana o anki gerçek sürümü yazdırıyoruz!
-            lblVersiyon.Text = "Sürüm: " + Application.ProductVersion;
+            lblVersiyon.Text = "Sürüm " + Guncelleme.KuruluSurum;
 
-            // 2. VIP Kapı (Güvenlik Duvarını Aşmak İçin)
-            System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
+            // Modern güncelleme merkezi: sessiz denetim. Zorunlu sürüm varsa pencere kendiliğinden açılır.
+            Guncelleme.DurumDegisti += GuncellemeDurumunuGoster;
+            this.FormClosed += (s, a) => Guncelleme.DurumDegisti -= GuncellemeDurumunuGoster;
+            Guncelleme.Denetle(true);
+            GuncellemeDurumunuGoster();
 
-            // 3. AutoUpdater'ı Çalıştır
-            AutoUpdater.Start("https://raw.githubusercontent.com/Yalcin-Soft/TamgaApp-Updates/main/TamgaApp/update.xml");
-
-            // 4. BENİ HATIRLA MOTORU (Form ve Kutular yüklendikten sonra çalışmalı)
+            // BENİ HATIRLA (şifre Windows DPAPI ile korunur)
             if (Properties.Settings.Default.BeniHatirla)
             {
                 txtKullaniciAdi.Text = Properties.Settings.Default.HatirlaKullanici;
-
-                // Şifre güvenli olması için Kripto class'ı ile çözülmeli
-                try
-                {
-                    txtSifre.Text = Kripto.Coz(Properties.Settings.Default.HatirlaSifre);
-                }
-                catch
-                {
-                    txtSifre.Text = Properties.Settings.Default.HatirlaSifre; // Şifreleme hatası olursa düz yazıyı bas
-                }
-
+                txtSifre.Text = Kripto.Coz(Properties.Settings.Default.HatirlaSifre);
                 chkBeniHatirla.Checked = true;
             }
-        }
 
-        #endregion
-
-        // =========================================================================================
-
-        #region 🎨 03. ARAYÜZ TASARIMI VE PENCERE KONTROLLERİ (UI)
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Graphics g = e.Graphics;
-
-            // TamgaApp Renk Paletimiz: 
-            // Sol Taraf: Koyu Metalik Karbon -> Zümrüt Yeşili
-            // Sağ Taraf: Temiz Açık Gri/Beyaz
-            using (LinearGradientBrush brush = new LinearGradientBrush(
-                this.ClientRectangle,
-                Color.FromArgb(26, 28, 30),       // Başlangıç
-                Color.FromArgb(248, 249, 250),    // Bitiş
-                0F)) // 0 derece = Soldan sağa düz geçiş
-            {
-                ColorBlends(brush);
-                g.FillRectangle(brush, this.ClientRectangle);
-            }
-        }
-
-        private void ColorBlends(LinearGradientBrush brush)
-        {
-            ColorBlend blend = new ColorBlend();
-            blend.Colors = new Color[]
-            {
-                Color.FromArgb(20, 22, 24),    // %0 -> En sol koyu metalik
-                Color.FromArgb(15, 76, 58),    // %40 -> Tamga Zümrüt Yeşili geçişi
-                Color.FromArgb(248, 249, 250), // %55 -> Yumuşak geçiş başlangıcı
-                Color.FromArgb(255, 255, 255)  // %100 -> En sağ tamamen beyaz
-            };
-            blend.Positions = new float[] { 0.0f, 0.40f, 0.55f, 1.0f };
-            brush.InterpolationColors = blend;
+            KilitDurumunuGuncelle();
+            BeginInvoke(new Action(() => { if (string.IsNullOrEmpty(txtKullaniciAdi.Text)) txtKullaniciAdi.Focus(); else btnGiris.Focus(); }));
         }
 
         private void LoginForm_MouseDown(object sender, MouseEventArgs e)
         {
-            // Kullanıcı formun sol tarafındaki koyu alana (X < 400) basınca formu taşıyabilsin
-            if (e.Button == MouseButtons.Left && e.X < 400)
+            if (e.Button == MouseButtons.Left)
             {
                 ReleaseCapture();
                 SendMessage(this.Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
             }
         }
 
-        // Sağ üstteki Çarpı (X) butonuna çift tıklayıp bu event'e bağlamayı unutma
         private void btnExit_Click(object sender, EventArgs e)
         {
-            // 🚀 TEK DOKUNULAN YER BURASI: Application.Exit yerine Environment.Exit(0) kullanıldı.
-            // Bu sayede programın arka planda yeniden açılması tamamen engellenir.
             Environment.Exit(0);
         }
 
         #endregion
 
-        // =========================================================================================
+        #region 🔑 03. GİRİŞ MOTORU
 
-        #region 🔑 04. GÜVENLİK, HAFIZA VE ANA GİRİŞ MOTORU
-
-        // ✨ MERKEZİ HAFIZA KAYIT SİSTEMİ: Sadece başarılı girişlerde çalışır
         private void BeniHatirlaAyariniKaydet(string kAdi, string sifre)
         {
+            var a = Properties.Settings.Default;
             if (chkBeniHatirla.Checked)
             {
-                Properties.Settings.Default.BeniHatirla = true;
-                Properties.Settings.Default.HatirlaKullanici = kAdi;
-                try
-                {
-                    Properties.Settings.Default.HatirlaSifre = Kripto.Sifrele(sifre); // Güvenlik için kriptola
-                }
-                catch
-                {
-                    Properties.Settings.Default.HatirlaSifre = sifre;
-                }
+                a.BeniHatirla = true;
+                a.HatirlaKullanici = kAdi;
+                try { a.HatirlaSifre = Kripto.Sifrele(sifre); } catch { a.HatirlaSifre = ""; }
             }
             else
             {
-                Properties.Settings.Default.BeniHatirla = false;
-                Properties.Settings.Default.HatirlaKullanici = "";
-                Properties.Settings.Default.HatirlaSifre = "";
+                a.BeniHatirla = false;
+                a.HatirlaKullanici = "";
+                a.HatirlaSifre = "";
             }
-            Properties.Settings.Default.Save();
+            a.Save();
         }
 
-        /// <summary>Giriş butonuna tıklandığında çalışır. Sistemdeki en kritik güvenlik kontrol kapısıdır.</summary>
+        private void GirisiTamamla(string gorunenAd, string yetkiler, Guvenlik.SistemHesabi sistemHesabi, string kAdi, string sifre, string karsilama)
+        {
+            Guvenlik.BasariliGiris();
+            MainForm.AktifKullaniciAdi = gorunenAd;
+            MainForm.AktifYetkiler = yetkiler;
+            MainForm.SistemHesabiOturumu = sistemHesabi;
+            MainForm.AcilisKarsilamasi = karsilama;
+            BeniHatirlaAyariniKaydet(kAdi, sifre);
+            Gunluk.Yaz("Oturum", "Giriş yapıldı", sistemHesabi == Guvenlik.SistemHesabi.Yok ? "" : "Sistem hesabı: " + sistemHesabi, gorunenAd);
+            this.DialogResult = DialogResult.OK;
+            this.Close();
+        }
+
+        /// <summary>Giriş butonu (ve Enter tuşu). Sistemdeki en kritik güvenlik kapısıdır.</summary>
         private void btnGiris_Click(object sender, EventArgs e)
         {
+            HatayiGizle();
+            if (Guvenlik.KalanKilitSuresi > TimeSpan.Zero) { KilitDurumunuGuncelle(); return; }
+
             string kAdi = txtKullaniciAdi.Text.Trim();
             string sifre = txtSifre.Text.Trim();
 
-            if (string.IsNullOrEmpty(kAdi) || string.IsNullOrEmpty(sifre)) return;
-
-            // ===================================================================
-            // 🚀 SİHİRLİ GOD MODE (KURUCU HESABI - ACİL DURUM ARKA KAPISI) 
-            // ===================================================================
-            if (kAdi == "TamgaApp" && sifre == "ugur-19Yalcin.97")
+            if (string.IsNullOrEmpty(kAdi) || string.IsNullOrEmpty(sifre))
             {
-                MainForm.AktifKullaniciAdi = "Kurucu (TamgaApp)";
-                MainForm.AktifYetkiler = "Sınırsız";
-
-                BeniHatirlaAyariniKaydet(kAdi, sifre); // ✅ GİRİŞ BAŞARILI, ŞİFREYİ KAYDET
-
-                // 🌟 AFİLLİ KARŞILAMA MESAJI
-                MessageBox.Show("Sisteme Hoş Geldin Patron! 😎\n\n[ ⚡ GOD MODE AKTİF ⚡ ]\nBütün güvenlik duvarları aşıldı, tüm kilitler açıldı. Sistemin tam kontrolü artık sende!", "Sistem Bildirimi: YÜCE YETKİ", MessageBoxButtons.OK, MessageBoxIcon.Asterisk);
-
-                this.DialogResult = DialogResult.OK; // Kapıyı aç!
-                this.Close();
+                HataGoster("Lütfen kullanıcı adı ve şifrenizi girin.");
+                (string.IsNullOrEmpty(kAdi) ? (Control)txtKullaniciAdi : txtSifre).Focus();
                 return;
             }
 
             // ===================================================================
-            // 👔 GÜNLÜK YÖNETİCİ HESABI (Normal Patron Kullanımı)
+            // 🛡️ SİSTEM HESAPLARI (KURUCU / YÖNETİCİ) — her zaman açık acil erişim.
+            // Şifreler kodda değil; Guvenlik.cs'deki tuzlu PBKDF2 özetleriyle doğrulanır.
             // ===================================================================
-            if (kAdi == "Yönetici" && sifre == "UY.19-97")
+            var sistem = Guvenlik.SistemHesabiDogrula(kAdi, sifre);
+            if (sistem == Guvenlik.SistemHesabi.Kurucu)
             {
-                MainForm.AktifKullaniciAdi = "Yönetici";
-                MainForm.AktifYetkiler = "Sınırsız";
-
-                BeniHatirlaAyariniKaydet(kAdi, sifre); // ✅ GİRİŞ BAŞARILI, ŞİFREYİ KAYDET
-
-                MessageBox.Show("Hoş Geldiniz Yönetici Bey. Tüm departmanlar rapor vermeye hazır.", "Yönetici Girişi", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                this.DialogResult = DialogResult.OK;
-                this.Close();
+                GirisiTamamla("Kurucu (TamgaApp)", "Sınırsız", sistem, kAdi, sifre,
+                    "Sisteme hoş geldin Patron! 😎  GOD MODE aktif — tüm kilitler açık.");
+                return;
+            }
+            if (sistem == Guvenlik.SistemHesabi.Yonetici)
+            {
+                GirisiTamamla("Yönetici", "Sınırsız", sistem, kAdi, sifre,
+                    "Hoş geldiniz Yönetici Bey. Tüm departmanlar rapor vermeye hazır.");
                 return;
             }
 
             // ===================================================================
-            // 👤 NORMAL KULLANICI KONTROLÜ (Veritabanı Doğrulaması)
+            // 👤 VERİTABANI KULLANICISI
             // ===================================================================
-            Kullanici giren = DataAccess.GetKullaniciGiris(kAdi, sifre);
+            Kullanici giren;
+            try { giren = DataAccess.GetKullaniciGiris(kAdi, sifre); }
+            catch (Exception ex) { HataGoster("Veritabanına ulaşılamadı: " + ex.Message); return; }
 
-            if (giren != null)
+            if (giren == null)
             {
-                // ⏳ 1. SÜRE KONTROLÜ
-                if (giren.BitisTarihi.HasValue && giren.BitisTarihi.Value < DateTime.Now)
+                Guvenlik.HataliGirisKaydet();
+                Gunluk.Yaz("Oturum", "Hatalı giriş denemesi", "Kullanıcı adı: " + kAdi, "-");
+                txtSifre.SelectAll();
+                txtSifre.Focus();
+                if (Guvenlik.KalanKilitSuresi > TimeSpan.Zero)
                 {
-                    DialogResult cevap = MessageBox.Show($"Sayın {giren.KullaniciAdi}, hesabınızın kullanım süresi dolmuştur!\nYönetici çağırarak süreyi uzatmak ister misiniz?", "Süre Bitti", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-
-                    if (cevap == DialogResult.Yes)
-                    {
-                        if (YoneticiIleSureUzat(giren.KullaniciAdi))
-                        {
-                            MessageBox.Show("Süreniz başarıyla uzatıldı! Lütfen tekrar giriş yapınız.", "Başarılı");
-                        }
-                    }
-                    txtSifre.Clear();
-                    return;
+                    Gunluk.Yaz("Oturum", "Giriş geçici olarak kilitlendi", "Çok sayıda hatalı deneme", "-");
+                    KilitDurumunuGuncelle();
                 }
-
-                // 🔒 2. ŞİFRE ESKİME KONTROLÜ (Süresi dolan şifreyi zorla yeniletme)
-                if (giren.SifreGecerlilikAyi > 0 && giren.SonSifreDegistirme.AddMonths(giren.SifreGecerlilikAyi) < DateTime.Now)
+                else
                 {
-                    MessageBox.Show("Şifrenizin geçerlilik süresi dolmuştur. Güvenliğiniz için yeni bir şifre belirlemelisiniz.", "Şifre Yenileme", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    if (KullaniciKendiSifresiniDegistir(giren.KullaniciAdi))
-                    {
-                        MessageBox.Show("Şifreniz başarıyla yenilendi! Lütfen yeni şifrenizle giriş yapınız.", "Başarılı");
-                    }
-                    txtSifre.Clear();
-                    return;
+                    int kalan = Guvenlik.KalanDeneme;
+                    HataGoster("Kullanıcı adı veya şifre hatalı." + (kalan > 0 && kalan <= 3 ? $"  ({kalan} deneme hakkınız kaldı)" : ""));
                 }
-
-                // 🎉 GİRİŞ BAŞARILI
-                MainForm.AktifKullaniciAdi = giren.KullaniciAdi;
-                MainForm.AktifYetkiler = giren.Yetkiler;
-
-                BeniHatirlaAyariniKaydet(kAdi, sifre); // ✅ GİRİŞ BAŞARILI, ŞİFREYİ KAYDET
-
-                this.DialogResult = DialogResult.OK; // Ana programa sinyali çak
-                this.Close(); // Login ekranını devreden çıkar
+                Salla();
+                return;
             }
-            else
+
+            // ⏳ 1. HESAP SÜRESİ KONTROLÜ
+            if (giren.BitisTarihi.HasValue && giren.BitisTarihi.Value < DateTime.Now)
             {
-                MessageBox.Show("Hatalı kullanıcı adı veya şifre girdiniz!", "Giriş Başarısız", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                DialogResult cevap = MessageBox.Show($"Sayın {giren.KullaniciAdi}, hesabınızın kullanım süresi dolmuştur!\nYönetici çağırarak süreyi uzatmak ister misiniz?", "Süre Bitti", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (cevap == DialogResult.Yes && YoneticiIleSureUzat(giren.KullaniciAdi))
+                {
+                    Gunluk.Yaz("Kullanıcı Yönetimi", "Hesap süresi uzatıldı", giren.KullaniciAdi);
+                    HataGoster("Süreniz uzatıldı. Lütfen tekrar giriş yapın.", true);
+                }
+                txtSifre.Clear();
+                return;
             }
+
+            // 🔒 2. ŞİFRE ESKİME KONTROLÜ
+            if (giren.SifreGecerlilikAyi > 0 && giren.SonSifreDegistirme.AddMonths(giren.SifreGecerlilikAyi) < DateTime.Now)
+            {
+                MessageBox.Show("Şifrenizin geçerlilik süresi dolmuştur. Güvenliğiniz için yeni bir şifre belirlemelisiniz.", "Şifre Yenileme", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (KullaniciKendiSifresiniDegistir(giren.KullaniciAdi))
+                {
+                    Gunluk.Yaz("Oturum", "Süresi dolan şifre yenilendi", giren.KullaniciAdi, giren.KullaniciAdi);
+                    HataGoster("Şifreniz yenilendi. Yeni şifrenizle giriş yapın.", true);
+                }
+                txtSifre.Clear();
+                return;
+            }
+
+            // 🎉 GİRİŞ BAŞARILI
+            GirisiTamamla(giren.KullaniciAdi, giren.Yetkiler, Guvenlik.SistemHesabi.Yok, kAdi, sifre, null);
         }
 
         #endregion
 
-        // =========================================================================================
+        #region 🛡️ 04. YÖNETİCİ ONAYI VE ŞİFRE YENİLEME PENCERELERİ
 
-        #region 🛡️ 05. DİNAMİK YETKİLENDİRME VE YÖNETİCİ KONTROLLERİ
-
-        /// <summary>
-        /// Kullanıcının süresi bittiğinde ekrana anında geçici bir "Yönetici Şifre İsteme" penceresi (formu) çizen metot.
-        /// </summary>
+        /// <summary>Süresi dolan kullanıcı için sistem hesabı onayıyla süre uzatma penceresi.</summary>
         private bool YoneticiIleSureUzat(string sureUzatilacakKullanici)
         {
-            Form adminForm = new Form { Width = 300, Height = 250, FormBorderStyle = FormBorderStyle.FixedDialog, Text = "Yönetici Onayı", StartPosition = FormStartPosition.CenterParent };
+            Form adminForm = new Form { Width = 320, Height = 290, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, Text = "Yönetici Onayı", StartPosition = FormStartPosition.CenterParent };
 
-            TextBox txtAdminAd = new TextBox { Left = 20, Top = 30, Width = 240 };
-            TextBox txtAdminPass = new TextBox { Left = 20, Top = 80, Width = 240, PasswordChar = '*' };
-
-            ComboBox cmbSure = new ComboBox { Left = 20, Top = 130, Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
+            TextBox txtAdminAd = new TextBox { Left = 20, Top = 36, Width = 264 };
+            TextBox txtAdminPass = new TextBox { Left = 20, Top = 92, Width = 264, UseSystemPasswordChar = true };
+            ComboBox cmbSure = new ComboBox { Left = 20, Top = 148, Width = 264, DropDownStyle = ComboBoxStyle.DropDownList };
             cmbSure.Items.AddRange(new string[] { "1 Saat Uzat", "1 Ay Uzat", "3 Ay Uzat", "6 Ay Uzat", "Sınırsız Yap" });
             cmbSure.SelectedIndex = 1;
+            Button btnOnay = new Button { Text = "Süreyi Uzat", Left = 20, Width = 264, Top = 192, Height = 40, BackColor = Color.SeaGreen };
 
-            Button btnOnay = new Button { Text = "UZAT", Left = 20, Width = 240, Top = 170, BackColor = Color.Green, ForeColor = Color.White };
-
-            adminForm.Controls.Add(new Label { Text = "Yönetici Kullanıcı Adı:", Left = 20, Top = 10, Width = 240 });
+            adminForm.Controls.Add(new Label { Text = "Yönetici kullanıcı adı", Left = 20, Top = 14, Width = 264 });
             adminForm.Controls.Add(txtAdminAd);
-            adminForm.Controls.Add(new Label { Text = "Yönetici Şifresi:", Left = 20, Top = 60, Width = 240 });
+            adminForm.Controls.Add(new Label { Text = "Yönetici şifresi", Left = 20, Top = 70, Width = 264 });
             adminForm.Controls.Add(txtAdminPass);
-            adminForm.Controls.Add(new Label { Text = "Uzatılacak Süre:", Left = 20, Top = 110, Width = 240 });
+            adminForm.Controls.Add(new Label { Text = "Uzatılacak süre", Left = 20, Top = 126, Width = 264 });
             adminForm.Controls.Add(cmbSure);
             adminForm.Controls.Add(btnOnay);
+            adminForm.AcceptButton = btnOnay;
 
             bool islemTamam = false;
-
             btnOnay.Click += (s, e) =>
             {
-                if ((txtAdminAd.Text == "Yönetici" && txtAdminPass.Text == "UY.19-97") || (txtAdminAd.Text == "TamgaApp" && txtAdminPass.Text == "ugur-19Yalcin.97"))
+                if (Guvenlik.SistemHesabiDogrula(txtAdminAd.Text.Trim(), txtAdminPass.Text.Trim()) != Guvenlik.SistemHesabi.Yok)
                 {
                     DateTime yeniTarih = DateTime.Now;
                     if (cmbSure.SelectedIndex == 0) yeniTarih = yeniTarih.AddHours(1);
                     else if (cmbSure.SelectedIndex == 1) yeniTarih = yeniTarih.AddMonths(1);
                     else if (cmbSure.SelectedIndex == 2) yeniTarih = yeniTarih.AddMonths(3);
                     else if (cmbSure.SelectedIndex == 3) yeniTarih = yeniTarih.AddMonths(6);
-                    else yeniTarih = DateTime.MaxValue; // Sınırsız
+                    else yeniTarih = DateTime.MaxValue;
 
-                    DataAccess.KullaniciSuresiUzat(sureUzatilacakKullanici, cmbSure.SelectedIndex == 4 ? DateTime.MaxValue : yeniTarih);
+                    DataAccess.KullaniciSuresiUzat(sureUzatilacakKullanici, yeniTarih);
                     islemTamam = true;
                     adminForm.Close();
                 }
-                else MessageBox.Show("Yetkisiz Giriş!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                else
+                {
+                    Gunluk.Yaz("Oturum", "Hatalı yönetici onayı denemesi", "Süre uzatma: " + sureUzatilacakKullanici, "-");
+                    MessageBox.Show("Yönetici bilgileri hatalı!", "Yetkisiz", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             };
 
-            adminForm.ShowDialog();
+            adminForm.ShowDialog(this);
             return islemTamam;
         }
 
-        /// <summary>
-        /// Kullanıcıya "Eski şifreni değiştir" uyarısı geldiğinde (veya adminden tetiklendiğinde) ekrana anında geçici bir şifre yenileme penceresi çizen metot.
-        /// </summary>
+        /// <summary>Kullanıcının yeni şifre belirlemesi (şifre eskidiğinde veya yönetici sıfırlarken).</summary>
         public static bool KullaniciKendiSifresiniDegistir(string kAdi)
         {
-            Form sifreForm = new Form { Width = 300, Height = 180, FormBorderStyle = FormBorderStyle.FixedDialog, Text = "Yeni Şifre Belirle", StartPosition = FormStartPosition.CenterParent };
+            Form sifreForm = new Form { Width = 320, Height = 250, FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false, Text = "Yeni Şifre Belirle — " + kAdi, StartPosition = FormStartPosition.CenterParent };
 
-            TextBox txtYeniSifre1 = new TextBox { Left = 20, Top = 30, Width = 240, PasswordChar = '*' };
-            TextBox txtYeniSifre2 = new TextBox { Left = 20, Top = 80, Width = 240, PasswordChar = '*' };
-            Button btnOnay = new Button { Text = "Şifremi Değiştir", Left = 20, Width = 240, Top = 110, BackColor = Color.Blue, ForeColor = Color.White };
+            TextBox txtYeniSifre1 = new TextBox { Left = 20, Top = 36, Width = 264, UseSystemPasswordChar = true };
+            TextBox txtYeniSifre2 = new TextBox { Left = 20, Top = 92, Width = 264, UseSystemPasswordChar = true };
+            Label lblKural = new Label { Text = "En az 6 karakter, harf ve rakam içermeli.", Left = 20, Top = 120, Width = 264, ForeColor = Color.Gray };
+            Button btnOnay = new Button { Text = "Şifremi Değiştir", Left = 20, Width = 264, Top = 150, Height = 40, BackColor = Color.SeaGreen };
 
-            sifreForm.Controls.Add(new Label { Text = "Yeni Şifre:", Left = 20, Top = 10, Width = 240 });
+            sifreForm.Controls.Add(new Label { Text = "Yeni şifre", Left = 20, Top = 14, Width = 264 });
             sifreForm.Controls.Add(txtYeniSifre1);
-            sifreForm.Controls.Add(new Label { Text = "Yeni Şifre (Tekrar):", Left = 20, Top = 60, Width = 240 });
+            sifreForm.Controls.Add(new Label { Text = "Yeni şifre (tekrar)", Left = 20, Top = 70, Width = 264 });
             sifreForm.Controls.Add(txtYeniSifre2);
+            sifreForm.Controls.Add(lblKural);
             sifreForm.Controls.Add(btnOnay);
+            sifreForm.AcceptButton = btnOnay;
 
             bool islemTamam = false;
-
             btnOnay.Click += (s, e) =>
             {
-                if (txtYeniSifre1.Text.Length < 3)
-                    MessageBox.Show("Şifre en az 3 karakter olmalı.", "Uyarı", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                else if (txtYeniSifre1.Text != txtYeniSifre2.Text)
+                string yeni = txtYeniSifre1.Text.Trim();
+                string kural = Guvenlik.SifreKuraliHatasi(yeni);
+                if (kural != null)
+                    MessageBox.Show(kural, "Zayıf Şifre", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                else if (yeni != txtYeniSifre2.Text.Trim())
                     MessageBox.Show("Şifreler uyuşmuyor!", "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 else
                 {
-                    DataAccess.KullaniciSifreDegistir(kAdi, txtYeniSifre1.Text);
+                    DataAccess.KullaniciSifreDegistir(kAdi, yeni);
                     islemTamam = true;
                     sifreForm.Close();
                 }

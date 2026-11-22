@@ -1,7 +1,24 @@
 ﻿################################################################################
-# Bu .gitignore dosyası Microsoft(R) Visual Studio tarafından otomatik olarak oluşturulmuştur.
+# TamgaApp - Git'e girmemesi gereken dosyalar
 ################################################################################
 
-/.vs/TamgaApp.slnx/FileContentIndex
+# Visual Studio
 .vs/
+*.user
+*.suo
+
+# Derleme çıktıları
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+publish/
+
+# NuGet paketleri (CI'da restore edilir)
 packages/
+
+# Kurulum çıktıları (Release sayfasına yüklenir, depoya değil)
+*.msi
+TamgaApp_Setup/**/setup.exe
+TamgaApp_Guncelleme_*.zip
